@@ -1,0 +1,185 @@
+;Spellbinder Grid00 Nifs
+
+[nifdefs]
+numnifs=18
+numfixtures=18
+
+[nif401]
+filename=falltree.nif
+
+;[nif402]
+filename=chair.nif
+
+;[nif403]
+filename=chandelr.nif
+
+;[nif404]
+filename=bench.nif
+
+[nif405]
+filename=sack1.nif
+
+;[nif406]
+filename=sack2.nif
+
+;[nif407]
+filename=brazier.nif
+
+;[nif408]
+filename=stool.nif
+
+[nif409]
+filename=lantern.nif
+
+[nif410]
+filename=1barrel.nif
+
+[nif411]
+filename=trunk.nif
+
+[nif412]
+filename=bush.nif 
+
+[nif413]
+filename=crates.nif
+
+;[nif414]
+filename=crate18.nif
+
+;[nif415]
+filename=crate24.nif
+
+[nif416]
+filename=node.nif
+scale=100
+flip=1
+
+[nif417]
+filename=nexus.nif
+scale=100
+flip=0
+
+
+
+
+;Fixtures
+
+[fixture00] ;Node
+nif=416
+x=128 
+y=128 
+z=0  
+
+[fixture01] ;Node
+nif=416
+x=3072
+y=2624
+z=420
+light=300
+
+[fixture02] ;Node
+nif=416
+x=2816
+y=4032
+z=164
+light=300
+
+[fixture03] ;Node
+nif=416
+x=3136
+y=5056
+z=4  
+light=300
+
+[fixture04] ;Node
+nif=416
+x=3648
+y=3456
+z=196
+light=300
+
+;[fixture05] ;Node
+nif=416
+x=3936
+y=5280
+z=132
+
+[fixture06] ;Node
+nif=416
+x=4864
+y=3008
+z=132
+light=300
+
+[fixture07] ;Node
+nif=416
+x=5120
+y=4032
+z=164
+light=300
+
+[fixture08] ;Node
+nif=416
+x=4800
+y=5056
+z=4   
+light=300
+
+[fixture09] ;Node
+nif=416
+x=5888
+y=3072
+z=260
+light=300
+
+[fixture10] ;Nexus
+nif=417
+x=1824
+y=4064
+z=8  
+light=400
+
+[fixture11] ;Nexus
+nif=417
+x=6048
+y=4064
+z=8  
+light=400
+
+[fixture12] ;Nexus
+nif=417
+x=3936
+y=2336
+z=8  
+light=400
+
+[fixture13] ;Node
+nif=416
+x=2112
+y=3072
+z=260
+light=300
+
+[fixture14] ;tree
+nif=401
+x=3744
+y=4256
+z=32 
+
+[fixture15] ;tree
+nif=401
+x=4896
+y=3232
+z=128
+
+;[fixture16] ;tree
+nif=401
+x=5088
+y=3104
+z=128
+
+[fixture17] ;tree
+nif=401
+x=5088
+y=3488
+z=128

@@ -1,0 +1,285 @@
+;Spellbinder Grid03 Nifs
+
+[nifdefs]
+numnifs=8
+numfixtures=36
+
+[nif401]
+filename=levitatr.nif
+
+[nif402]
+filename=node.nif    
+flip=1
+scale=100
+
+[nif403]
+filename=nexus.nif
+scale=100
+flip=0
+
+[nif404]
+filename=chole1.nif
+scale=100
+flip=1
+
+[nif405]
+filename=chole2.nif
+scale=100
+flip=1
+
+[nif406]
+filename=chole3.nif
+scale=100
+flip=1
+
+[nif407]
+filename=chole4.nif
+scale=100
+flip=1
+
+
+
+
+
+;Fixtures
+
+[fixture00] ;lev
+nif=401
+x=2400
+y=2464
+z=160
+
+[fixture01] ;lev
+nif=401
+x=2976
+y=2144
+z=0 
+
+[fixture02] ;lev
+nif=401
+x=3040
+y=2592
+z=0 
+
+[fixture03] ;lev
+nif=401
+x=3872
+y=2144
+z=0 
+
+[fixture04] ;lev
+nif=401
+x=4000
+y=2400
+z=0 
+
+[fixture05] ;lev
+nif=401
+x=4768
+y=2080
+z=0 
+
+[fixture06] ;lev
+nif=401
+x=5152
+y=2848
+z=160
+
+[fixture07] ;lev
+nif=401
+x=3616
+y=3104
+z=0 
+
+[fixture08] ;lev
+nif=401
+x=4512
+y=4576
+z=160
+
+
+[fixture09] ;node (dummy)
+nif=402
+x=128
+y=128
+z=0
+
+[fixture10] ;node
+nif=402
+x=1728
+y=2048
+z=388
+light=300
+
+[fixture11] ;node
+nif=402
+x=3712
+y=5632
+z=388
+light=300
+
+[fixture12] ;node
+nif=402
+x=6080
+y=2496
+z=388
+light=300
+
+[fixture13] ;node
+nif=402
+x=2944
+y=1728
+z=-124
+light=300
+
+[fixture14] ;node
+nif=402
+x=3648
+y=1472
+z=-124
+light=300
+
+[fixture15] ;node
+nif=402
+x=4672
+y=1600
+z=-124
+light=300
+
+[fixture16] ;node
+nif=402
+x=3776
+y=3520
+z=-124
+light=300
+
+[fixture17] ;node
+nif=402
+x=3456
+y=2496
+z=-124
+light=300
+
+[fixture18] ;node
+nif=402
+x=4352
+y=2560
+z=164
+light=300
+
+[fixture19] ;Nexus
+nif=403
+x=1760
+y=3232
+z=100
+light=400
+
+[fixture20] ;Nexus
+nif=403
+x=3744
+y=6816
+z=100
+light=400
+
+[fixture21] ;Nexus
+nif=403
+x=6112
+y=3680
+z=100
+light=400
+
+[fixture22] ;ceilhole 56,28
+nif=404
+x=3616
+y=1824
+z=128
+
+[fixture23] ;ceilhole 60,21
+nif=404
+x=3872
+y=1376
+z=128
+
+[fixture24] ;ceilhole 47,20
+nif=405
+x=3040
+y=1312
+z=128
+
+[fixture25] ;ceilhole 69,18
+nif=406
+x=4448
+y=1184
+z=128
+
+[fixture26] ;ceilhole 63,44
+nif=407
+x=4064
+y=2848
+z=128
+
+[fixture27] ;node
+nif=402
+x=2304
+y=3648
+z=420
+light=300
+
+[fixture28] ;node
+nif=402
+x=1216
+y=3648
+z=420
+light=300
+
+[fixture29] ;node
+nif=402
+x=1792
+y=2752
+z=420
+light=300
+
+[fixture30] ;node
+nif=402
+x=3776
+y=6272
+z=420
+light=300
+
+[fixture31] ;node
+nif=402
+x=4288
+y=7232
+z=420
+light=300
+
+[fixture32] ;node
+nif=402
+x=3200
+y=7232
+z=420
+light=300
+
+[fixture33] ;node
+nif=402
+x=5568
+y=4096
+z=420
+light=300
+
+[fixture34] ;node
+nif=402
+x=6656
+y=4096
+z=420
+light=300
+
+[fixture35] ;node
+nif=402
+x=6144
+y=3136
+z=420
+light=300
+
+
+

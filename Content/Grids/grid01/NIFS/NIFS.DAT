@@ -1,0 +1,138 @@
+;Spellbinder Grid01 Nifs
+
+[nifdefs]
+numnifs=5
+numfixtures=16
+
+
+[nif401]
+filename=lantern.nif
+
+
+[nif402]
+filename=levitatr.nif
+
+[nif403]
+filename=node.nif
+scale=100
+flip=1
+
+[nif404]
+filename=nexus.nif
+scale=100
+flip=0
+
+
+;fixtures
+
+[fixture00]   ;lev
+nif=402
+x=672 
+y=3360
+z=0
+
+[fixture01]   ;lev
+nif=402
+x=7584
+y=3360
+z=0
+
+[fixture02]   ;lev
+nif=402
+x=4192
+y=7200
+z=0
+
+[fixture03]   ;Node
+nif=403
+x=128 
+y=128 
+z=-124
+light=350
+
+[fixture04]   ;Node
+nif=403
+x=3264
+y=2624
+z=4   
+light=350
+
+[fixture05]   ;Node
+nif=403
+x=3264
+y=4160
+z=4   
+light=350
+
+[fixture06]   ;Node
+nif=403
+x=5056
+y=2624
+z=4   
+light=350
+
+[fixture07]   ;Node
+nif=403
+x=5056
+y=4160
+z=4   
+light=350
+
+[fixture08]   ;Node
+nif=403
+x=3264
+y=5120
+z=4   
+light=350
+
+[fixture09]   ;Node
+nif=403
+x=5056
+y=5120
+z=4   
+light=350
+
+[fixture10]   ;Node
+nif=403
+x=6464
+y=3392
+z=-124
+light=350
+
+[fixture11]   ;Node
+nif=403
+x=4160
+y=6080
+z=-124
+light=350
+
+
+[fixture12]   ;Nexus
+nif=404
+x=992 
+y=3360
+z=-56 
+light=400
+
+[fixture13]   ;Nexus
+nif=404
+x=7264
+y=3360
+z=-56 
+light=400
+
+[fixture14]   ;Nexus
+nif=404
+x=4192
+y=6880
+z=-56 
+light=400
+
+[fixture15]   ;Node
+nif=403
+x=1728
+y=3392
+z=-124
+light=350
+
+

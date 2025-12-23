@@ -1,0 +1,229 @@
+;Spellbinder Grid02 Nifs
+
+[nifdefs]
+numnifs=5
+numfixtures=31
+
+[nif401]
+filename=lantern.nif
+
+[nif402]
+filename=levitatr.nif
+
+[nif403]
+filename=node.nif
+scale=100
+flip=1
+
+[nif404]
+filename=nexus.nif
+scale=100
+flip=0
+
+
+
+;Fixtures
+
+[fixture00] ;lev
+nif=402
+x=2336
+y=4128
+z=64
+
+[fixture01] ;lev
+nif=402 
+x=1952
+y=5472
+z=64 
+
+[fixture02] ;lev
+nif=402
+x=3936
+y=4640
+z=-128
+
+[fixture03] ;lev
+nif=402
+x=4320
+y=4640
+z=-128
+
+[fixture04] ;lev
+nif=402
+x=4128
+y=3424
+z=0 
+
+[fixture05] ;lev
+nif=402 
+x=5984
+y=4704
+z=64
+  
+[fixture06] ;lev
+nif=402
+x=3584
+y=5536
+z=160 
+
+[fixture07] ;lev
+nif=402
+x=5184
+y=5024
+z=160 
+
+[fixture08] ;lev
+nif=402
+x=3584
+y=4384
+z=64  
+
+[fixture09] ;lev
+nif=402
+x=4672
+y=4384
+z=64  
+
+[fixture10] ;node
+nif=403
+x=128
+y=128
+z=0  
+
+[fixture11] ;node
+nif=403
+x=2304
+y=4864
+z=68  
+light=300
+
+[fixture12] ;node
+nif=403
+x=2880
+y=3136
+z=4   
+light=300
+
+[fixture13] ;node
+nif=403
+x=3200
+y=4608
+z=4   
+light=300
+
+[fixture14] ;node
+nif=403
+x=5312
+y=5952
+z=-124
+light=300
+
+[fixture15] ;node
+nif=403
+x=4096
+y=1728
+z=68  
+light=300
+
+[fixture16] ;node
+nif=403
+x=4352
+y=3072
+z=4   
+light=300
+
+[fixture17] ;node
+nif=403
+x=4096
+y=3968
+z=4   
+light=300
+
+[fixture18] ;node
+nif=403
+x=4416
+y=6464
+z=-124
+light=300
+
+[fixture19] ;node
+nif=403
+x=5056
+y=4096
+z=4   
+light=300
+
+[fixture20] ;node
+nif=403
+x=5696
+y=3328
+z=4   
+light=300
+
+[fixture21] ;node
+nif=403
+x=6016
+y=4992
+z=68  
+light=300
+
+[fixture22] ;node
+nif=403
+x=3008
+y=6272
+z=-124
+light=300
+
+[fixture23] ;node
+nif=403
+x=6976
+y=4864
+z=68  
+light=300
+
+[fixture24] ;nexus
+nif=404
+x=736 
+y=4640
+z=8 
+light=350
+
+[fixture25] ;nexus
+nif=404
+x=4128
+y=992
+z=8
+light=350
+
+[fixture26] ;nexus
+nif=404
+x=7712
+y=4832
+z=8
+light=350
+
+[fixture27] ;node
+nif=403
+x=1472
+y=4672
+z=68  
+light=300
+
+[fixture28] ;lev
+nif=402
+x=544 
+y=4640
+z=0
+
+[fixture29] ;lev
+nif=402
+x=7904
+y=4832
+z=0
+
+[fixture30] ;lev
+nif=402
+x=4128
+y=800
+z=0
+

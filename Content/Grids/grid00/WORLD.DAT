@@ -1,0 +1,586 @@
+
+;World File for Small Keep 3d
+
+;=========================================================================
+; Monster Generators 
+;=========================================================================
+[mongendefs]
+nummongens= 0
+
+[mongen00]
+object= 1
+maxnum= 5
+chance= 50
+timer= 2000
+xmaze= 45
+ymaze= 61
+single= 1
+
+
+;=========================================================================
+; Team Starting 
+;=========================================================================
+[noteam]
+startx= 34
+starty= 46
+raisex= 34
+raisey= 46 
+starta= 270
+
+[chaos]
+startx= 29
+starty= 61 
+starta= 180
+raise1x= 23
+raise1y= 70
+raise2x= 37
+raise2y= 81
+raise3x= 40
+raise3y= 57
+raise4x= 56
+raise4y= 82
+raise5x= 52
+raise5y= 62
+
+[order]
+startx= 59   
+starty= 36
+starta= 180
+raise1x= 64
+raise1y= 31
+raise2x= 49
+raise2y= 32
+raise3x= 69
+raise3y= 47
+raise4x= 60
+raise4y= 61
+raise5x= 71
+raise5y= 66
+
+[balance]
+startx= 95
+starty= 61
+starta= 180
+raise1x= 101
+raise1y= 69
+raise2x= 89
+raise2y= 57
+raise3x= 86
+raise3y= 78
+raise4x= 67
+raise4y= 80
+raise5x= 75
+raise5y= 67
+
+
+;=========================================================================
+; Light
+;=========================================================================
+[light]
+ambient= 12
+outdoor= 18
+intensity= 96
+
+;===================
+;sound regions
+;===================
+
+[soundregiondefs]
+numsoundregions=8
+
+;[soundregion00] ;looping sound example
+x1=16
+y1=66
+x2=25
+y2=78
+sound=62
+
+[soundregion00] ;outdoor, SW courtyard
+x1=42
+y1=76
+x2=50
+y2=81
+num_random_sounds=6
+random_sound0=74
+random_sound1=73
+random_sound2=73
+random_sound3=73
+random_sound4=74
+random_sound4=63
+min_time=5
+max_time=20
+
+[soundregion01] ;outdoor, SEcourtyard
+x1=73
+y1=76
+x2=81
+y2=81
+num_random_sounds=6
+random_sound0=74
+random_sound1=73
+random_sound2=73
+random_sound3=73
+random_sound4=74
+random_sound4=63
+min_time=5
+max_time=20
+
+[soundregion02] ;outdoor, NE courtyard
+x1=75
+y1=43
+x2=78
+y2=54
+num_random_sounds=6
+random_sound0=74
+random_sound1=73
+random_sound2=73
+random_sound3=73
+random_sound4=74
+random_sound4=63
+min_time=5
+max_time=20
+
+[soundregion03] ;outdoor, NW courtyard
+x1=44
+y1=37
+x2=48
+y2=45
+num_random_sounds=6
+random_sound0=74
+random_sound1=73
+random_sound2=73
+random_sound3=73
+random_sound4=74
+random_sound4=63
+min_time=5
+max_time=20
+
+[soundregion04] ;outdoor, central
+x1=58
+y1=63
+x2=65
+y2=69
+num_random_sounds=6
+random_sound0=74
+random_sound1=73
+random_sound2=73
+random_sound3=73
+random_sound4=74
+random_sound5=63
+min_time=5
+max_time=20
+
+[soundregion05] ;cave, SW
+x1=25
+y1=75
+x2=33
+y2=82
+num_random_sounds=6
+random_sound0=75
+random_sound1=75
+random_sound2=75
+random_sound3=69
+random_sound4=67
+random_sound5=67
+min_time=5
+max_time=20
+
+[soundregion06] ;cave, SE
+x1=90
+y1=76
+x2=95
+y2=82
+num_random_sounds=6
+random_sound0=75
+random_sound1=75
+random_sound2=75
+random_sound3=69
+random_sound4=67
+random_sound5=67
+min_time=5
+max_time=20
+
+[soundregion07] ;cave, NE
+x1=74
+y1=22
+x2=80
+y2=35
+num_random_sounds=6
+random_sound0=75
+random_sound1=75
+random_sound2=75
+random_sound3=69
+random_sound4=67
+random_sound5=67
+min_time=5
+max_time=20
+
+
+;=========================================================================
+;Earthnodes
+;=========================================================================
+[earthblooddefs]
+numearthblood=10
+
+[earthblood00]  
+power= 11
+fixture= 13
+link1= 102
+link2= 5
+link3= 7
+
+[earthblood01]  
+power= 11
+fixture= 4
+link1= 101
+link2= 7
+link3= 6
+link4= 5
+link5= 2
+
+[earthblood02]  
+power= 11
+fixture= 6
+link1= 101
+link2= 3
+link3= 1
+
+[earthblood03]  
+power= 11
+fixture= 9
+link1= 2
+link2= 100
+link3= 6
+
+;[earthblood04]  
+power= 11
+neutraltexture= 1
+balancetexture= 1
+ordertexture= 1
+chaostexture= 1
+fixture= 5
+
+[earthblood05]  
+power= 11
+fixture= 1
+link1= 101
+link2= 0
+link3= 1
+
+[earthblood06]  
+power= 11
+fixture= 7
+link1= 100
+link2= 1
+link3= 9
+link4= 7
+link5= 3
+
+[earthblood07]  
+power= 11
+fixture= 2
+link1= 102
+link2= 1
+link3= 0 
+link4= 8
+link5= 6
+
+[earthblood08]  
+power= 11
+fixture= 3
+link1= 102
+link2= 9
+link3= 7
+radius=5
+
+[earthblood09]  
+power= 11
+fixture= 8
+link1= 100
+link2= 8
+link3= 6
+radius=5
+
+;=========================================================================
+;Shrines
+;=========================================================================
+
+[shrinedefs]
+numshrines=3
+
+[shrine00]
+power= 100
+alignment=balance
+bias= 100
+fixture= 11
+link1= 3
+link2= 6
+link3= 9
+
+[shrine01]
+power= 100
+alignment=order
+bias= 100
+fixture= 12
+link1= 5
+link2= 1
+link3= 2
+
+[shrine02]
+power= 100
+alignment=chaos
+bias= 100
+fixture= 10
+link1= 0
+link2= 7
+link3= 8
+
+
+;=========================================================
+;Stairslopes
+;=========================================================
+
+[stairslopes]
+tile01=4
+tile02=2
+tile03=1
+tile04=3
+
+;============================
+;Room Views
+;============================
+
+[room-views]
+numrooms=32
+
+[room00]
+minx=84
+miny=74
+maxx=98
+maxy=82
+views=31,25,30
+
+[room01]
+minx=20
+miny=54
+maxx=36
+maxy=70
+views=2,7,5,3
+
+[room02]
+minx=29
+miny=43
+maxx=36
+maxy=53
+views=1,3,4
+
+[room03]
+minx=37
+miny=43
+maxx=40
+maxy=50
+views=2,4,5,9,1
+
+[room04]
+minx=37
+miny=51
+maxx=44
+maxy=58
+views=3,5,9,10,2,11
+
+[room05]
+minx=37
+miny=59
+maxx=39
+maxy=70
+views=4,3,1,6
+
+[room06]
+minx=30
+miny=71
+maxx=38
+maxy=82
+views=7,11,5
+
+[room07]
+minx=25
+miny=71
+maxx=29
+maxy=77
+views=1,6   
+
+;[room08]
+minx=84
+miny=74
+maxx=98
+maxy=82
+views=31,25
+
+[room09]
+minx=41
+miny=59
+maxx=47
+maxy=65
+views=4,3,10,11,14,13
+
+[room10]
+minx=41
+miny=66
+maxx=46
+maxy=72
+views=9,4,11
+
+[room11]
+minx=39
+miny=73
+maxx=53
+maxy=83
+views=6,10,14,20,4,13,9
+
+[room12]
+minx=42
+miny=35
+maxx=50
+maxy=49
+views=15,17
+
+[room13]
+minx=46
+miny=50
+maxx=52
+maxy=58
+views=14,18,9,11,15
+
+[room14]
+minx=48
+miny=59
+maxx=52
+maxy=72
+views=13,11,9,19
+
+[room15]
+minx=45
+miny=30
+maxx=51
+maxy=34
+views=12,16,13
+
+[room16]
+minx=52
+miny=19
+maxx=71
+maxy=44
+views=15,17,23
+
+[room17]
+minx=51
+miny=45
+maxx=71
+maxy=48
+views=16,18,12
+
+[room18]
+minx=53
+miny=49
+maxx=71
+maxy=59
+views=17,19,13,23,21
+
+[room19]
+minx=53
+miny=60
+maxx=70
+maxy=72
+views=18,14,24,21
+
+[room20]
+minx=54
+miny=73
+maxx=59
+maxy=85
+views=11,21,22
+
+[room21]
+minx=60
+miny=73
+maxx=63
+maxy=84
+views=20,22,19,18
+
+[room22]
+minx=64
+miny=73
+maxx=70
+maxy=84
+views=21,20,25
+
+[room23]
+minx=72
+miny=20
+maxx=81
+maxy=57
+views=16,18,26,27,25
+
+[room24]
+minx=71
+miny=60
+maxx=75
+maxy=72
+views=19,26,25,30,27
+
+[room25]
+minx=71
+miny=73
+maxx=83
+maxy=83
+views=24,27,26,22,0,23
+
+[room26]
+minx=76
+miny=58
+maxx=82
+maxy=65
+views=23,30,24,27,25
+
+[room27]
+minx=77
+miny=66
+maxx=82
+maxy=72
+views=26,23,25,30
+
+[room28]
+minx=82
+miny=43
+maxx=88
+maxy=52
+views=29,30,31
+
+[room29]
+minx=89
+miny=43
+maxx=95
+maxy=55
+views=28,31
+
+[room30]
+minx=83
+miny=53
+maxx=86
+maxy=73
+views=26,28,31,24,27,0
+
+[room31]
+minx=87
+miny=56
+maxx=102
+maxy=73
+views=29,30,0,28
+
+
+
+[map]
+minx=10
+miny=10
+maxx=104
+maxy=104

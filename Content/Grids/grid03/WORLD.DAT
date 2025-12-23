@@ -1,0 +1,514 @@
+
+;World File for Xaxak Glacier
+
+;=========================================================================
+; Monster Generators 
+;=========================================================================
+[mongendefs]
+nummongens= 0
+
+[mongen00]
+object= 1
+maxnum= 3
+chance= 50
+timer= 6000
+xmaze= 66
+ymaze= 82
+single= 1
+
+
+;=========================================================================
+; Team Starting 
+;=========================================================================
+[noteam]
+startx= 71
+starty= 19 
+raisex= 71
+raisey= 19 
+starta= 0
+
+[chaos]
+startx= 27
+starty= 48 
+starta= 180
+raise1x= 35
+raise1y= 36
+raise2x= 21
+raise2y= 29
+raise3x= 32
+raise3y= 26
+raise4x= 25
+raise4y= 18
+raise5x= 15
+raise5y= 25
+
+[order]
+startx= 58
+starty= 104 
+starta= 180
+raise1x= 71
+raise1y= 102
+raise2x= 64
+raise2y= 85
+raise3x= 46
+raise3y= 82
+raise4x= 65
+raise4y= 73
+raise5x= 66
+raise5y= 63
+
+[balance]
+startx= 95
+starty= 55 
+starta=180
+raise1x= 85
+raise1y= 46
+raise2x= 101
+raise2y= 41
+raise3x= 90
+raise3y= 30
+raise4x= 108
+raise4y= 32
+raise5x= 74
+raise5y= 38
+
+
+
+;=========================================================================
+; Light
+;=========================================================================
+[light]
+ambient= 12
+outdoor= 18
+intensity= 96
+
+
+;===================
+;sound regions
+;===================
+
+[soundregiondefs]
+numsoundregions=5
+
+;[soundregion00] ;looping sound example
+x1=16
+y1=66
+x2=25
+y2=78
+sound=62
+
+[soundregion00] ;outdoor, Eastern courtyard
+x1=89
+y1=21
+x2=100
+y2=33
+num_random_sounds=4
+random_sound0=63
+random_sound1=74
+random_sound2=74
+random_sound3=63
+min_time=5
+max_time=20
+
+[soundregion01] ;outdoor, southern courtyard
+x1=53
+y1=66
+x2=65 
+y2=83
+num_random_sounds=4
+random_sound0=63
+random_sound1=74
+random_sound2=63
+random_sound3=74
+min_time=5
+max_time=20
+
+[soundregion02] ;outdoor, western courtyard
+x1=22
+y1=15
+x2=33 
+y2=26
+num_random_sounds=4
+random_sound0=74
+random_sound1=63
+random_sound2=74
+random_sound3=63
+min_time=5
+max_time=20
+
+[soundregion03] ;indoor, northern cave
+x1=39 
+y1=13
+x2=84 
+y2=37
+num_random_sounds=4
+random_sound0=63
+random_sound1=74
+random_sound2=74
+random_sound3=75
+min_time=10
+max_time=35
+
+[soundregion04] ;indoor , southern cave    
+x1=45
+y1=38
+x2=76 
+y2=59
+num_random_sounds=4
+random_sound0=74
+random_sound1=63
+random_sound2=75
+random_sound3=74
+min_time=10
+max_time=30
+
+
+;=========================================================================
+;Earthnodes
+;=========================================================================
+[earthblooddefs]
+numearthblood=18
+
+[earthblood00]  
+power= 5
+radius=7
+link1=11
+link2=3
+fixture=10
+
+[earthblood01]  
+power= 5
+radius=7
+link1=12
+link2=6
+fixture=11
+
+[earthblood02]  
+power= 5
+radius=7
+link1=17 
+link2=5
+fixture=12
+
+[earthblood03]  
+power= 6 
+link1=0   
+link2=4
+link3=7
+fixture=13
+
+[earthblood04]  
+power= 6 
+link1=3   
+link2=5
+link3=7
+link4=8
+fixture=14
+
+[earthblood05]  
+power= 6 
+link1=4   
+link2=2
+link3=8
+fixture=15
+
+[earthblood06]  
+power= 6 
+link1=7   
+link2=1
+link3=8
+fixture=16
+
+[earthblood07]  
+power= 6 
+link1=6   
+link2=3
+link3=4
+link4=8
+fixture=17
+
+[earthblood08]  
+power= 6 
+link1=6   
+link2=5
+link3=4
+link4=7
+fixture=18
+
+[earthblood09]  
+power= 4 
+link1=100 
+link2=11
+link3=10
+fixture=27
+
+[earthblood10]  
+power= 4 
+link1=100 
+link2=9 
+link3=11
+fixture=28
+
+[earthblood11]  
+power= 4 
+link1=100 
+link2=10
+link3=9 
+link4=0
+fixture=29
+
+[earthblood12]  
+power= 4 
+link1=1 
+link2=101
+link3=14
+link4=13
+fixture=30
+
+[earthblood13]  
+power= 4 
+link1=101
+link2=12
+link3=14
+fixture=31
+
+[earthblood14]  
+power= 4  
+link1=101
+link2=12
+link3=13
+fixture=32
+
+[earthblood15] 
+power= 4  
+link1=102
+link2=16
+link3=17
+fixture=33
+
+[earthblood16]  
+power= 4  
+link1=102
+link2=15
+link3=17
+fixture=34
+
+[earthblood17]  
+power= 4  
+link1=102
+link2=15
+link3=16
+link4=2
+fixture=35
+
+;=========================================================================
+;Nexuses
+;=========================================================================
+
+[shrinedefs]
+numshrines=3
+
+[shrine00]
+power= 100
+alignment=chaos
+bias= 100
+fixture=19
+link1=10
+link2=9
+link3=11
+
+[shrine01]
+power= 100
+alignment=order
+bias= 100
+fixture=20
+link1=12
+link2=14
+link3=13
+
+[shrine02]
+power= 100
+alignment=balance
+bias= 100
+fixture=21
+link1=17
+link2=15
+link3=16
+
+;=========================================================
+;Stairslopes
+;=========================================================
+
+[stairslopes]
+tile00=1
+
+;============================
+;Room Views
+;============================
+
+[room-views]
+numrooms=22
+
+;[room00] ;not used
+minx=84
+miny=74
+maxx=98
+maxy=82
+views=31,25
+
+[room01]
+minx=46
+miny=102
+maxx=72
+maxy=119
+views=4,2  
+
+[room02]
+minx=66
+miny=76
+maxx=72
+maxy=101
+views=1,3,6,4
+
+[room03]
+minx=51
+miny=83
+maxx=65
+maxy=100
+views=2,4,5
+
+[room04]
+minx=44
+miny=79
+maxx=50
+maxy=101
+views=1,2,3,5
+
+[room05]
+minx=51
+miny=66
+maxx=65
+maxy=82
+views=3,4,6,20
+
+[room06]
+minx=66
+miny=66
+maxx=76
+maxy=75 
+views=5,2,21
+
+[room07]
+minx=81
+miny=53
+maxx=108
+maxy=70
+views=8,10 
+
+[room08]
+minx=77
+miny=41
+maxx=87
+maxy=52
+views=7,9,10,21
+
+[room09]
+minx=88
+miny=36
+maxx=102
+maxy=51
+views=8,10,11
+
+[room10]
+minx=103
+miny=29
+maxx=108
+maxy=52
+views=11,9,7,8
+
+[room11]
+minx=85
+miny=20
+maxx=102
+maxy=35
+views=19,10,9,18
+
+[room12]
+minx=15
+miny=46
+maxx=41
+maxy=62
+views=13,14
+
+[room13]
+minx=13
+miny=24
+maxx=19
+maxy=45
+views=12,15,16,14
+
+[room14]
+minx=35
+miny=35
+maxx=43
+maxy=45
+views=12,13,15,20
+
+[room15]
+minx=20
+miny=29
+maxx=34
+maxy=44
+views=13,14,16
+
+[room16]
+minx=20
+miny=15
+maxx=38
+maxy=28
+views=15,13,17,18
+
+[room17]
+minx=39
+miny=19
+maxx=52
+maxy=32
+views=16,18,20
+
+[room18]
+minx=53
+miny=16
+maxx=67
+maxy=32
+views=17,16,19,11,20,21
+
+[room19]
+minx=68
+miny=14
+maxx=84
+maxy=32
+views=11,18,21
+
+[room20]
+minx=43
+miny=32
+maxx=64
+maxy=65
+views=14,17,18,21,5
+
+[room21]
+minx=65
+miny=33
+maxx=76
+maxy=65
+views=6,8,19,20,18
+
+
+
+
+[map]
+minx=7 
+miny=7  
+maxx=121
+maxy=121
+
