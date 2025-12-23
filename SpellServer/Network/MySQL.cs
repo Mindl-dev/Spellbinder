@@ -380,6 +380,7 @@ namespace SpellServer
 								CommandText = isNew ? Resources.Strings_MySQL.NonQuery_Insert_Character_SaveNew : Resources.Strings_MySQL.NonQuery_Update_Character_SaveExisting
 							};
 
+                            sqlCommand.Parameters.AddWithValue("@charid", character.CharacterId);
                             sqlCommand.Parameters.AddWithValue("@accountid", character.AccountId);
 							sqlCommand.Parameters.AddWithValue("@slot", character.Slot);
 							sqlCommand.Parameters.AddWithValue("@name", character.Name);
@@ -416,12 +417,14 @@ namespace SpellServer
 							sqlCommand.Parameters.AddWithValue("@list_level_8", character.ListLevel8);
 							sqlCommand.Parameters.AddWithValue("@list_level_9", character.ListLevel9);
 							sqlCommand.Parameters.AddWithValue("@list_level_10", character.ListLevel10);
-							sqlCommand.Parameters.AddWithValue("@experience", character.Experience);
-							sqlCommand.Parameters.AddWithValue("@class", (Byte)character.Class);
-							sqlCommand.Parameters.AddWithValue("@level", character.Level);
-							sqlCommand.Parameters.AddWithValue("@spell_picks", character.SpellPicks);
-							sqlCommand.Parameters.AddWithValue("@model", character.Model);
-							sqlCommand.Parameters.AddWithValue("@spell_key_1", character.SpellKey1);
+                            sqlCommand.Parameters.AddWithValue("@class", (Byte)character.Class);
+                            sqlCommand.Parameters.AddWithValue("@level", character.Level);
+                            sqlCommand.Parameters.AddWithValue("@spell_picks", character.SpellPicks);
+                            sqlCommand.Parameters.AddWithValue("@model", character.Model);
+                            sqlCommand.Parameters.AddWithValue("@oplevel", character.OpLevel);
+                            sqlCommand.Parameters.AddWithValue("@experience", character.Experience);
+                            sqlCommand.Parameters.AddWithValue("@flags", flags);                           
+                            sqlCommand.Parameters.AddWithValue("@spell_key_1", character.SpellKey1);
 							sqlCommand.Parameters.AddWithValue("@spell_key_2", character.SpellKey2);
 							sqlCommand.Parameters.AddWithValue("@spell_key_3", character.SpellKey3);
 							sqlCommand.Parameters.AddWithValue("@spell_key_4", character.SpellKey4);
@@ -461,8 +464,6 @@ namespace SpellServer
                             sqlCommand.Parameters.AddWithValue("@spell_key_38", character.SpellKey38);
                             sqlCommand.Parameters.AddWithValue("@spell_key_39", character.SpellKey39);
                             sqlCommand.Parameters.AddWithValue("@spell_key_40", character.SpellKey40);
-                            sqlCommand.Parameters.AddWithValue("@oplevel", character.OpLevel);
-							sqlCommand.Parameters.AddWithValue("@flags", flags);
 
 							return sqlCommand.ExecuteNonQuery() >= 1;
 						}
