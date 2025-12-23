@@ -218,7 +218,7 @@ namespace SpellServer
             Network.Send(player, GamePacket.Outgoing.Login.Connected(player));
             Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player));
 
-			MySQL.OnlineAccounts.SetOnline(player.AccountId);
+			MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
 
             Program.ServerForm.MainLog.WriteMessage(String.Format("(PID: {0}, AID: {1}, S/N: {2}) {3} has connected.", player.PlayerId, player.AccountId, serial, player.Username), Color.MediumSlateBlue);
         }

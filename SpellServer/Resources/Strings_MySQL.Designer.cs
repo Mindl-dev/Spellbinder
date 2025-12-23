@@ -160,7 +160,7 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to INSERT INTO `online_accounts` (accountid) VALUES (@accountid).
+        ///   Looks up a localized string similar to INSERT INTO `online_accounts` (accountid) VALUES (@accountid, @username).
         /// </summary>
         public static string NonQuery_Insert_OnlineAccounts_SetOnline {
             get {

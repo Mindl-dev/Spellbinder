@@ -126,7 +126,7 @@ namespace SpellServer
 				}
 			}
 
-			public static Boolean SetOnline(Int32 accountId)
+			public static Boolean SetOnline(Int32 accountId, String username)
 			{
 				try
 				{
@@ -143,7 +143,8 @@ namespace SpellServer
 							};
 
 							sqlCommand.Parameters.AddWithValue("@accountid", accountId);
-							return sqlCommand.ExecuteNonQuery() >= 1;
+                            sqlCommand.Parameters.AddWithValue("@username", username);
+                            return sqlCommand.ExecuteNonQuery() >= 1;
 						}
 
 						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
