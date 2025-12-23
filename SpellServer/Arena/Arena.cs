@@ -807,7 +807,7 @@ namespace SpellServer
             Boolean doProjectileTracking = ProjectileTrackingTick.HasElapsed;
 
             Single adjustedTickDelta = CurrentTickDelta + (CurrentTickDelta * 0.085f);
-           
+
             for (Int32 i = ProjectileGroups.Count - 1; i >= 0; i--)
             {
                 for (Int32 j = ProjectileGroups[i].Projectiles.Count - 1; j >= 0; j--)
@@ -942,6 +942,50 @@ namespace SpellServer
                             else
                             {
                                 DoWallDamage(projectile.Owner, Walls[w], projectile.Spell, null);
+                            }
+
+                            if (projectile.Spell.Bounce > 0 && projectile.BouncesRemaining > 0)
+                            {
+                                // Compute reflection
+                                // Get wall normal (perpendicular to direction)
+                                float wallDirRad = Walls[w].Direction * (2f * (float)Math.PI / 65536f);
+                                Vector3 wallNormal = new Vector3(
+                                    -(float)Math.Sin(wallDirRad),
+                                    (float)Math.Cos(wallDirRad),
+                                    0f);
+
+                                // Current velocity direction
+                                Vector3 velDir = new Vector3(
+                                    -(float)Math.Sin(projectile.Direction),
+                                    (float)Math.Cos(projectile.Direction),
+                                    0f);
+
+                                // Reflect: v' = v - 2 * (v · n) * n
+                                float dot = Vector3.Dot(velDir, wallNormal);
+                                Vector3 reflectedDir = velDir - 2f * dot * wallNormal;
+
+                                // Convert back to direction (0-65535)
+                                float newDirRad = (float)Math.Atan2(-reflectedDir.X, reflectedDir.Y);
+                                ushort newDirection = (ushort)((newDirRad * 65536f / (2f * Math.PI) + 65536f) % 65536f);
+
+                                // Spawn new projectile
+                                Projectile newProj = new Projectile(Walls[w].Location, projectile.Spell, 0, 0, projectile.Owner)
+                                {
+                                    Location = projectile.Location + reflectedDir * 10f, // small offset to avoid immediate re-collision
+                                    Direction = newDirection,
+                                    Angle = projectile.Angle, // preserve pitch if needed
+                                    BouncesRemaining = projectile.BouncesRemaining - 1,
+                                    // copy other fields as needed
+                                };
+
+                                // Add to same group or new — your choice
+                                ProjectileGroups[i].Projectiles.Add(newProj);
+
+                                // Visual feedback
+                                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                                {
+                                    GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, projectile.BoundingBox);
+                                }
                             }
 
                             hasCollided = true;
@@ -1118,7 +1162,25 @@ namespace SpellServer
 
                     if (Grid.Collides(projectile.BoundingBox))
                     {
-                        hasCollided = true;
+                        if (projectile.BouncesRemaining > 0)
+                        {
+                            // Approximate normal from movement direction (simple bounce)
+                            // Reverse direction (180° turn)
+                            projectile.Direction = (ushort)((projectile.Direction + 32768) % 65536);
+
+                            projectile.BouncesRemaining--;
+
+                            // Small offset
+                            Vector3 moveDir = new Vector3(
+                                -(float)Math.Sin(projectile.Direction * (2f * Math.PI / 65536f)),
+                                (float)Math.Cos(projectile.Direction * (2f * Math.PI / 65536f)),
+                                0f);
+                            projectile.Location += moveDir * 10f;
+                        }
+                        else
+                        {
+                            hasCollided = true;
+                        }
                     }
 
                     if (projectile.Duration.HasElapsed || hasCollided)

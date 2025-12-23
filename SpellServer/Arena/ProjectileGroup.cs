@@ -22,7 +22,7 @@ namespace SpellServer
             Owner = owner;
             Team = Owner.ActiveTeam;
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("ProjectileGroup - spellId: {0}", spell.Id), System.Drawing.Color.Blue);
+            //Program.ServerForm.MainLog.WriteMessage(String.Format("ProjectileGroup - spellId: {0}", spell.Id), System.Drawing.Color.Blue);
 
             location.X += (-spell.CastDistance * (Single)Math.Sin(direction)) + 1f;
             location.Y += (spell.CastDistance * (Single)Math.Cos(direction)) - (spell.Width * 0.5f);

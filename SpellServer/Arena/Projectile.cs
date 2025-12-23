@@ -25,6 +25,9 @@ namespace SpellServer
         public TickCounter DistanceTicks;
         public Interval Duration;
 
+        public int MaxBounces { get; set; } = 0;
+        public int BouncesRemaining { get; set; } = 0;
+
         public Projectile(Vector3 location, Spell spell, Single direction, Single angle, ArenaPlayer owner)
         {
             Spell = spell;
@@ -33,6 +36,9 @@ namespace SpellServer
             Velocity = spell.Velocity;
             Angle = angle;
             Size = new Vector3(spell.Width * 0.5f, spell.Width, spell.Tall);
+
+            MaxBounces = spell.MaxBounces;
+            BouncesRemaining = spell.MaxBounces;
 
             Single zRadians = MathHelper.DegreesToRadians(Angle);
             Single cosZRadians = (Single)Math.Cos(zRadians);

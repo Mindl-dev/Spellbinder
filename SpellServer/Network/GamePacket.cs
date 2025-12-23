@@ -2282,8 +2282,8 @@ namespace SpellServer
                         outStream.WriteByte(0x00);
                         outStream.WriteByte(0x00);
                         outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
+                        //outStream.WriteByte(0x00);
+                        //outStream.WriteByte(0x00);
                         Network.Send(arenaPlayer.WorldPlayer, outStream);
                     }
 
@@ -2300,8 +2300,8 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
+                    //outStream.WriteByte(0x00);
+                    //outStream.WriteByte(0x00);
                     Network.Send(arenaPlayer.WorldPlayer, outStream);
                 }
             }
