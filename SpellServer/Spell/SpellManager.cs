@@ -413,6 +413,8 @@ namespace SpellServer
                         spell.NoTeam = NativeMethods.GetPrivateProfileBoolean(keyName, NO_TEAM, fileName);
                         spell.SkillUsed = NativeMethods.GetPrivateProfileInt32(keyName, SKILL_USED, fileName);
                         spell.Bounce = NativeMethods.GetPrivateProfileInt32(keyName, BOUNCE, fileName);
+                        spell.MaxBounces = NativeMethods.GetPrivateProfileInt32(keyName, MAX_BOUNCES, fileName);
+                        spell.BounceEffect = NativeMethods.GetPrivateProfileInt32(keyName, BOUNCE_EFFECT, fileName);
                         spell.DeathBounce = NativeMethods.GetPrivateProfileInt32(keyName, DEATH_BOUNCE, fileName);
                         spell.Acceleration = NativeMethods.GetPrivateProfileInt32(keyName, ACCELERATION, fileName);
                         spell.HitEffect = NativeMethods.GetPrivateProfileInt32(keyName, HIT_EFFECT, fileName);
