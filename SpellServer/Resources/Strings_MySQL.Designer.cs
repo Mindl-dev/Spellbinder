@@ -142,7 +142,7 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to INSERT INTO `characters` (accountid, slot, name, agility, constitution, memory, reasoning, discipline, empathy, intuition, presence, quickness, strength, spent_stat, bonus_stat, bonus_spent, list_1, list_2, list_3, list_4, list_5, list_6, list_7, list_8, list_9, list_10, list_level_1, list_level_2, list_level_3, list_level_4, list_level_5, list_level_6, list_level_7, list_level_8, list_level_9, list_level_10, class, level, spell_picks, model, experience, spell_key_1, spell_key_2, spell_key_3, spell_key_4, s [rest of string was truncated]&quot;;.
+        ///   Looks up a localized string similar to INSERT INTO `characters` (charid, accountid, slot, name, agility, constitution, memory, reasoning, discipline, empathy, intuition, presence, quickness, strength, spent_stat, bonus_stat, bonus_spent, list_1, list_2, list_3, list_4, list_5, list_6, list_7, list_8, list_9, list_10, list_level_1, list_level_2, list_level_3, list_level_4, list_level_5, list_level_6, list_level_7, list_level_8, list_level_9, list_level_10, class, level, spell_picks, model, oplevel, experience, flags, spell_key_1, spell_key_2, spe [rest of string was truncated]&quot;;.
         /// </summary>
         public static string NonQuery_Insert_Character_SaveNew {
             get {
