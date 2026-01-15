@@ -1,7 +1,8 @@
-﻿using System;
-using System.ComponentModel;
+﻿using Helper.Math;
 using SharpDX;
-using Helper.Math;
+using System;
+using System.ComponentModel;
+using System.Drawing;
 using OrientedBoundingBox = Helper.Math.OrientedBoundingBox;
 
 namespace Helper
@@ -61,7 +62,6 @@ namespace Helper
         SmallFullArchNorthSouth,
     }
 
-
     [DefaultPropertyAttribute("BlockId")]
     public class GridBlock
     {
@@ -74,7 +74,27 @@ namespace Helper
 
         #region Fields
 
-        private Int32 _lowTileId;
+        private byte _tileId;
+        private byte _rawTileFlag;
+        private byte _specialCollision;
+        private byte _logicFlag;
+        private byte _thinCollision;
+        private byte _blockType;
+        private byte _detailMapIndex;
+        private byte _modifierTemplate;
+        private byte _finalModifier;
+
+        private short _wallHeight;
+        private short _floorZ;
+        private short _ceilingZ;
+        private short _highBoxZ;
+        private short _lowBoxZ;
+
+        private int _ledgeFlagWest;
+        private int _ledgeFlagEast;
+        private int _ledgeFlagNorth;
+        private int _ledgeFlagSouth;
+
         private Int32 _lowBoxTopMod;
 
         private Int32 _blockFlags;
@@ -92,8 +112,10 @@ namespace Helper
 
         private Int32 _lowBoxTopZ;
         private Int32 _midBoxBottomZ;
-        private Int32 _modBoxTopZ;
+        private Int32 _midBoxTopZ;
         private Int32 _highBoxBottomZ;
+
+        private float _midBoxHeight;
 
         public OrientedBoundingBox ContainerBox;
         public OrientedBoundingBox LowBox;
@@ -103,8 +125,9 @@ namespace Helper
 
         private Int32 _unknown0;
         private Int32 _unknown17;
-        private Int32 _unknown18;  
-        #endregion  
+        private Int32 _unknown18;
+
+        #endregion
 
         #region Properties
         [ReadOnly(true), CategoryAttribute(LocationCategory)]
@@ -123,8 +146,16 @@ namespace Helper
             set
             {
                 _lowBoxTopZ = value;
+                // The floor typically starts at 0 or a base floor height.
+                // Let's assume the floor is 64 units thick, sitting just below the surface.
+                float floorThickness = 64f;
+                float bottom = _lowBoxTopZ - floorThickness;
 
-                LowBox = new OrientedBoundingBox(new Vector3(X, Y, -512), new Vector3(64, 64, 512 + _lowBoxTopZ), 0.0f);
+                // Use the actual height (floorThickness) so the Origin is at the center of the visible floor
+                LowBox = new OrientedBoundingBox(
+                    new Vector3(X, Y, bottom),
+                    new Vector3(64, 64, floorThickness),
+                    0.0f);
             }
         }
 
@@ -136,21 +167,68 @@ namespace Helper
             {
                 _midBoxBottomZ = value;
 
-                MidBox = new OrientedBoundingBox(new Vector3(X, Y, _midBoxBottomZ), new Vector3(64, 64, _modBoxTopZ - _midBoxBottomZ), 0.0f);
+                float height = _midBoxTopZ - _midBoxBottomZ;
+
+                // Ensure we don't create a box with 0 or negative height
+
+                if (height <= 0) height = 1.0f;
+
+                MidBox = new OrientedBoundingBox(
+                    new Vector3(X, Y, _midBoxBottomZ),
+                    new Vector3(64, 64, height),
+                    0.0f);
             }
         }
 
         [CategoryAttribute(LocationCategory)]
-        public Int32 MidBoxTopZ
+        public float MidBoxHeight
         {
-            get { return _modBoxTopZ; }
+            get { return _midBoxHeight; }
             set
             {
-                _modBoxTopZ = value;
-
-                MidBox = new OrientedBoundingBox(new Vector3(X, Y, _midBoxBottomZ), new Vector3(64, 64, _modBoxTopZ - _midBoxBottomZ), 0.0f);
+                if (value == 0)
+                {
+                    _midBoxHeight = value;
+                }
+                else
+                {
+                    _midBoxHeight = value;
+                    _midBoxHeight = _midBoxTopZ - _midBoxBottomZ;
+                }
             }
         }
+            /*public Int32 MidBoxBottomZ
+            {
+                get { return _midBoxBottomZ; }
+                set
+                {
+                    _midBoxTopZ = value;
+
+                    UpdateMidBox();
+                }
+            }*/
+
+            [CategoryAttribute(LocationCategory)]
+        public Int32 MidBoxTopZ
+        {
+            get { return _midBoxTopZ; }
+            set
+            {
+                _midBoxTopZ = value;
+
+                MidBox = new OrientedBoundingBox(new Vector3(X, Y, _midBoxBottomZ), new Vector3(64, 64, _midBoxTopZ - _midBoxBottomZ), 0.0f);
+            }
+        }
+        /*public Int32 MidBoxTopZ
+        {
+            get { return _midBoxTopZ; }
+            set
+            {
+                _midBoxTopZ = value;
+
+                UpdateMidBox();
+            }
+        }*/
 
         [CategoryAttribute(LocationCategory)]
         public Int32 HighBoxBottomZ
@@ -172,11 +250,132 @@ namespace Helper
         }
 
         [CategoryAttribute(ObjectsCategory)]
-        public Int32 LowTileId
+        public byte TileId
         {
-            get { return _lowTileId; }
-            set { _lowTileId = value; }
+            get { return _tileId; }
+            set { _tileId = value; }
         }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public short FloorZ
+        {
+            get { return _floorZ; }
+            set { _floorZ = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public short WallHeight
+        {
+            get { return _wallHeight; }
+            set { _wallHeight = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public short CeilingZ
+        {
+            get { return _ceilingZ; }
+            set { _ceilingZ = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public byte BlockType
+        {
+            get { return _blockType; }
+            set { _blockType = value; }
+        }
+        [CategoryAttribute(ObjectsCategory)]
+        public byte RawTileFlag
+        {
+            get { return _rawTileFlag; }
+            set { _rawTileFlag = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public byte DetailMapIndex
+        {
+            get { return _detailMapIndex; }
+            set { _detailMapIndex = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public byte LogicFlag
+        {
+            get { return _logicFlag; }
+            set { _logicFlag = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public short HighBoxZ
+        {
+            get { return _highBoxZ; }
+            set { _highBoxZ = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public short LowBoxZ
+        {
+            get { return _lowBoxZ; }
+            set { _lowBoxZ = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public byte ModifierTemplate
+        {
+            get { return _modifierTemplate; }
+            set { _modifierTemplate = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public byte ThinCollision
+        {
+            get { return _thinCollision; }
+            set { _thinCollision = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public byte FinalModifier
+        {
+            get { return _finalModifier; }
+            set { _finalModifier = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public byte SpecialCollision
+        {
+            get { return _specialCollision; }
+            set { _specialCollision = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public int LedgeFlagWest
+        {
+            get { return _ledgeFlagWest; }
+            set { _ledgeFlagWest = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public int LedgeFlagEast
+        {
+            get { return _ledgeFlagEast; }
+            set { _ledgeFlagEast = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public int LedgeFlagNorth
+        {
+            get { return _ledgeFlagNorth; }
+            set { _ledgeFlagNorth = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public int LedgeFlagSouth
+        {
+            get { return _ledgeFlagSouth; }
+            set { _ledgeFlagSouth = value; }
+        }
+
+        [CategoryAttribute(ObjectsCategory)]
+        public bool IsSolidPillar { get; set; }
 
         [CategoryAttribute(ObjectsCategory)]
         public GridBlockShape LowTopShape
@@ -290,15 +489,39 @@ namespace Helper
         {
             get
             {
-                return MidBoxTopZ == 32767;
+                // After the fix-up loop, 1024(0x400) is the value for open sky.
+                // We check for >= 1024 to be safe against slope offsets.
+                return MidBoxTopZ >= 1024;
+            }
+            set
+            {
+                // If we set HasSkybox = true, we move the ceiling to the sky limit (1024)
+                // If we set it to false, we usually default it to 0 (solid) or leave it.
+                if (value)
+                {
+                    MidBoxTopZ = 1024;
+                }
+                else if (MidBoxTopZ >= 1024)
+                {
+                    MidBoxTopZ = 0; // Or keep current value if it's already a real ceiling
+                }
             }
         }
-
         public GridBlock(Int32 blockId, Int32 x, Int32 y)
         {
             BlockId = blockId;
             X = x;
             Y = y;
         }
+        /*private void UpdateMidBox()
+        {
+            float height = _midBoxTopZ - _midBoxBottomZ;
+            if (height <= 0) height = 1.0f;
+
+            MidBox = new OrientedBoundingBox(
+                new Vector3(X, Y, _midBoxBottomZ),
+                new Vector3(64, 64, height),
+                0.0f);
+        }*/
     }
 }

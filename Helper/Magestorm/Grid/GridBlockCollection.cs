@@ -8,12 +8,18 @@ namespace Helper
     {
         public GridBlockCollection(Boolean isBase)
         {
-            if (isBase) Add(new GridBlock(0, 0, 0));
+            
         }
 
         public GridBlock GetBlockByLocation(Single x, Single y)
         {
-			return this[(Int32)System.Math.Floor(x / 64f) + (Int32)System.Math.Floor(y / 64f) * 128 + 1];
+            int gX = (int)x >> 6;
+            int gY = (int)y >> 6;
+
+            // Clamp to prevent out-of-bounds on map edges
+            if (gX < 0 || gX >= 128 || gY < 0 || gY >= 128) return null;
+
+            return this[gY + (gX << 7)];
         }
 
         public GridBlockCollection GetBlocksNearBoundingBox(OrientedBoundingBox boundingBox)

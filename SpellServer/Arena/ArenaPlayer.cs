@@ -37,9 +37,9 @@ namespace SpellServer
             Bonus
         }
 
-        public static readonly Vector3 PlayerStandingSize = new Vector3(44, 44, 64);
-        public static readonly Vector3 PlayerCrouchingSize = new Vector3(44, 44, 32);
-        public static readonly Vector3 PlayerOrigin = new Vector3(20, 20, 0);
+        public static readonly Vector3 PlayerStandingSize = new Vector3(48, 48, 80);
+        public static readonly Vector3 PlayerCrouchingSize = new Vector3(48, 48, 40);
+        public static readonly Vector3 PlayerOrigin = new Vector3(24, 24, 0);
 
         public Arena OwnerArena;
 

@@ -81,7 +81,19 @@ namespace Helper.Timing
         {
             get { return _currentResets < _maxResets || (_maxResets == 0 && _autoReset); }
         }
+        public Single PreciseDeltaSeconds
+        {
+            get
+            {
+                // Use the high-precision counters you already defined in NativeMethods
+                Int64 currentTick = NativeMethods.PerformanceCount;
+                Int64 tickDiff = currentTick - _lastTick;
 
+                // Use the Frequency you already have in TimeHelper (or NativeMethods)
+                // Divide raw ticks by frequency to get exact fractional seconds
+                return (Single)((Double)tickDiff / NativeMethods.PerformanceFrequency);
+            }
+        }
         public Single Delta
         {
             get { return ElapsedMilliseconds * 0.001f; }

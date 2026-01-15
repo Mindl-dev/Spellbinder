@@ -1,11 +1,11 @@
 ﻿using Helper;
 using Helper.Math;
 using Helper.Network;
+using Org.BouncyCastle.Security.Certificates;
+using SharpDX;
 using SpellServer.GamePacket.Incoming;
 using SpellServer.GamePacket.Outgoing;
 using SpellServer.Sound;
-using Org.BouncyCastle.Security.Certificates;
-using SharpDX;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,6 +16,10 @@ using System.Net;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using ZstdSharp.Unsafe;
+using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
+using static Mysqlx.Crud.Order.Types;
+using static SpellServer.ArenaPlayer;
 using Color = System.Drawing.Color;
 using OrientedBoundingBox = Helper.Math.OrientedBoundingBox;
 
@@ -77,6 +81,60 @@ namespace SpellServer
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
 
+                    inStream.Seek(2, SeekOrigin.Begin);
+
+                    byte[] data = new byte[12];
+                    inStream.Read(data, 0, 12);
+
+                    ushort rawWord = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 0)); // Note: check endianness
+                    int elementId = (rawWord >> 9) & 0x03;
+                    int rawAngle = rawWord & 0x0FFF;
+                    
+                    float direction = MathHelper.DirectionToRadians(rawAngle);
+
+                    ushort rawZ = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 2));
+                    int zPos = rawZ & 0x7FF;
+                    if ((rawZ & 0x800) != 0) zPos = -zPos; // Sign bit at 0x800
+
+                    int speedScalar = (rawZ >> 12) & 0x0F;
+
+                    byte mSpeed = (byte)((speedScalar / 15.0f) * 255);
+
+                    int xPos = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 4)) & 0x1FFF;
+                    int yRaw = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 6));
+                    int yPos = yRaw & 0x1FFF;
+
+                    bool isSpecialState = (yRaw & 0x8000) != 0;
+
+                    byte originalByte7 = data[7];
+
+                    byte byte7 = (byte)(yRaw >> 8);
+                    int accel = (byte7 >> 3) & 0x03;
+                    int flags = byte7 & 0x07;
+                    int elementFromFlags = (byte7 >> 5) & 0x03;
+
+                    ArenaPlayer.StatusFlag statusFlags = ((ArenaPlayer.StatusFlag)flags) & ~ArenaPlayer.StatusFlag.Hurt;
+
+                    if (player.ActiveArenaPlayer.StatusFlags.HasFlag(ArenaPlayer.StatusFlag.Hurt))
+                    {
+                        statusFlags |= ArenaPlayer.StatusFlag.Hurt;
+                    }
+
+                    byte statusPart = (byte)player.ActiveArenaPlayer.StatusFlags;
+
+                    SharpDX.Vector3 location = new SharpDX.Vector3(xPos, yPos, zPos) - ArenaPlayer.PlayerOrigin;
+
+                    data[7] = (byte)((originalByte7 & 0xF8) | (statusPart & 0x07));
+
+                    player.ActiveArena.PlayerMove(player.ActiveArenaPlayer, statusFlags, mSpeed, location, direction);
+
+                    Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveState(player.ActiveArenaPlayer, data, UDP), false);
+
+                }
+                /*public static void PlayerMoveState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
+                {
+                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
+
                     Byte[] tBuffer = new Byte[2];
                     inStream.Seek(2, SeekOrigin.Begin);
 
@@ -112,9 +170,47 @@ namespace SpellServer
                     player.ActiveArena.PlayerMove(player.ActiveArenaPlayer, statusFlags, mSpeed, location, direction);
 
                     Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveState(player.ActiveArenaPlayer, relayBuffer, UDP), false);
-                }
-                
+                }*/
                 public static void PlayerMoveStateShort(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
+                {
+                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
+
+                    inStream.Seek(2, SeekOrigin.Begin);
+                    byte[] data = new byte[8];
+                    inStream.Read(data, 0, 8);
+
+                    ushort rawAngleWord = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 0));
+                    int rawAngle = rawAngleWord & 0x0FFF;
+                    player.ActiveArenaPlayer.Direction = MathHelper.DirectionToRadians(rawAngle);
+
+                    byte stateByte = data[2];
+                    ArenaPlayer.StatusFlag statusFlags = (ArenaPlayer.StatusFlag)(stateByte & 0x07);
+
+                    if (player.ActiveArenaPlayer.StatusFlags.HasFlag(ArenaPlayer.StatusFlag.Hurt))
+                    {
+                        statusFlags |= ArenaPlayer.StatusFlag.Hurt;
+                    }
+
+                    byte byte5 = data[5];
+                    int speedScalar = byte5 & 0x0F;
+                    byte mSpeed = (byte)((speedScalar / 15.0f) * 255);
+
+                    if ((byte5 & 0xF0) != 0)
+                    {
+                        // You could map these to custom server flags like IsTouchingWall or IsInTransition
+                    }
+
+                    statusFlags &= ~ArenaPlayer.StatusFlag.Hurt;
+                    if (player.ActiveArenaPlayer.StatusFlags.HasFlag(ArenaPlayer.StatusFlag.Hurt))
+                    {
+                        statusFlags |= ArenaPlayer.StatusFlag.Hurt;
+                    }
+
+                    player.ActiveArena.PlayerMove(player.ActiveArenaPlayer, statusFlags, mSpeed, player.ActiveArenaPlayer.Location, player.ActiveArenaPlayer.Direction);
+
+                    Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveStateShort(player.ActiveArenaPlayer, data, UDP), false);
+                }
+                /*public static void PlayerMoveStateShort(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
 
@@ -128,7 +224,7 @@ namespace SpellServer
                     inStream.Read(relayBuffer, 0, 8);
 
                     Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveStateShort(player.ActiveArenaPlayer, relayBuffer, UDP), false);
-                }   
+                }*/
                 public static void TappedAtShrine(SpellServer.Player player)
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
@@ -325,11 +421,17 @@ namespace SpellServer
 
                     inStream.Read(tBuffer, 0, 2);
                     Single fDirection = MathHelper.DirectionToRadians(NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)));
+                    ushort Direction = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 0));
 
+                    Program.ServerForm.MainLog.WriteMessage($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
+
+                    // Read angle as byte (0–255)
                     inStream.Seek(2, SeekOrigin.Current);
-                    Int32 angle = (Byte)inStream.ReadByte();
-                    angle = angle > 0x7F ? (angle & 0x1F) ^ 0x1F : -angle;
+                    Int32 rawangle = (Byte)inStream.ReadByte();
+                    Int32 angle = rawangle > 0x7F ? (rawangle & 0x7F) ^ 0x7F : -rawangle;
                     Single fAngle = angle;
+
+                    Program.ServerForm.MainLog.WriteMessage($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
 
                     Byte[] relayBuffer = new Byte[16];
                     inStream.Seek(2, SeekOrigin.Begin);
@@ -1378,6 +1480,20 @@ namespace SpellServer
                     outStream.Write(relayBuffer, 0, 16);
                     return outStream;
                 }
+                public static MemoryStream CastProjectile(ArenaPlayer arenaPlayer, Projectile newProj, bool UDP = false)
+                {
+                    MemoryStream outStream = new MemoryStream();
+                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte((Byte)PacketOutFunction.CastProjectile);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(newProj.Spell.Id)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Location.X)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Location.Y)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Location.Z)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Direction)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Angle)), 0, 2);
+                    return outStream;
+                    
+                }
                 public static MemoryStream CastWall(Byte[] relayBuffer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
@@ -2262,12 +2378,12 @@ namespace SpellServer
                 }
                 public static void DrawBoundingBox(ArenaPlayer arenaPlayer, OrientedBoundingBox boundingBox, bool UDP = false)
                 {
-                    const Int16 spellId = 216;
+                    const Int16 spellId = 222;
 
                     if (arenaPlayer == null) return;
                     MemoryStream outStream;
 
-                    for (Int32 i = 0; i < boundingBox.Corners.Length; i++)
+                    /*for (Int32 i = 0; i < boundingBox.Corners.Length; i++)
                     {
                         outStream = new MemoryStream();
                         outStream.WriteByte(arenaPlayer.ArenaPlayerId);
@@ -2285,7 +2401,7 @@ namespace SpellServer
                         //outStream.WriteByte(0x00);
                         //outStream.WriteByte(0x00);
                         Network.Send(arenaPlayer.WorldPlayer, outStream);
-                    }
+                    }*/
 
                     outStream = new MemoryStream();
                     outStream.WriteByte(arenaPlayer.ArenaPlayerId);

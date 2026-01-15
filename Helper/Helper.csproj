@@ -111,6 +111,8 @@
     <Compile Include="Magestorm\Grid\GridObjectDefinitionCollection.cs" />
     <Compile Include="Magestorm\Arena\Pool.cs" />
     <Compile Include="Magestorm\Arena\PoolCollection.cs" />
+    <Compile Include="Magestorm\Grid\Tables.cs" />
+    <Compile Include="Magestorm\Grid\TablesCollection.cs" />
     <Compile Include="Magestorm\Grid\Thin.cs" />
     <Compile Include="Magestorm\Grid\ThinCollection.cs" />
     <Compile Include="Magestorm\Grid\Tile.cs" />
@@ -127,6 +129,9 @@
     </Compile>
     <Compile Include="Logging\LogMessage.cs" />
     <Compile Include="Cryptography\CryptoRandom.cs" />
+    <Compile Include="Magestorm\Map\Map.cs" />
+    <Compile Include="Magestorm\Map\MapCollection.cs" />
+    <Compile Include="Magestorm\Map\MapManager.cs" />
     <Compile Include="Math\MathHelper.cs" />
     <Compile Include="Math\OrientedBoundingBox.cs" />
     <Compile Include="NativeMethods.cs" />

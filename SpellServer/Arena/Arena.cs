@@ -1,13 +1,29 @@
 ﻿using Helper;
 using Helper.Math;
 using Helper.Timing;
-using SpellServer.Properties;
+using Mysqlx.Crud;
+using Mysqlx.Expr;
+using MySqlX.XDevAPI.Relational;
 using SharpDX;
+using SpellServer.Properties;
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Timers;
+using System.Windows.Forms;
+using ZstdSharp.Unsafe;
+using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
+using static Helper.Grid;
+using static Mysqlx.Crud.Order.Types;
+using static Org.BouncyCastle.Asn1.Cmp.Challenge;
 using static SpellServer.ArenaRuleset;
+using static System.Net.Mime.MediaTypeNames;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TrackBar;
 using Color = System.Drawing.Color;
 using OrientedBoundingBox = Helper.Math.OrientedBoundingBox;
 
@@ -37,7 +53,7 @@ namespace SpellServer
             CleanUp = 255,
         }
 
-        public readonly Object SyncRoot = new Object();
+        public readonly Mysqlx.Expr.Object SyncRoot = new Mysqlx.Expr.Object();
 	    private readonly Thread WorkerThread;
 
 	    private const Int32 TickRate = 5;
@@ -93,6 +109,18 @@ namespace SpellServer
 
         public Single CurrentTickDelta;
 
+        public float FrameTime;
+
+        public Tables Tables;
+
+        public Int32 DebugNumber;
+
+        public bool WallCollisionFlag;
+
+        public Wall CollidedWall;
+
+        public Projectile CollidedSpell;
+
         public Arena(Player player, Grid grid, Byte levelRange, ArenaRuleset ruleset)
         {
             lock (ArenaManager.Arenas.SyncRoot)
@@ -135,6 +163,7 @@ namespace SpellServer
 
                 Ruleset = ruleset;
                 Grid = new Grid(grid);
+                Tables = grid.Tables.GetById(grid.GridId);
                 ArenaTeams = new ArenaTeamCollection(Grid);
                 ArenaPlayers = new ArenaPlayerCollection();
                 ArenaPlayerHistory = new ArenaPlayerCollection();
@@ -207,7 +236,7 @@ namespace SpellServer
                 MaxPlayers = Grid.MaxPlayers;
                 EndState = State.Normal;
                 IsDurationLocked = false;
-                DebugFlags = ArenaSpecialFlag.None;
+                DebugFlags = ArenaSpecialFlag.ProjectileTracking;
 
                 StartTime = DateTime.UtcNow;
 
@@ -228,6 +257,8 @@ namespace SpellServer
                
 				WorkerThread = new Thread(ProcessArena);
                 WorkerThread.Start();
+
+
 
                 ArenaManager.Arenas.Add(this);
             }
@@ -330,6 +361,7 @@ namespace SpellServer
                 }
 
                 CurrentTickDelta = ProcessingTick.Delta;
+                FrameTime = ProcessingTick.PreciseDeltaSeconds;
                 ProcessingTick.Reset();
 
                 lock (SyncRoot)
@@ -337,7 +369,7 @@ namespace SpellServer
                     try
                     {
                         ProcessArenaPlayers();
-                        ProcessProjectiles();
+                        ProcessProjectiles(FrameTime);
                         ProcessRunes();
                         ProcessBolts();
                         ProcessWalls();
@@ -801,291 +833,797 @@ namespace SpellServer
                 Bolts.RemoveAt(i);
             }
         }
-
-        public void ProcessProjectiles()
+        public int UpdateProjectileMovement(Projectile projectile, Grid grid, float FrameTime)
         {
-            Boolean doProjectileTracking = ProjectileTrackingTick.HasElapsed;
+            int width = projectile.Spell.Width;
 
-            Single adjustedTickDelta = CurrentTickDelta + (CurrentTickDelta * 0.085f);
+            float velocity = (projectile.Gravity == 0) ? projectile.Velocity : projectile.Velocity - (projectile.Velocity * 0.10f * FrameTime);
 
-            for (Int32 i = ProjectileGroups.Count - 1; i >= 0; i--)
+            projectile.Velocity = velocity;
+
+            float tickDelta = FrameTime;
+
+            float totalMoveMagnitude = velocity * tickDelta;
+            float stepVerticalMove = 0;
+
+            if (projectile.Gravity > 0)
             {
-                for (Int32 j = ProjectileGroups[i].Projectiles.Count - 1; j >= 0; j--)
+                float gravity = (projectile.Spell.Element == SpellElementType.Fire) ? 222f : 333f;
+
+                if (projectile.Gravity == 2)
+                { 
+                    projectile.VerticalVelocity += gravity * tickDelta;
+
+                    stepVerticalMove = projectile.VerticalVelocity * tickDelta;
+                }
+                if (projectile.Gravity == 1)
                 {
-                    Boolean hasCollided = false;
-
-                    Projectile projectile = ProjectileGroups[i].Projectiles[j];
-
-                    Single cosZRadians = (Single) Math.Cos(MathHelper.DegreesToRadians(projectile.Angle));
-                    Single velocityDelta = projectile.Spell.Velocity * adjustedTickDelta;
-
-                    switch (projectile.Spell.Gravity)
+                    if ((projectile.Spell.Id == 24 || projectile.Spell.Id == 16) && projectile.Location.Z <= 2)
                     {
-                        case true:
-                        {
-                            Single gravityVelocityDelta = (projectile.Spell.Velocity - Math.Abs(projectile.OriginalAngle)) * adjustedTickDelta;
+                        float floor = grid.GetFloorHeight((int)projectile.Location.X, (int)projectile.Location.Y, (int)projectile.Location.Z, grid);
 
-                            if (projectile.GravityStepDelta > 0)
-                            {
-                                projectile.Location.X += -(gravityVelocityDelta) * (Single)Math.Sin(projectile.Direction) * cosZRadians;
-                                projectile.Location.Y += (gravityVelocityDelta) * (Single)Math.Cos(projectile.Direction) * cosZRadians;
-                                projectile.Location.Z += (-256 * projectile.GravityStepDelta + projectile.Angle * (gravityVelocityDelta * 2.85f)) * adjustedTickDelta;
-                            }
-                            else
-                            {
-                                projectile.Location.X += -(gravityVelocityDelta) * (Single)Math.Sin(projectile.Direction) * cosZRadians;
-                                projectile.Location.Y += gravityVelocityDelta * (Single)Math.Cos(projectile.Direction) * cosZRadians;
+                        projectile.Location.Z = floor + 2;
 
-                                if (projectile.Angle > 0 || projectile.Angle < 0)
-                                {
-                                    projectile.Location.Z += (gravityVelocityDelta * (MathHelper.DegreesToRadians(projectile.Angle) * 0.95f));
-                                }
-                            }
+                        projectile.VerticalVelocity = 0;
+                    }
+                    
+                    projectile.VerticalVelocity -= gravity * tickDelta;
 
-                            projectile.GravityStepDelta += adjustedTickDelta;
-                            projectile.GravityStepCount++;
+                    stepVerticalMove = projectile.VerticalVelocity * tickDelta;
+                }
+            }
+            else
+            {
+                stepVerticalMove = projectile.VerticalVelocity * tickDelta;
+            }
 
-                            break;
-                        }
-                        case false:
-                        {
-                            projectile.Location.X += -(velocityDelta) * (Single)Math.Sin(projectile.Direction) * cosZRadians;
-                            projectile.Location.Y += velocityDelta * (Single)Math.Cos(projectile.Direction) * cosZRadians;
+            float angle = projectile.Direction;
+            float sinA = (float)Math.Sin(angle);
+            float cosA = (float)Math.Cos(angle);
 
-                            if (projectile.Angle > 0 || projectile.Angle < 0)
-                            {
-                                projectile.Location.Z += (projectile.Spell.Velocity * adjustedTickDelta * (MathHelper.DegreesToRadians(projectile.Angle) * 0.95f));
-                            }
+            WallCollisionFlag = false;
 
-                            break;
-                        }
+            float nextX = projectile.Location.X - (totalMoveMagnitude * sinA); // + (stepVerticalMove * cosA);
+            float nextY = projectile.Location.Y + (totalMoveMagnitude * cosA); // + (stepVerticalMove * sinA);
+
+            int sweepIntX = (int)Math.Round(nextX);
+            int sweepIntY = (int)Math.Round(nextY);
+
+            if (sweepIntX <= (int)projectile.Location.X) sweepIntX -= (sweepIntX < (int)projectile.Location.X) ? width : 0;
+            else sweepIntX += width;
+
+            if (sweepIntY <= (int)projectile.Location.Y) sweepIntY -= (sweepIntY < (int)projectile.Location.Y) ? width : 0;
+            else sweepIntY += width;
+
+            if (WallCollisionFlag == false && Walls.Count > 0)
+            {
+                for (Int32 w = Walls.Count - 1; w >= 0; w--)
+                {
+                    if (Walls[w].BoundingBox.Collides(projectile.BoundingBox))
+                    {
+                        Program.ServerForm.MainLog.WriteMessage($"Wall collides [Projectile Move]- WallId: {Walls[w].ObjectId}, Owner: {Walls[w].Owner.ActiveCharacter.Name}", Color.Red);
+                        CollidedWall = Walls[w];
+                        break;
                     }
 
-                    if (projectile.Location.X < 0 || projectile.Location.X > 32767 || projectile.Location.Y < 0 || projectile.Location.Y > 32767 || projectile.Location.Z < -32767 || projectile.Location.Z > 32767)
+                }
+            }
+
+            float moveMagnitudeRemaining = Math.Abs(totalMoveMagnitude);
+            float verticalDistRemaining = Math.Abs(stepVerticalMove);
+
+            int safety = 0;
+
+            while ((moveMagnitudeRemaining > 0.001f || verticalDistRemaining > 0.001f) && safety < 50)
+            {
+                safety++;
+
+                float currentStepSize = Math.Min(moveMagnitudeRemaining, 8.0f);
+                float currentStepH = currentStepSize;
+                float currentStepV = Math.Min(verticalDistRemaining, 8.0f);
+
+                float ratio = 0;
+                float verticalStep = 0;
+                float stepXFinal = 0;
+                float stepYFinal = 0;
+                Vector3 nextStepPos = new Vector3(0);
+
+                if (projectile.Gravity == 0)
+                {
+                    // Calculate the displacement for THIS sub-step
+                    ratio = (totalMoveMagnitude != 0) ? (currentStepSize / Math.Abs(totalMoveMagnitude)) : 0;
+                    verticalStep = stepVerticalMove * ratio;
+
+                    stepXFinal = projectile.Location.X - (currentStepSize * sinA); // + (verticalStep * sinA);
+                    stepYFinal = projectile.Location.Y + (currentStepSize * cosA); // + (verticalStep * cosA);
+
+                    nextStepPos = new Vector3(stepXFinal, stepYFinal, projectile.Location.Z + verticalStep);
+                }
+                else
+                {
+                    if (moveMagnitudeRemaining > 0.001f)
                     {
-                        ProjectileGroups[i].Projectiles.RemoveAt(j);
-                        continue;
+                        currentStepV = stepVerticalMove * (currentStepH / totalMoveMagnitude);
+                    }
+                    else
+                    {
+                        currentStepV = Math.Min(verticalDistRemaining, 8.0f) * Math.Sign(stepVerticalMove);
                     }
 
-                    projectile.BoundingBox.Move(projectile.Location);
+                    stepXFinal = projectile.Location.X - (currentStepH * sinA); // + (verticalStep * sinA);
+                    stepYFinal = projectile.Location.Y + (currentStepH * cosA); // + (verticalStep * cosA);
+                    
+                    verticalStep = currentStepV;
 
-                    if (projectile.Spell.Gravity)
+                    if ((projectile.Spell.Id == 24 || projectile.Spell.Id == 16) && projectile.Location.Z + verticalStep <= 0)
                     {
-                        GridBlock block  = Grid.GridBlocks.GetHighestGravityBlock(projectile.BoundingBox);
-
-                        if (block != null)
-                        {
-                            if (((projectile.Location.Z + projectile.Spell.MaxStep) >= (block.LowBoxTopZ - block.LowBoxTopMod) && projectile.Location.Z < block.MidBoxBottomZ))
-                            {
-                                if (projectile.Location.Z <= (block.LowBoxTopZ + 1))
-                                {
-                                    projectile.Location.Z = block.LowBoxTopZ + 1 ;
-                                    projectile.GravityStepDelta = 0f;
-                                    projectile.GravityStepCount = 0;
-                                    projectile.Angle = 0f;
-                                    projectile.BoundingBox.Move(projectile.Location);
-                                }
-                            }
-                        }
-
-                        GridBlockCollection tileGridBlockCollection = Grid.GridBlocks.GetBlocksNearBoundingBox(projectile.BoundingBox);
-
-                        foreach (GridBlock gridBlock in tileGridBlockCollection)
-                        {
-                            if (gridBlock.LowBoxTile == null) continue;
-
-                            foreach (TileBlock tileBlock in gridBlock.LowBoxTile.TileBlocks)
-                            {
-                                if (tileBlock.BottomHeight <= 0) continue;
-                                if (!tileBlock.BottomBoundingBox.Collides(projectile.BoundingBox)) continue;
-                                
-                                if ((projectile.Location.Z + projectile.Spell.MaxStep) >= (tileBlock.BottomHeight + gridBlock.LowBoxTopZ))
-                                {
-                                    projectile.Location.Z = tileBlock.BottomHeight + gridBlock.LowBoxTopZ + 1f;
-                                    projectile.GravityStepDelta = 0f;
-                                    projectile.GravityStepCount = 0;
-                                    projectile.Angle = 0f;
-                                    projectile.BoundingBox.Move(projectile.Location);
-                                    break;
-                                }
-                            }
-                        }
+                        projectile.Location.Z = 2;
+                        verticalStep = 0;
                     }
 
+                    nextStepPos = new Vector3(stepXFinal, stepYFinal, projectile.Location.Z + verticalStep);
+                }
 
-                    if (!projectile.Spell.Ethereal)
+                // 3. Collision Check
+                int collisionType = CollisionClassifier(projectile, nextStepPos, projectile.Location, verticalStep, grid);
+
+                if (collisionType != 0)
+                {
+                    // Handle collision (Bounce/Remove)
+                    bool stopped = UpdateProjectileState(projectile, collisionType, nextStepPos, grid);
+                    if (stopped && projectile.BounceCount >= projectile.MaxBounces || projectile.State == ObjectState.Collision)
                     {
-                        for (Int32 w = Walls.Count - 1; w >= 0; w--)
-                        {
-                            if (!Walls[w].BoundingBox.Collides(projectile.BoundingBox)) continue;
-
-                            if (projectile.Spell.EffectRadius > 0)
-                            {
-                                DoAreaDamage(null, projectile, Walls[w].BoundingBox);
-                            }
-
-                            if (ProjectileGroups[i].Projectiles[j].Spell.DamageByDistanceTraveled)
-                            {
-                                SpellDamage spellDamage = new SpellDamage(ProjectileGroups[i].Projectiles[j].Spell);
-
-                                Single bonus = (((ProjectileGroups[i].Projectiles[j].DistanceTicks.Ticks * 2f) * 0.01f) + 1f);
-
-                                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
-                                {
-                                    Network.SendTo(this, GamePacket.Outgoing.System.DirectTextMessage(null, String.Format("[DBDT Wall Damage] Base: {0}, After: {1}, Bonus: {2}%, {3} Ticks", spellDamage.Damage, spellDamage.Damage * bonus, (bonus - 1) * 100, ProjectileGroups[i].Projectiles[j].DistanceTicks.Ticks)), Network.SendToType.Arena);
-                                }
-
-                                spellDamage.Damage = (Int16)(spellDamage.Damage * bonus);
-
-                                DoWallDamage(projectile.Owner, Walls[w], projectile.Spell, spellDamage);
-                            }
-                            else
-                            {
-                                DoWallDamage(projectile.Owner, Walls[w], projectile.Spell, null);
-                            }
-
-                            if (projectile.Spell.Bounce > 0 && projectile.BouncesRemaining > 0)
-                            {
-                                // Compute reflection
-                                // Get wall normal (perpendicular to direction)
-                                float wallRad = Walls[w].Direction * (2f * (float)Math.PI / 65536f);
-
-                                Vector3 wallNormal = new Vector3(
-                                    (float)Math.Cos(wallRad + Math.PI / 2f),  // +90° for correct side
-                                    (float)Math.Sin(wallRad + Math.PI / 2f),
-                                    0f);
-
-                                // Current velocity direction
-                                Vector3 vel = new Vector3(
-                                    (float)Math.Cos(projectile.Direction * (2f * Math.PI / 65536f)),
-                                    (float)Math.Sin(projectile.Direction * (2f * Math.PI / 65536f)),
-                                    0f);
-
-                                // Reflect: v' = v - 2 * (v · n) * n
-                                float dot = Vector3.Dot(vel, wallNormal);
-                                Vector3 reflected = vel - 2f * dot * wallNormal;
-
-                                // Convert back to direction (0-65535)
-                                float newRad = (float)Math.Atan2(reflected.Y, reflected.X);
-
-                                projectile.Direction = (ushort)((newRad * 65536f / (2f * Math.PI) + 65536f) % 65536f);
-
-                                projectile.BouncesRemaining--;
-
-                                // Small push away from wall to prevent stuck/re-collision
-                                projectile.Location += reflected * 10f;
-
-                                hasCollided = false;
-                                break;
-                            }
-
-                            hasCollided = true;
-                            break;
-                        }
+                        RemoveProjectile(projectile);
+                        return 0;
                     }
 
-                    if (hasCollided)
-                    {
-                        if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
-                        {
-                            if (projectile.Owner != null)
-                            {
-                                GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, projectile.BoundingBox);
-                            }
-                        }
+                    moveMagnitudeRemaining = 0;
+                    verticalDistRemaining = 0;
 
-                        ProjectileGroups[i].Projectiles.RemoveAt(j);
-                        continue;
+                    // If bounced, we usually break and wait for next tick
+                    break;
+                }
+                else
+                {
+                    // 4. APPLY MOVE
+                    projectile.Location = nextStepPos;
+                    moveMagnitudeRemaining -= currentStepSize;
+                    verticalDistRemaining = (projectile.Gravity == 0) ? verticalDistRemaining - Math.Abs(verticalStep) : verticalDistRemaining - Math.Abs(verticalStep);
+                }
+
+                // Update Bounding Box every step
+                projectile.BoundingBox.Move(projectile.Location);
+                projectile.BoundingBox.Rotation = projectile.Direction;
+                projectile.BoundingBox.Rotate();
+            }
+
+            return 0;
+        }
+        public void RemoveProjectile(Projectile projectile)
+        {
+            if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+            {
+                if (projectile.Owner != null)
+                {
+                    GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, projectile.BoundingBox);
+                    ProjectileTrackingTick.End();
+                }
+            }
+
+            projectile.State = ObjectState.Collision; // Ensure it's marked dead
+            projectile.Duration.End();
+
+            var group = projectile.ParentGroup;
+            if (group != null)
+            {
+                group.Projectiles.Remove(projectile);
+
+                // If the group is now empty, clean up the group itself
+                if (group.Projectiles.Count == 0)
+                {
+                    this.ProjectileGroups.Remove(group);
+                }
+            }
+        }
+        public int CollisionClassifier(Projectile projectile, Vector3 newPos, Vector3 oldPos, float zDelta, Grid grid, ArenaPlayer targetPlayer = null, Wall wall = null)
+        {
+            int offsetX = 0;
+            int offsetY = 0;
+
+            int nX = (int)newPos.X; int nY = (int)newPos.Y; int nZ = (int)newPos.Z;
+            int oX = (int)oldPos.X; int oY = (int)oldPos.Y; int oZ = (int)oldPos.Z;
+
+            if (nX <= oX)
+            {
+                if (nX < oX) offsetX = -projectile.Spell.Width;
+            }
+            else
+            {
+                offsetX = projectile.Spell.Width;
+            }
+
+            if (nY <= oY)
+            {
+                if (nY < oY) offsetY = -projectile.Spell.Width;
+            }
+            else
+            {
+                offsetY = projectile.Spell.Width;
+            }
+
+            int leadingX = offsetX + nX;
+            int leadingY = offsetY + nY;
+            int leadingZ = oZ + (int)zDelta;
+
+            if (projectile.State == ObjectState.Active || projectile.State == ObjectState.Collision)
+            {
+                GridBlock block = grid.GridBlocks.GetBlockByLocation(leadingX, leadingY);
+
+                if (block.SpecialCollision == 1)
+                {
+                    projectile.hitBlock = block;
+                    return 9;
+                }
+
+                if (CollisionHeightDetection(oZ, oZ, leadingX, oY, projectile, grid, grid.GridBlocks.GetBlockByLocation(leadingX, oY)) == 0)
+                {                    
+                    var detectedBlock = grid.GridBlocks.GetBlockByLocation(oX, leadingY);
+                    if (CollisionHeightDetection(oZ, oZ, oX, leadingY, projectile, grid, detectedBlock) != 0)
+                    {
+                        if (detectedBlock != null)
+                        {
+                            projectile.hitBlock = detectedBlock;
+                        }
+                        return 3;
                     }
 
-
-                    if (Grid.TileCollides(projectile.BoundingBox))
+                    detectedBlock = grid.GridBlocks.GetBlockByLocation(leadingX, leadingY);
+                    if (CollisionHeightDetection(oZ, oZ, leadingX, leadingY, projectile, grid, grid.GridBlocks.GetBlockByLocation(leadingX, leadingY)) != 0)
                     {
-                        if (projectile.Spell.EffectRadius > 0)
+                        if (detectedBlock != null)
                         {
-                            GridBlock block = Grid.GridBlocks.GetBlockByLocation(projectile.BoundingBox.Origin.X, projectile.BoundingBox.Origin.Y);
-
-                            if (block != null)
-                            {
-                                DoAreaDamage(null, projectile, block.ContainerBox);
-                            }
+                            projectile.hitBlock = detectedBlock;
                         }
+                        return 10;
+                    }
 
-                        ProjectileGroups[i].Projectiles.RemoveAt(j);
-                        continue;
+                    detectedBlock = grid.GridBlocks.GetBlockByLocation(leadingX, leadingY);
+
+                    int FloorCeilingCollision = CollisionHeightDetection(leadingZ, oZ, leadingX, leadingY, projectile, grid, grid.GridBlocks.GetBlockByLocation(leadingX, leadingY));
+
+                    if (FloorCeilingCollision == 1)
+                    {
+                        if (detectedBlock != null)
+                        {
+                            projectile.hitBlock = detectedBlock;
+                        }
+                        return 6;
+                    }
+                    if (FloorCeilingCollision == 2)
+                    {
+                        if (detectedBlock != null)
+                        {
+                            projectile.hitBlock = detectedBlock;
+                        }
+                        return 7;
                     }
 
                     for (Int32 k = ArenaPlayers.Count - 1; k >= 0; k--)
                     {
                         ArenaPlayer arenaPlayer = ArenaPlayers[k];
-                        if (arenaPlayer == null) continue;
+
+                        if (arenaPlayer == null || arenaPlayer.StatusFlags == ArenaPlayer.StatusFlag.Dead) continue;
 
                         if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) ||
                             (!arenaPlayer.IsAlive && projectile.Spell.Friendly != SpellFriendlyType.FriendlyDead) ||
-                            ProjectileGroups[i].Owner == arenaPlayer ||
+                            projectile.Owner == arenaPlayer ||
                             !arenaPlayer.BoundingBox.Collides(projectile.BoundingBox))
                             continue;
 
-                        if ((arenaPlayer.ActiveTeam != ProjectileGroups[i].Team || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.FriendlyFire)) || arenaPlayer.ActiveTeam == Team.Neutral)
+                        if (projectile.Owner != arenaPlayer)
                         {
-                            if (ProjectileGroups[i].Projectiles[j].Spell.DamageByDistanceTraveled)
-                            {
-                                SpellDamage spellDamage = new SpellDamage(ProjectileGroups[i].Projectiles[j].Spell);
-
-                                Single bonus = (((ProjectileGroups[i].Projectiles[j].DistanceTicks.Ticks*2f)*0.01f) + 1f);
-
-                                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
-                                {
-                                    Network.SendTo(this, GamePacket.Outgoing.System.DirectTextMessage(null, String.Format("[DBDT Player Damage] Base: {0}, After: {1}, Bonus: {2}%, {3} Ticks", spellDamage.Damage, spellDamage.Damage * bonus, (bonus - 1) * 100, ProjectileGroups[i].Projectiles[j].DistanceTicks.Ticks)), Network.SendToType.Arena);
-                                }
-
-                                spellDamage.Damage = (Int16)(spellDamage.Damage * bonus);
-
-								DoPlayerDamage(arenaPlayer, ProjectileGroups[i].Owner, ProjectileGroups[i].Projectiles[j].Spell, spellDamage, true);
-                            }
-                            else
-                            {
-                                if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.FriendlyFire) && (ProjectileGroups[i].Owner.ActiveTeam == arenaPlayer.ActiveTeam && arenaPlayer.ActiveTeam != Team.Neutral))
-                                {
-                                    SpellDamage spellDamage = new SpellDamage(ProjectileGroups[i].Projectiles[j].Spell);
-
-                                    spellDamage.Damage = (Int16)(spellDamage.Damage * 0.50f);
-                                    spellDamage.Power = (Int16)(spellDamage.Power * 0.50f);
-
-                                    DoPlayerDamage(arenaPlayer, ProjectileGroups[i].Owner, ProjectileGroups[i].Projectiles[j].Spell, spellDamage, true);
-                                    DoPlayerDamage(ProjectileGroups[i].Owner, ProjectileGroups[i].Owner, ProjectileGroups[i].Projectiles[j].Spell, spellDamage, false);
-                                }
-                                else
-                                {
-									DoPlayerDamage(arenaPlayer, ProjectileGroups[i].Owner, ProjectileGroups[i].Projectiles[j].Spell, null, true);
-                                }
-                            }
-
-                            DoPlayerEffect(arenaPlayer, ProjectileGroups[i].Owner, ProjectileGroups[i].Projectiles[j].Spell, EffectType.Death);
+                            projectile.hitPlayer = arenaPlayer;
+                            return 5;
                         }
 
-                        if (projectile.Spell.EffectRadius > 0)
+                        if (projectile.BounceCount > 0)
                         {
-                            DoAreaDamage(arenaPlayer, projectile, arenaPlayer.BoundingBox);
+                            projectile.hitPlayer = projectile.Owner;
+                            return 5;
                         }
-
-                        hasCollided = true;
-                        break;
                     }
 
-                    if (hasCollided)
+                    // Skipping the SpellMissSound and audio since this is the server
+
+                    if (WallCollisionFlag == false || Walls.Count <= 0)
                     {
-                        if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        return 0;
+                    }
+                    else
+                    {
+                        for (Int32 w = Walls.Count - 1; w >= 0; w--)
                         {
-                            if (projectile.Owner != null)
+                            if (Walls[w].BoundingBox.Collides(projectile.BoundingBox))
                             {
-                                GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, projectile.BoundingBox);
+                                Program.ServerForm.MainLog.WriteMessage($"Wall collides [CollisionClassifier]- WallId: {Walls[w].ObjectId}, Owner: {Walls[w].Owner.ActiveCharacter.Name}", Color.Red);
+                                CollidedWall = Walls[w];
+                                break;
                             }
+
                         }
 
-                        ProjectileGroups[i].Projectiles.RemoveAt(j);
+                        projectile.hitWall = CollidedWall;
+                        WallCollisionFlag = true;
+                        return 8;
+                    }
+                
+                }
+
+                projectile.hitBlock = block;
+                return 2;
+            }
+            
+            return 0;
+        }
+        public int CollisionHeightDetection(int newZ, int oldZ, int x, int y, Projectile projectile, Grid grid, GridBlock block)
+        {
+            if (oldZ >= grid.GetCeilingHeight(x, y, 0, grid))
+            {
+                if (oldZ < block.CeilingZ - projectile.Spell.MaxStep)
+                {
+                    if (newZ < block.CeilingZ) return 2;
+                    else return 1;
+                }
+                
+                if (projectile.Spell.Tall + oldZ > block.HighBoxZ) return 2;
+                
+                if (projectile.Spell.Tall > block.HighBoxZ - block.CeilingZ) return 1;
+            }
+            else
+            {                
+                if (newZ >= block.CeilingZ) return 1;
+                
+                if (oldZ < grid.GetFloorHeight(x, y, -1000, grid) - projectile.Spell.MaxStep) return 1;
+                
+                if (oldZ + projectile.Spell.Tall > grid.GetCeilingHeight(x, y, 0, grid)) return 2;
+               
+                if (projectile.Spell.Tall > grid.GetCeilingHeight(x, y, 0, grid) - grid.GetFloorHeight(x, y, -1000, grid)) return 1;
+            }
+
+            return 0;
+        }
+        public bool UpdateProjectileState(Projectile projectile, int collisionType, Vector3 testPos, Grid grid)
+        {
+            // 1. Priority: Bouncing
+            // If the spell can bounce, we handle that first and exit. The projectile remains alive.
+            if (projectile.Bounce > 0 && HandleBounce(projectile, collisionType, testPos, grid) != 0)
+            {
+                if (projectile.MaxBounces != 0 && projectile.BounceCount > projectile.MaxBounces)
+                    projectile.Bounce = 0;
+
+                return true;
+            }
+
+            bool isTerminal = (collisionType != 0 && projectile.Bounce == 0) ||
+                projectile.HitCount >= projectile.MaxTargets ||
+                projectile.State == ObjectState.Collision;
+
+            if (isTerminal)
+            {                
+                if (collisionType == 9)
+                {
+                    RemoveProjectile(projectile);
+                    return true;
+                }
+
+                projectile.State = ObjectState.Collision;
+                
+                OrientedBoundingBox hitBox = null;
+
+                if (projectile.hitBlock != null) hitBox = projectile.hitBlock.ContainerBox;
+                else if (projectile.hitWall != null) hitBox = projectile.hitWall.BoundingBox;
+                //else if (projectile.hitThin != null) hitBox = projectile.hitThin.BoundingBox;
+
+                HandleImpactPayload(projectile, collisionType, hitBox, grid);
+
+                if (projectile.Spell.DeathBounce != 0)
+                {
+                    projectile.Bounce = 2;
+                    projectile.Gravity = 2;
+                    projectile.Duration.End();
+                    HandleBounce(projectile, collisionType, testPos, grid);
+                    return true;
+                }
+
+                RemoveProjectile(projectile);
+                return true;
+            }
+
+            if (projectile.MaxTargets != 0 && projectile.HitCount >= projectile.MaxTargets)
+            {
+                projectile.State = ObjectState.Collision;
+                projectile.MaxTargets = 0;
+            }
+            else
+            {
+                projectile.HitCount++;
+            }
+
+            return false;
+        }
+        private void HandleImpactPayload(Projectile p, int collisionType, OrientedBoundingBox hitBox, Grid grid)
+        {
+            // Area Damage
+            if (p.Spell.EffectRadius > 0)
+            {
+                DoAreaDamage(p.Owner, p, hitBox);
+            }
+
+            // Secondary Spell Trigger (rand() % 100 logic from ASM)
+            if (p.Spell.DeathSpellEffect != 0 && new Random().Next(100) < p.Spell.DeathEffectChance)
+            {
+                //DoSpellDeathEffect(p.Owner, hitBox, EffectType.Death, grid);
+            }
+
+            // Specific logic for Case 5 (Players)
+            if (collisionType == 5 && p.hitPlayer != null)
+            {
+                if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.FriendlyFire) && (p.Owner.ActiveTeam == p.hitPlayer.ActiveTeam && p.hitPlayer.ActiveTeam != Team.Neutral))
+                {
+                    SpellDamage spellDamage = new SpellDamage(p.Spell);
+
+                    spellDamage.Damage = (Int16)(spellDamage.Damage * 0.50f);
+                    spellDamage.Power = (Int16)(spellDamage.Power * 0.50f);
+
+                    DoPlayerDamage(p.hitPlayer, p.Owner, p.Spell, spellDamage, true);
+                    DoPlayerDamage(p.Owner, p.Owner, p.Spell, spellDamage, false);
+                }
+                else
+                {
+                    DoPlayerDamage(p.hitPlayer, p.Owner, p.Spell, null, true);
+                }
+
+                DoPlayerEffect(p.hitPlayer, p.Owner, p.Spell, EffectType.Death);
+
+                if (p.Spell.EffectRadius > 0)
+                {
+                    DoAreaDamage(p.hitPlayer, p, p.BoundingBox);
+                }
+            }
+
+            // Specific logic for Case 8 (Shields/Walls)
+            if (collisionType == 8 && p.hitWall != null && p.Owner != p.hitWall.Owner)
+            {
+                SpellDamage damage = new SpellDamage(p.Spell);
+                Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - Damage: {damage}, WallId: {p.hitWall.ObjectId}", Color.Red);
+                DoWallDamage(p.Owner, p.hitWall, p.Spell, damage);
+            }
+        }
+        public int HandleBounce(Projectile projectile, int collisionType, Vector3 testPos, Grid grid)
+        {
+            // Safety check: ensure projectile and vector aren't null
+            if (projectile == null || testPos == null)
+            {
+                return 0; 
+            }
+
+            //if (projectile.hitBlock == null && projectile.hitThin == null && (collisionType == 2 || collisionType == 3 || collisionType == 6 || collisionType == 7 || collisionType == 10))
+            if (projectile.hitBlock == null && (collisionType == 2 || collisionType == 3 || collisionType == 6 || collisionType == 7 || collisionType == 10))
+            {
+                return 0;
+            }
+            else if (projectile.hitWall == null && collisionType == 8)
+            {
+                return 0;
+            }
+            else if (collisionType == 5)
+            {
+                return 0;
+            }
+
+
+            Vector3 normal;
+            Vector3 vIn;
+            Vector3 vOut;
+            Vector3 impactPoint = new Vector3(0);
+
+            if (collisionType == 9 || collisionType == 5)
+            {
+                return 0;
+            }
+
+            if (collisionType != 6 && collisionType != 7 && collisionType != 8)
+            {
+                if (projectile.hitBlock != null)
+                    impactPoint = projectile.hitBlock.MidBox.LineImpactVector(projectile.Location, testPos);
+            }
+
+            if (collisionType == 6)
+            {
+                int bouncePlane = 0;
+
+                impactPoint = projectile.BoundingBox.Location;
+
+                if ((projectile.Spell.Id == 24 || projectile.Spell.Id == 16) && collisionType == 6)
+                {
+                    int floorHeight = grid.GetFloorHeight((int)projectile.Location.X, (int)projectile.Location.Y, (int)projectile.Location.Z, grid);
+                    int lowBoxZ = projectile.hitBlock.LowBoxZ;
+                    bouncePlane = Math.Max(floorHeight, lowBoxZ);
+                    impactPoint.Z = bouncePlane + 5.0f;
+
+                    projectile.VerticalVelocity = 0;
+
+                    projectile.Location = impactPoint;
+
+                    projectile.BoundingBox.Move(projectile.Location);
+
+                    return 1;
+                }
+                else
+                {
+                    bouncePlane = Math.Max(projectile.Owner.OwnerArena.Grid.GetFloorHeight((int)impactPoint.X, (int)impactPoint.Y, (int)impactPoint.Z, projectile.Owner.OwnerArena.Grid), projectile.hitBlock.LowBoxZ) + projectile.Spell.Elevation;
+                    impactPoint.Z = bouncePlane + 5.0f;
+                }
+
+                int slopeId = grid.SlopeProperty[projectile.hitBlock.BlockType];
+
+                float nx = 0, ny = 0, nz = 1.0f;
+
+                if (slopeId > 0)
+                {
+                    // Extract X and Y from your SlopeNormalTable
+                    // The index is usually slopeId * 2 (for X and Y)
+                    nx = SlopeNormalTable[slopeId * 2] / 64.0f;
+                    ny = SlopeNormalTable[slopeId * 2 + 1] / 64.0f;
+
+                    // Z is calculated so the normal has a length of 1
+                    // For these slopes, Z is usually the dominant component
+                    nz = (float)Math.Sqrt(1.0f - (nx * nx + ny * ny));
+
+                    normal = new Vector3(nx, ny, nz);
+
+                    if (projectile.VerticalVelocity < 10) projectile.VerticalVelocity = 20;
+                }
+                else
+                {
+                    normal = new Vector3(0, 0, 1);
+
+                    projectile.VerticalVelocity = Math.Abs(projectile.VerticalVelocity);
+                }
+            }
+            else if (collisionType == 7)
+            {
+                // The client uses the LOWEST non-zero value of the ceiling values as the real ceiling
+                float trueCeiling = projectile.hitBlock.MidBoxTopZ; // Start with standard ceiling
+                if (projectile.hitBlock.HighBoxZ > 0 && (trueCeiling == 0 || projectile.hitBlock.HighBoxZ < trueCeiling))
+                {
+                    trueCeiling = projectile.hitBlock.HighBoxZ;
+                }
+
+                impactPoint.X = projectile.Location.X;
+                impactPoint.Y = projectile.Location.Y;
+                impactPoint.Z = trueCeiling - 5.0f;
+
+                normal = new Vector3(0, 0, -1); // Downward
+
+            }
+            else if (collisionType == 8 || collisionType == 10)
+            {
+                Vector3 toPlayer = Vector3.Normalize(projectile.Location - impactPoint);
+
+                normal = toPlayer; // A corner normal is effectively the inverse of the incoming direction
+            }
+            else
+            {
+                if (projectile.Location.Z < projectile.hitBlock.MidBoxBottomZ)
+                {
+                    normal = projectile.hitBlock.LowBox.GetNormal(impactPoint);
+                }
+                else if (projectile.Location.Z > projectile.hitBlock.MidBoxTopZ)
+                {
+                    // Projectile is above the wall level -> Hit the HighBox (Ceiling/Top of Wall)
+                    // Check if we are closer to the Ceiling or the Top of the wall
+                    normal = projectile.hitBlock.HighBox.GetNormal(impactPoint);
+                }
+                else
+                {
+                    // Projectile is level with the wall -> This is a standard Wall hit
+                    normal = projectile.hitBlock.MidBox.GetNormal(impactPoint);
+
+                    // CRITICAL: Force the normal to be horizontal for wall hits
+                    // This prevents "snagging" on the top/bottom edges of the wall
+                    normal.Z = 0;
+                    if (normal.Length() > 0) normal = Vector3.Normalize(normal);
+
+                    Vector3 velocity = new Vector3(projectile.VelocityX, projectile.VelocityY, 0);
+                    if (Vector3.Dot(velocity, normal) > 0)
+                    {
+                        normal = -normal;
+                    }
+                }
+            }
+
+            if (Math.Abs(normal.X) > 0.5f)
+            {
+                // Snap X to the nearest 64-unit boundary
+                impactPoint.X = (float)Math.Round(impactPoint.X / 64.0f) * 64.0f;
+            }
+            // If Normal is Y (1 or -1), we hit a Horizontal wall (X-axis face)
+            else if (Math.Abs(normal.Y) > 0.5f)
+            {
+                // Snap Y to the nearest 64-unit boundary
+                impactPoint.Y = (float)Math.Round(impactPoint.Y / 64.0f) * 64.0f;
+            }
+
+            if (Math.Abs(normal.Z) < 0.1f)
+            {
+                // Flip horizontal direction
+                vIn = new Vector3(projectile.VelocityX, projectile.VelocityY, projectile.VerticalVelocity);
+                vOut = vIn - 2 * Vector3.Dot(vIn, normal) * normal;
+
+                projectile.VelocityX = vOut.X;
+                projectile.VelocityY = vOut.Y;
+                projectile.VerticalVelocity = vOut.Z;
+                projectile.Velocity = (float)Math.Sqrt(vOut.X * vOut.X + vOut.Y * vOut.Y);
+                
+                ushort rawDirection = MathHelper.URadiansToDirection(projectile.Direction);
+
+                rawDirection = MathHelper.VectorToDirection(vOut);
+                //rawDirection = ApplyClientReflection(rawDirection, collisionType);
+
+                projectile.Direction = MathHelper.DirectionToRadians(rawDirection);
+            }
+            else
+            {
+                if (collisionType == 6 || collisionType == 7)
+                {
+                    vIn = new Vector3(projectile.VelocityX, projectile.VelocityY, projectile.VerticalVelocity);
+                    vOut = vIn - 2 * Vector3.Dot(vIn, normal) * normal;
+
+                    projectile.VelocityX = vOut.X;
+                    projectile.VelocityY = vOut.Y;
+                    projectile.Velocity = (float)Math.Sqrt(vOut.X * vOut.X + vOut.Y * vOut.Y);
+
+                    if (collisionType == 6)
+                    {
+                        projectile.VerticalVelocity = Math.Abs(vOut.Z);
+                    }
+                    else
+                    {
+                        projectile.VerticalVelocity = -Math.Abs(vOut.Z);
+                    }
+
+                    ushort rawDirection = MathHelper.URadiansToDirection(projectile.Direction);
+
+                    rawDirection = MathHelper.VectorToDirection(vOut);
+                    //rawDirection = ApplyClientReflection(rawDirection, collisionType);
+
+                    projectile.Direction = MathHelper.DirectionToRadians(rawDirection);
+                }
+                else if (collisionType == 8 || collisionType == 10)
+                {
+                    vIn = new Vector3(projectile.VelocityX, projectile.VelocityY, projectile.VerticalVelocity);
+                    vOut = vIn - 2 * Vector3.Dot(vIn, normal) * normal;
+
+                    projectile.VelocityX = vOut.X;
+                    projectile.VelocityY = vOut.Y;
+                    projectile.VerticalVelocity = vOut.Z;
+                    projectile.Velocity = (float)Math.Sqrt(vOut.X * vOut.X + vOut.Y * vOut.Y);
+
+                    ushort rawDirection = MathHelper.URadiansToDirection(projectile.Direction);
+
+                    rawDirection = (ushort)((rawDirection + 2048) & 0x0FF);
+
+                    projectile.Direction = MathHelper.DirectionToRadians(rawDirection);
+                }
+                else
+                {
+                    vIn = new Vector3(projectile.VelocityX, projectile.VelocityY, projectile.VerticalVelocity);
+                    vOut = vIn - 2 * Vector3.Dot(vIn, normal) * normal;
+
+                    projectile.VelocityX = vOut.X;
+                    projectile.VelocityY = vOut.Y;
+                    projectile.VerticalVelocity = vOut.Z;
+                    projectile.Velocity = (float)Math.Sqrt(vOut.X * vOut.X + vOut.Y * vOut.Y);
+
+                    ushort rawDirection = MathHelper.URadiansToDirection(projectile.Direction);
+
+                    rawDirection = MathHelper.VectorToDirection(vOut);
+                    //rawDirection = ApplyClientReflection(rawDirection, collisionType);
+
+                    projectile.Direction = MathHelper.DirectionToRadians(rawDirection);
+                }
+            }
+
+            if (projectile.Spell.Id == 3 || projectile.Spell.Id == 4)
+            {
+                if (collisionType == 6)
+                {
+                    projectile.Velocity *= 0.60f;
+                    projectile.VerticalVelocity = Math.Abs(projectile.VerticalVelocity) * 0.60f;
+                    projectile.Location.Z = Grid.GetFloorHeight((int)projectile.Location.X, (int)projectile.Location.Y, (int)projectile.Location.Z, projectile.Owner.OwnerArena.Grid);
+                }
+                else if (collisionType == 7)
+                {
+                    projectile.VerticalVelocity = -Math.Abs(projectile.VerticalVelocity) * 0.60f;
+                    projectile.Velocity *= 0.60f;
+                }
+            }
+            
+            projectile.Location = impactPoint;
+
+            float nudgeAmount = 8.0f;
+            projectile.Location += (normal * nudgeAmount);
+
+            projectile.BoundingBox.Move(projectile.Location);
+
+            projectile.BounceCount++;
+
+            return 1;
+        }
+        public int CheckInitialMapCollision(Projectile projectile, Grid grid)
+        {
+            Vector3 testPos = projectile.Location;
+
+            if (float.IsNaN(testPos.X) || float.IsNaN(testPos.Y) || float.IsNaN(testPos.Z))
+                return 0;
+
+            // 1. Hard Map Boundaries (Matches ASM 0x2000 check)
+            if (testPos.X < 0 || testPos.X > 8192 ||
+                testPos.Y < 0 || testPos.Y > 8192 ||
+                testPos.Z < -768 || testPos.Z > 768)
+            {
+                // In the original game, out-of-bounds projectiles are 
+                // deleted silently without triggering explosions.
+                return 0;
+            }
+
+            // 2. Ground Collision Check
+            // We add a small offset (0.1f) to prevent "Ground Clipping" on cast
+            float floorHeight = grid.GetFloorHeight((int)testPos.X, (int)testPos.Y, (int)testPos.Z, grid);
+
+            if (testPos.Z < (floorHeight - 0.1f))
+            {
+                // If it starts underground, we treat it as an impact (collisionType 1)
+                // This ensures things like 'Earthquake' or 'Landmines' can trigger correctly.
+                return 0;
+            }
+
+            return 1; // Position is valid, start the movement loop
+        }
+        public void ProcessProjectiles(float FrameTime)
+        {
+            float adjustedTickDelta = CurrentTickDelta + (CurrentTickDelta * 0.085f);
+
+            WallCollisionFlag = false;
+
+            for (int i = ProjectileGroups.Count - 1; i >= 0; i--)
+            {
+                for (int j = ProjectileGroups[i].Projectiles.Count - 1; j >= 0; j--)
+                {
+                    Projectile projectile = ProjectileGroups[i].Projectiles[j];
+
+                    Grid grid = projectile.Owner.OwnerArena.Grid;
+
+                    if (projectile.State == ObjectState.Active)
+                    {
+                        UpdateProjectileMovement(projectile, grid, FrameTime);
+
+                        if (projectile.Duration.HasElapsed)
+                        {
+                            RemoveProjectile(projectile);
+                            ProjectileTrackingTick.End();
+                            continue;
+                        }
+                    }
+                    else if (projectile.State == ObjectState.Collision)
+                    {
+                        RemoveProjectile(projectile);
+                        ProjectileTrackingTick.End();
                         continue;
                     }
+
+                    Boolean doProjectileTracking = ProjectileTrackingTick.HasElapsed;
 
                     if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking) && doProjectileTracking)
                     {
@@ -1094,114 +1632,9 @@ namespace SpellServer
                             GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, projectile.BoundingBox);
                         }
                     }
-
-                    foreach (Thin thin in Grid.Thins)
-                    {
-                        if (thin.BoundingBox == null) continue;
-
-                        if (thin.BoundingBox.Collides(projectile.BoundingBox))
-                        {
-                            if (thin.TriggerId > 0)
-                            {
-                                Trigger trigger = Grid.Triggers[thin.TriggerId];
-
-                                if (trigger != null)
-                                {
-                                    if (!trigger.Enabled) continue;
-
-                                    if (trigger.TriggerType == TriggerType.Door && trigger.CurrentState == TriggerState.Active) continue;
-                                }
-                            }
-                            else
-                            {
-                                if (!thin.BlockProjectiles) continue;
-                            }
-
-                            if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
-                            {
-                                if (projectile.Owner != null)
-                                {
-                                    GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, thin.BoundingBox);
-                                }
-                            }
-
-                            if (projectile.Spell.EffectRadius > 0)
-                            {
-                                DoAreaDamage(null, projectile, thin.BoundingBox);
-                            }
-
-                            hasCollided = true;
-                            break;
-                        }
-                    }
-
-                    if (hasCollided)
-                    {
-                        if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
-                        {
-                            if (projectile.Owner != null)
-                            {
-                                GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, projectile.BoundingBox);
-                            }
-                        }
-
-                        ProjectileGroups[i].Projectiles.RemoveAt(j);
-                        continue;
-                    }
-
-                    GridBlock impactBlock = Grid.GridBlocks.GetBlockByLocation(projectile.BoundingBox.Origin.X, projectile.BoundingBox.Origin.Y);
-
-                    if (Grid.Collides(projectile.BoundingBox))
-                    {
-                        if (projectile.BouncesRemaining > 0)
-                        {
-                            Program.ServerForm.MainLog.WriteMessage($"[Grid.Collides] BouncesReamaing: {projectile.BouncesRemaining.ToString()}", Color.Red);
-
-                            // Approximate normal from movement direction (simple bounce)
-                            // Reverse direction (180° turn)
-                            projectile.Direction = (ushort)((projectile.Direction + 32768 + CryptoRandom.GetInt32(-2000, 2000)) % 65536);
-
-                            projectile.BouncesRemaining--;
-
-                            // Small offset
-                            Vector3 moveDir = new Vector3(
-                                (float)Math.Cos(projectile.Direction * (2f * Math.PI / 65536f)),
-                                (float)Math.Sin(projectile.Direction * (2f * Math.PI / 65536f)),
-                                0f);
-                            projectile.Location += moveDir * 10f;
-                        }
-                        else
-                        {
-                            hasCollided = true;
-                        }
-                    }
-
-                    if (projectile.Duration.HasElapsed || hasCollided)
-                    {
-                        if (projectile.Spell.EffectRadius > 0)
-                        {
-                            if (impactBlock != null)
-                            {
-                                DoAreaDamage(null, projectile, impactBlock.ContainerBox);
-                            }
-                        }
-
-                        if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
-                        {
-                            if (projectile.Owner != null)
-                            {
-                                GamePacket.Outgoing.System.DrawBoundingBox(projectile.Owner, projectile.BoundingBox);
-                            }
-                        }
-
-                        ProjectileGroups[i].Projectiles.RemoveAt(j);
-                    }
                 }
-
-                if (ProjectileGroups[i].Projectiles.Count == 0) ProjectileGroups.RemoveAt(i);
             }
-        }
-
+        }                        
         public void ProcessWalls(bool UDP = false)
         {
             for (Int32 i = Walls.Count - 1; i >= 0; i--)

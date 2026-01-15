@@ -2,6 +2,7 @@
 using Helper.Math;
 using SharpDX;
 using System;
+using System.Linq;
 using static Mysqlx.Crud.Order.Types;
 
 namespace SpellServer
@@ -49,6 +50,8 @@ namespace SpellServer
                     {
                         Projectiles.Add(new Projectile(location, spell, direction, angle, owner));
 
+                        Projectiles.Last().ParentGroup = this;
+
                         location.X += -spell.ProjectileSpacing * (Single)Math.Sin(direction);
                         location.Y += spell.ProjectileSpacing * (Single)Math.Cos(direction);
                     }
@@ -63,11 +66,15 @@ namespace SpellServer
                     yOffset = (spell.ProjectileSpacing * 0.5f) * (Single)Math.Cos(direction + MathHelper.RightAngleRadians);
                     tLocation = new Vector3(location.X + xOffset, location.Y + yOffset, location.Z);
                     Projectiles.Add(new Projectile(tLocation, spell, direction, angle, owner));
+                    
+                    Projectiles.Last().ParentGroup = this;
 
                     xOffset = -(spell.ProjectileSpacing * 0.5f) * (Single)Math.Sin(direction - MathHelper.RightAngleRadians);
                     yOffset = (spell.ProjectileSpacing * 0.5f) * (Single)Math.Cos(direction - MathHelper.RightAngleRadians);
                     tLocation = new Vector3(location.X + xOffset, location.Y + yOffset, location.Z);
                     Projectiles.Add(new Projectile(tLocation, spell, direction, angle, owner));
+
+                    Projectiles.Last().ParentGroup = this;
 
                     break;
                 }
@@ -82,13 +89,19 @@ namespace SpellServer
                     tLocation = new Vector3(location.X + xOffset, location.Y + yOffset, location.Z - zOffset);
                     Projectiles.Add(new Projectile(tLocation, spell, direction, angle, owner));
 
+                    Projectiles.Last().ParentGroup = this;
+
                     xOffset = -(spell.ProjectileSpacing * 0.5f) * (Single)Math.Sin(direction - MathHelper.RightAngleRadians);
                     yOffset = (spell.ProjectileSpacing * 0.5f) * (Single)Math.Cos(direction - MathHelper.RightAngleRadians);
                     tLocation = new Vector3(location.X + xOffset, location.Y + yOffset, location.Z - zOffset);
                     Projectiles.Add(new Projectile(tLocation, spell, direction, angle, owner));
 
+                    Projectiles.Last().ParentGroup = this;
+
                     tLocation = new Vector3(location.X, location.Y, location.Z);
                     Projectiles.Add(new Projectile(tLocation, spell, direction, angle, owner));
+
+                    Projectiles.Last().ParentGroup = this;
 
                     break;
                 }
