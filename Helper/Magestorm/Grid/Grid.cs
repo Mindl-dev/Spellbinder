@@ -63,7 +63,21 @@ namespace Helper
 
         public byte[][,] SubPixelLibrary; // byte_7fbfc0 [StampIndex][Y, X]
 
-        public ListCollection<Int16> Links = new ListCollection<Int16>();                
+        public ListCollection<Int16> Links = new ListCollection<Int16>();
+
+        public HashSet<long> HollowZones = new HashSet<long>();
+
+        public static readonly HashSet<long> HollowZonesGrid0 = new HashSet<long> { Pack(27, 63), Pack(27, 64), Pack(27, 65), Pack(28, 63), Pack(28, 64), Pack(28, 65), Pack(29, 63), Pack(29, 64), Pack(29, 65), Pack(60, 36), Pack(60, 37), Pack(60, 38), Pack(61, 36), Pack(61, 37), Pack(61, 38), Pack(62, 36), Pack(62, 37), Pack(62, 38), Pack(93, 63), Pack(93, 64), Pack(93, 65), Pack(94, 63), Pack(94, 64), Pack(94, 65), Pack(95, 63), Pack(95, 64), Pack(95, 65), Pack(1, 2), Pack(1, 3), Pack(1, 4), Pack(2, 2), Pack(2, 3), Pack(2, 4), Pack(3, 2), Pack(3, 3), Pack(3, 4), Pack(32, 48), Pack(32, 49), Pack(32, 50), Pack(33, 48), Pack(33, 49), Pack(33, 50), Pack(34, 48), Pack(34, 49), Pack(34, 50), Pack(43, 63), Pack(43, 64), Pack(43, 65), Pack(44, 63), Pack(44, 64), Pack(44, 65), Pack(45, 63), Pack(45, 64), Pack(45, 65), Pack(47, 41), Pack(47, 42), Pack(47, 43), Pack(48, 41), Pack(48, 42), Pack(48, 43), Pack(48, 79), Pack(48, 80), Pack(48, 81), Pack(49, 41), Pack(49, 42), Pack(49, 43), Pack(49, 79), Pack(49, 80), Pack(49, 81), Pack(50, 79), Pack(50, 80), Pack(50, 81), Pack(56, 54), Pack(56, 55), Pack(56, 56), Pack(57, 54), Pack(57, 55), Pack(57, 56), Pack(58, 54), Pack(58, 55), Pack(58, 56), Pack(74, 79), Pack(74, 80), Pack(74, 81), Pack(75, 47), Pack(75, 48), Pack(75, 49), Pack(75, 79), Pack(75, 80), Pack(75, 81), Pack(76, 47), Pack(76, 48), Pack(76, 49), Pack(76, 79), Pack(76, 80), Pack(76, 81), Pack(77, 47), Pack(77, 48), Pack(77, 49), Pack(79, 63), Pack(79, 64), Pack(79, 65), Pack(80, 63), Pack(80, 64), Pack(80, 65), Pack(81, 63), Pack(81, 64), Pack(81, 65), Pack(91, 48), Pack(91, 49), Pack(91, 50), Pack(92, 48), Pack(92, 49), Pack(92, 50), Pack(93, 48), Pack(93, 49), Pack(93, 50) };
+        
+        public static readonly HashSet<long> HollowZonesGrid1 = new HashSet<long> { Pack(14, 52), Pack(14, 53), Pack(14, 54), Pack(15, 52), Pack(15, 53), Pack(15, 54), Pack(16, 52), Pack(16, 53), Pack(16, 54), Pack(64, 107), Pack(64, 108), Pack(64, 109), Pack(65, 107), Pack(65, 108), Pack(65, 109), Pack(66, 107), Pack(66, 108), Pack(66, 109), Pack(112, 52), Pack(112, 53), Pack(112, 54), Pack(113, 52), Pack(113, 53), Pack(113, 54), Pack(114, 52), Pack(114, 53), Pack(114, 54), Pack(1, 2), Pack(1, 3), Pack(1, 4), Pack(2, 2), Pack(2, 3), Pack(2, 4), Pack(3, 2), Pack(3, 3), Pack(3, 4), Pack(26, 53), Pack(26, 54), Pack(26, 55), Pack(27, 53), Pack(27, 54), Pack(27, 55), Pack(28, 53), Pack(28, 54), Pack(28, 55), Pack(50, 41), Pack(50, 42), Pack(50, 43), Pack(50, 65), Pack(50, 66), Pack(50, 67), Pack(50, 80), Pack(50, 81), Pack(50, 82), Pack(51, 41), Pack(51, 42), Pack(51, 43), Pack(51, 65), Pack(51, 66), Pack(51, 67), Pack(51, 80), Pack(51, 81), Pack(51, 82), Pack(52, 41), Pack(52, 42), Pack(52, 43), Pack(52, 65), Pack(52, 66), Pack(52, 67), Pack(52, 80), Pack(52, 81), Pack(52, 82), Pack(64, 95), Pack(64, 96), Pack(64, 97), Pack(65, 95), Pack(65, 96), Pack(65, 97), Pack(66, 95), Pack(66, 96), Pack(66, 97), Pack(78, 41), Pack(78, 42), Pack(78, 43), Pack(78, 65), Pack(78, 66), Pack(78, 67), Pack(78, 80), Pack(78, 81), Pack(78, 82), Pack(79, 41), Pack(79, 42), Pack(79, 43), Pack(79, 65), Pack(79, 66), Pack(79, 67), Pack(79, 80), Pack(79, 81), Pack(79, 82), Pack(80, 41), Pack(80, 42), Pack(80, 43), Pack(80, 65), Pack(80, 66), Pack(80, 67), Pack(80, 80), Pack(80, 81), Pack(80, 82), Pack(100, 53), Pack(100, 54), Pack(100, 55), Pack(101, 53), Pack(101, 54), Pack(101, 55), Pack(102, 53), Pack(102, 54), Pack(102, 55) };
+        
+        public static readonly HashSet<long> HollowZonesGrid2 = new HashSet<long> { Pack(10, 72), Pack(10, 73), Pack(10, 74), Pack(11, 72), Pack(11, 73), Pack(11, 74), Pack(12, 72), Pack(12, 73), Pack(12, 74), Pack(63, 15), Pack(63, 16), Pack(63, 17), Pack(64, 15), Pack(64, 16), Pack(64, 17), Pack(65, 15), Pack(65, 16), Pack(65, 17), Pack(119, 75), Pack(119, 76), Pack(119, 77), Pack(120, 75), Pack(120, 76), Pack(120, 77), Pack(121, 75), Pack(121, 76), Pack(121, 77), Pack(1, 2), Pack(1, 3), Pack(1, 4), Pack(2, 2), Pack(2, 3), Pack(2, 4), Pack(3, 2), Pack(3, 3), Pack(3, 4), Pack(35, 76), Pack(35, 77), Pack(35, 78), Pack(36, 76), Pack(36, 77), Pack(36, 78), Pack(37, 76), Pack(37, 77), Pack(37, 78), Pack(44, 49), Pack(44, 50), Pack(44, 51), Pack(45, 49), Pack(45, 50), Pack(45, 51), Pack(46, 49), Pack(46, 50), Pack(46, 51), Pack(46, 98), Pack(46, 99), Pack(46, 100), Pack(47, 98), Pack(47, 99), Pack(47, 100), Pack(48, 98), Pack(48, 99), Pack(48, 100), Pack(49, 72), Pack(49, 73), Pack(49, 74), Pack(50, 72), Pack(50, 73), Pack(50, 74), Pack(51, 72), Pack(51, 73), Pack(51, 74), Pack(63, 27), Pack(63, 28), Pack(63, 29), Pack(63, 62), Pack(63, 63), Pack(63, 64), Pack(64, 27), Pack(64, 28), Pack(64, 29), Pack(64, 62), Pack(64, 63), Pack(64, 64), Pack(65, 27), Pack(65, 28), Pack(65, 29), Pack(65, 62), Pack(65, 63), Pack(65, 64), Pack(67, 48), Pack(67, 49), Pack(67, 50), Pack(68, 48), Pack(68, 49), Pack(68, 50), Pack(68, 101), Pack(68, 102), Pack(68, 103), Pack(69, 48), Pack(69, 49), Pack(69, 50), Pack(69, 101), Pack(69, 102), Pack(69, 103), Pack(70, 101), Pack(70, 102), Pack(70, 103), Pack(78, 64), Pack(78, 65), Pack(78, 66), Pack(79, 64), Pack(79, 65), Pack(79, 66), Pack(80, 64), Pack(80, 65), Pack(80, 66), Pack(82, 93), Pack(82, 94), Pack(82, 95), Pack(83, 93), Pack(83, 94), Pack(83, 95), Pack(84, 93), Pack(84, 94), Pack(84, 95), Pack(88, 52), Pack(88, 53), Pack(88, 54), Pack(89, 52), Pack(89, 53), Pack(89, 54), Pack(90, 52), Pack(90, 53), Pack(90, 54), Pack(93, 78), Pack(93, 79), Pack(93, 80), Pack(94, 78), Pack(94, 79), Pack(94, 80), Pack(95, 78), Pack(95, 79), Pack(95, 80), Pack(108, 76), Pack(108, 77), Pack(108, 78), Pack(109, 76), Pack(109, 77), Pack(109, 78), Pack(110, 76), Pack(110, 77), Pack(110, 78) };
+
+        public static readonly HashSet<long> HollowZonesGrid3 = new HashSet<long> { Pack(26, 50), Pack(26, 51), Pack(26, 52), Pack(27, 50), Pack(27, 51), Pack(27, 52), Pack(28, 50), Pack(28, 51), Pack(28, 52), Pack(57, 106), Pack(57, 107), Pack(57, 108), Pack(58, 106), Pack(58, 107), Pack(58, 108), Pack(59, 106), Pack(59, 107), Pack(59, 108), Pack(94, 57), Pack(94, 58), Pack(94, 59), Pack(95, 57), Pack(95, 58), Pack(95, 59), Pack(96, 57), Pack(96, 58), Pack(96, 59), Pack(1, 2), Pack(1, 3), Pack(1, 4), Pack(2, 2), Pack(2, 3), Pack(2, 4), Pack(3, 2), Pack(3, 3), Pack(3, 4), Pack(18, 57), Pack(18, 58), Pack(18, 59), Pack(19, 57), Pack(19, 58), Pack(19, 59), Pack(20, 57), Pack(20, 58), Pack(20, 59), Pack(26, 32), Pack(26, 33), Pack(26, 34), Pack(27, 32), Pack(27, 33), Pack(27, 34), Pack(27, 43), Pack(27, 44), Pack(27, 45), Pack(28, 32), Pack(28, 33), Pack(28, 34), Pack(28, 43), Pack(28, 44), Pack(28, 45), Pack(29, 43), Pack(29, 44), Pack(29, 45), Pack(35, 57), Pack(35, 58), Pack(35, 59), Pack(36, 57), Pack(36, 58), Pack(36, 59), Pack(37, 57), Pack(37, 58), Pack(37, 59), Pack(45, 27), Pack(45, 28), Pack(45, 29), Pack(46, 27), Pack(46, 28), Pack(46, 29), Pack(47, 27), Pack(47, 28), Pack(47, 29), Pack(49, 113), Pack(49, 114), Pack(49, 115), Pack(50, 113), Pack(50, 114), Pack(50, 115), Pack(51, 113), Pack(51, 114), Pack(51, 115), Pack(53, 39), Pack(53, 40), Pack(53, 41), Pack(54, 39), Pack(54, 40), Pack(54, 41), Pack(55, 39), Pack(55, 40), Pack(55, 41), Pack(56, 23), Pack(56, 24), Pack(56, 25), Pack(57, 23), Pack(57, 24), Pack(57, 25), Pack(57, 88), Pack(57, 89), Pack(57, 90), Pack(58, 23), Pack(58, 24), Pack(58, 25), Pack(58, 55), Pack(58, 56), Pack(58, 57), Pack(58, 88), Pack(58, 89), Pack(58, 90), Pack(58, 98), Pack(58, 99), Pack(58, 100), Pack(59, 55), Pack(59, 56), Pack(59, 57), Pack(59, 88), Pack(59, 89), Pack(59, 90), Pack(59, 98), Pack(59, 99), Pack(59, 100), Pack(60, 55), Pack(60, 56), Pack(60, 57), Pack(60, 98), Pack(60, 99), Pack(60, 100), Pack(66, 113), Pack(66, 114), Pack(66, 115), Pack(67, 40), Pack(67, 41), Pack(67, 42), Pack(67, 113), Pack(67, 114), Pack(67, 115), Pack(68, 40), Pack(68, 41), Pack(68, 42), Pack(68, 113), Pack(68, 114), Pack(68, 115), Pack(69, 40), Pack(69, 41), Pack(69, 42), Pack(72, 25), Pack(72, 26), Pack(72, 27), Pack(73, 25), Pack(73, 26), Pack(73, 27), Pack(74, 25), Pack(74, 26), Pack(74, 27), Pack(86, 64), Pack(86, 65), Pack(86, 66), Pack(87, 64), Pack(87, 65), Pack(87, 66), Pack(88, 64), Pack(88, 65), Pack(88, 66), Pack(94, 39), Pack(94, 40), Pack(94, 41), Pack(95, 39), Pack(95, 40), Pack(95, 41), Pack(95, 49), Pack(95, 50), Pack(95, 51), Pack(96, 39), Pack(96, 40), Pack(96, 41), Pack(96, 49), Pack(96, 50), Pack(96, 51), Pack(97, 49), Pack(97, 50), Pack(97, 51), Pack(103, 64), Pack(103, 65), Pack(103, 66), Pack(104, 64), Pack(104, 65), Pack(104, 66), Pack(105, 64), Pack(105, 65), Pack(105, 66) };
+        public static long Pack(int x, int y)
+        {
+            return ((long)x << 32) | (uint)y;
+        }
         public struct CollisionResult
         {
             public bool Hit;
@@ -184,6 +198,8 @@ namespace Helper
 
             _rawTerrainData = grid._rawTerrainData;
 
+            LoadHollowZones(grid.GridId);
+
         }
         public Shrine GetShrineById(Byte shrineId)
         {
@@ -226,8 +242,26 @@ namespace Helper
                 }
             }
         }
+        private void LoadHollowZones(int id)
+        {
+            HollowZones.Clear();
+            // Point to your static data definitions
+            HashSet<long> sourceData = null;
 
-		public static void LoadAllGrids(LogBox logBox)
+            switch (id)
+            {
+                case 0: sourceData = HollowZonesGrid0; break;
+                case 1: sourceData = HollowZonesGrid1; break;
+                case 2: sourceData = HollowZonesGrid2; break;
+                case 3: sourceData = HollowZonesGrid3; break;
+            }
+
+            if (sourceData != null)
+            {
+                foreach (var zone in sourceData) HollowZones.Add(zone);
+            }
+        }
+        public static void LoadAllGrids(LogBox logBox)
 		{
 			String fName = String.Format("{0}\\Arenas.dat", Directory.GetCurrentDirectory());
 			Int32 aCount = NativeMethods.GetPrivateProfileInt32("arenadefs", "numarenas", fName);

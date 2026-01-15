@@ -14,6 +14,7 @@ namespace SpellServer
         Inactive = 0,
         Active = 1,
         Collision = 3,
+        Initial = 4,
         Ghost = 8,
     }
 
@@ -75,7 +76,7 @@ namespace SpellServer
 
         public Projectile(Vector3 location, Spell spell, Single direction, Single angle, ArenaPlayer owner)
         {
-            State = ObjectState.Active;
+            State = ObjectState.Initial;
             Spell = spell;
             Location = location;
             Direction = direction;
