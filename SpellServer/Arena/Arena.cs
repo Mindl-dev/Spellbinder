@@ -236,7 +236,7 @@ namespace SpellServer
                 MaxPlayers = Grid.MaxPlayers;
                 EndState = State.Normal;
                 IsDurationLocked = false;
-                DebugFlags = ArenaSpecialFlag.ProjectileTracking;
+                DebugFlags = ArenaSpecialFlag.None;
 
                 StartTime = DateTime.UtcNow;
 
