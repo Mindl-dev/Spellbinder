@@ -74,6 +74,8 @@ namespace Helper
         public static readonly HashSet<long> HollowZonesGrid2 = new HashSet<long> { Pack(10, 72), Pack(10, 73), Pack(10, 74), Pack(11, 72), Pack(11, 73), Pack(11, 74), Pack(12, 72), Pack(12, 73), Pack(12, 74), Pack(63, 15), Pack(63, 16), Pack(63, 17), Pack(64, 15), Pack(64, 16), Pack(64, 17), Pack(65, 15), Pack(65, 16), Pack(65, 17), Pack(119, 75), Pack(119, 76), Pack(119, 77), Pack(120, 75), Pack(120, 76), Pack(120, 77), Pack(121, 75), Pack(121, 76), Pack(121, 77), Pack(1, 2), Pack(1, 3), Pack(1, 4), Pack(2, 2), Pack(2, 3), Pack(2, 4), Pack(3, 2), Pack(3, 3), Pack(3, 4), Pack(35, 76), Pack(35, 77), Pack(35, 78), Pack(36, 76), Pack(36, 77), Pack(36, 78), Pack(37, 76), Pack(37, 77), Pack(37, 78), Pack(44, 49), Pack(44, 50), Pack(44, 51), Pack(45, 49), Pack(45, 50), Pack(45, 51), Pack(46, 49), Pack(46, 50), Pack(46, 51), Pack(46, 98), Pack(46, 99), Pack(46, 100), Pack(47, 98), Pack(47, 99), Pack(47, 100), Pack(48, 98), Pack(48, 99), Pack(48, 100), Pack(49, 72), Pack(49, 73), Pack(49, 74), Pack(50, 72), Pack(50, 73), Pack(50, 74), Pack(51, 72), Pack(51, 73), Pack(51, 74), Pack(63, 27), Pack(63, 28), Pack(63, 29), Pack(63, 62), Pack(63, 63), Pack(63, 64), Pack(64, 27), Pack(64, 28), Pack(64, 29), Pack(64, 62), Pack(64, 63), Pack(64, 64), Pack(65, 27), Pack(65, 28), Pack(65, 29), Pack(65, 62), Pack(65, 63), Pack(65, 64), Pack(67, 48), Pack(67, 49), Pack(67, 50), Pack(68, 48), Pack(68, 49), Pack(68, 50), Pack(68, 101), Pack(68, 102), Pack(68, 103), Pack(69, 48), Pack(69, 49), Pack(69, 50), Pack(69, 101), Pack(69, 102), Pack(69, 103), Pack(70, 101), Pack(70, 102), Pack(70, 103), Pack(78, 64), Pack(78, 65), Pack(78, 66), Pack(79, 64), Pack(79, 65), Pack(79, 66), Pack(80, 64), Pack(80, 65), Pack(80, 66), Pack(82, 93), Pack(82, 94), Pack(82, 95), Pack(83, 93), Pack(83, 94), Pack(83, 95), Pack(84, 93), Pack(84, 94), Pack(84, 95), Pack(88, 52), Pack(88, 53), Pack(88, 54), Pack(89, 52), Pack(89, 53), Pack(89, 54), Pack(90, 52), Pack(90, 53), Pack(90, 54), Pack(93, 78), Pack(93, 79), Pack(93, 80), Pack(94, 78), Pack(94, 79), Pack(94, 80), Pack(95, 78), Pack(95, 79), Pack(95, 80), Pack(108, 76), Pack(108, 77), Pack(108, 78), Pack(109, 76), Pack(109, 77), Pack(109, 78), Pack(110, 76), Pack(110, 77), Pack(110, 78) };
 
         public static readonly HashSet<long> HollowZonesGrid3 = new HashSet<long> { Pack(26, 50), Pack(26, 51), Pack(26, 52), Pack(27, 50), Pack(27, 51), Pack(27, 52), Pack(28, 50), Pack(28, 51), Pack(28, 52), Pack(57, 106), Pack(57, 107), Pack(57, 108), Pack(58, 106), Pack(58, 107), Pack(58, 108), Pack(59, 106), Pack(59, 107), Pack(59, 108), Pack(94, 57), Pack(94, 58), Pack(94, 59), Pack(95, 57), Pack(95, 58), Pack(95, 59), Pack(96, 57), Pack(96, 58), Pack(96, 59), Pack(1, 2), Pack(1, 3), Pack(1, 4), Pack(2, 2), Pack(2, 3), Pack(2, 4), Pack(3, 2), Pack(3, 3), Pack(3, 4), Pack(18, 57), Pack(18, 58), Pack(18, 59), Pack(19, 57), Pack(19, 58), Pack(19, 59), Pack(20, 57), Pack(20, 58), Pack(20, 59), Pack(26, 32), Pack(26, 33), Pack(26, 34), Pack(27, 32), Pack(27, 33), Pack(27, 34), Pack(27, 43), Pack(27, 44), Pack(27, 45), Pack(28, 32), Pack(28, 33), Pack(28, 34), Pack(28, 43), Pack(28, 44), Pack(28, 45), Pack(29, 43), Pack(29, 44), Pack(29, 45), Pack(35, 57), Pack(35, 58), Pack(35, 59), Pack(36, 57), Pack(36, 58), Pack(36, 59), Pack(37, 57), Pack(37, 58), Pack(37, 59), Pack(45, 27), Pack(45, 28), Pack(45, 29), Pack(46, 27), Pack(46, 28), Pack(46, 29), Pack(47, 27), Pack(47, 28), Pack(47, 29), Pack(49, 113), Pack(49, 114), Pack(49, 115), Pack(50, 113), Pack(50, 114), Pack(50, 115), Pack(51, 113), Pack(51, 114), Pack(51, 115), Pack(53, 39), Pack(53, 40), Pack(53, 41), Pack(54, 39), Pack(54, 40), Pack(54, 41), Pack(55, 39), Pack(55, 40), Pack(55, 41), Pack(56, 23), Pack(56, 24), Pack(56, 25), Pack(57, 23), Pack(57, 24), Pack(57, 25), Pack(57, 88), Pack(57, 89), Pack(57, 90), Pack(58, 23), Pack(58, 24), Pack(58, 25), Pack(58, 55), Pack(58, 56), Pack(58, 57), Pack(58, 88), Pack(58, 89), Pack(58, 90), Pack(58, 98), Pack(58, 99), Pack(58, 100), Pack(59, 55), Pack(59, 56), Pack(59, 57), Pack(59, 88), Pack(59, 89), Pack(59, 90), Pack(59, 98), Pack(59, 99), Pack(59, 100), Pack(60, 55), Pack(60, 56), Pack(60, 57), Pack(60, 98), Pack(60, 99), Pack(60, 100), Pack(66, 113), Pack(66, 114), Pack(66, 115), Pack(67, 40), Pack(67, 41), Pack(67, 42), Pack(67, 113), Pack(67, 114), Pack(67, 115), Pack(68, 40), Pack(68, 41), Pack(68, 42), Pack(68, 113), Pack(68, 114), Pack(68, 115), Pack(69, 40), Pack(69, 41), Pack(69, 42), Pack(72, 25), Pack(72, 26), Pack(72, 27), Pack(73, 25), Pack(73, 26), Pack(73, 27), Pack(74, 25), Pack(74, 26), Pack(74, 27), Pack(86, 64), Pack(86, 65), Pack(86, 66), Pack(87, 64), Pack(87, 65), Pack(87, 66), Pack(88, 64), Pack(88, 65), Pack(88, 66), Pack(94, 39), Pack(94, 40), Pack(94, 41), Pack(95, 39), Pack(95, 40), Pack(95, 41), Pack(95, 49), Pack(95, 50), Pack(95, 51), Pack(96, 39), Pack(96, 40), Pack(96, 41), Pack(96, 49), Pack(96, 50), Pack(96, 51), Pack(97, 49), Pack(97, 50), Pack(97, 51), Pack(103, 64), Pack(103, 65), Pack(103, 66), Pack(104, 64), Pack(104, 65), Pack(104, 66), Pack(105, 64), Pack(105, 65), Pack(105, 66) };
+
+        public GridObject[] ObjectMap = new GridObject[128 * 128];
         public static long Pack(int x, int y)
         {
             return ((long)x << 32) | (uint)y;
@@ -199,6 +201,8 @@ namespace Helper
             _rawTerrainData = grid._rawTerrainData;
 
             LoadHollowZones(grid.GridId);
+
+            ObjectMap = grid.ObjectMap;
 
         }
         public Shrine GetShrineById(Byte shrineId)
@@ -792,47 +796,6 @@ namespace Helper
                 }
             }
         }
-        /*private void ProcessTileFlags(Grid grid)
-        {
-            // The assembly uses nested loops (128 x 128)
-            for (int y = 0; y < 128; y++)
-            {
-                for (int x = 0; x < 128; x++)
-                {
-                    byte rawFlag = .RawTileFlagTable[x, y];
-
-                    // Default: clear the destination tables for this tile
-                    tables.SpecialCollisionTable[x, y] = 0;
-
-                    // --- Sorting Logic ---
-
-                    if (rawFlag >= 0xFA) // 250+
-                    {
-                        tables.SpecialCollisionTable[x, y] = 1;
-                    }
-                    else if (rawFlag == 0x64) // 100 ('d')
-                    {
-                        tables.SpecialCollisionTable[x, y] = 2;
-                    }
-                    else if (rawFlag == 0x65) // 101 ('e')
-                    {
-                        tables.SpecialCollisionTable[x, y] = 3;
-                    }
-                    else if (rawFlag == 0x66) // 102 ('f')
-                    {
-                        tables.SpecialCollisionTable[x, y] = 4;
-                    }
-                    else if (rawFlag == 0x6E) // 110 ('n')
-                    {
-                        tables.SpecialCollisionTable[x, y] = 5;
-                    }
-
-                    // The assembly ends by zeroing the raw table entry at 46275C
-                    // to indicate processing is complete.
-                    tables.RawTileFlagTable[x, y] = 0;
-                }
-            }
-        }*/
         private void LoadSubPixelLibrary()
         {
             byte[] rawData = File.ReadAllBytes(SubPixelFilename);
@@ -859,28 +822,6 @@ namespace Helper
                 }
             }
         }
-        private T[,] LoadFlatTable<T>(string path, int elementSize)
-        {
-            T[,] result = new T[128, 128];
-            byte[] data = File.ReadAllBytes(path);
-
-            for (int y = 0; y < 128; y++)
-            {
-                for (int x = 0; x < 128; x++)
-                {
-                    // This is the index the Assembly (v4) expects
-                    int index = (y << 7) + x;
-
-                    int offset = index * elementSize;
-
-                    if (elementSize == 1)
-                        result[x, y] = (T)(object)data[offset];
-                    else
-                        result[x, y] = (T)(object)BitConverter.ToInt16(data, offset);
-                }
-            }
-            return result;
-        }
         public void LoadStaticTables(byte[] rawData)
         {
             // Simply store the flat dump from the IDC script
@@ -898,13 +839,7 @@ namespace Helper
             }
         }
         public int GetFloorMeshHeight(byte blockType, int subX, int subY)
-        {
-            //int gX = worldX >> 6;
-            //int gY = worldY >> 6;
-
-            //int subX = gX / 8;
-            //int subY = gY / 8;
-
+        {            
             int cellIdx = (subX * 8) + subY;
             
             int rawByteOffset = (blockType * 130) + (cellIdx * 2);
@@ -914,12 +849,6 @@ namespace Helper
 
         public int GetCeilingMeshHeight(byte blockType, int subX, int subY)
         {
-            //int gX = worldX >> 6;
-            //int gY = worldY >> 6;
-
-            //int subX = gX / 8;
-            //int subY = gY / 8;
-
             int cellIdx = (subX * 8) + subY;
             // ASM: word_86DA20[130 * blockType + cellIdx]
             // Note: word_86DA20 is exactly 128 bytes after word_86D9A0
@@ -927,160 +856,6 @@ namespace Helper
 
             return BitConverter.ToInt16(_rawTerrainData, rawByteOffset);
         }
-
-        /*public void LoadStaticTables(byte[] rawData)
-        {
-            int blockSize = 130;
-            int totalTemplates = rawData.Length / blockSize;
-
-            HeightLibrary = new short[totalTemplates, 64];
-            SlopeProperty = new int[totalTemplates];
-
-            for (int i = 0; i < totalTemplates; i++)
-            {
-                int fileOffset = i * blockSize;
-
-                // 1. Extract 8x8 Heights (First 128 bytes of the block) 
-                // We copy directly into the row of our 2D array
-                Buffer.BlockCopy(rawData, fileOffset, HeightLibrary, i * 64 * 2, 128);
-
-                // 2. Extract Property (First 4 bytes of the second 128-byte half) 
-                // As you noted, the property/ID is at offset +128 within the block
-                SlopeProperty[i] = BitConverter.ToInt32(rawData, fileOffset + 128);
-            }
-        }*/
-        private void LoadOverlayTable<T>(byte[] buffer, int stride, int pushValue, int size, out T[,] table) where T : struct
-        {
-            table = new T[128, 128];
-            int elementSize = Marshal.SizeOf<T>();
-
-            // We follow the CSV/Memory order: Tile 0, 1, 2...
-            for (int y = 0; y < 128; y++)
-            {
-                for (int x = 0; x < 128; x++)
-                {
-                    // This is the index the Assembly (v4) expects
-                    int index = (y << 7) + x;
-
-                    // The formula based on the client stride logic
-                    // We use pushValue directly. 
-                    // Index 0 of the file is Tile 0, Slot 0.
-                    int currentEcx = (index * stride) + pushValue;
-                    int bufIdx = currentEcx * size; // Everything is 2-byte aligned
-
-                    if (bufIdx + elementSize <= buffer.Length)
-                    {
-                        if (typeof(T) == typeof(byte))
-                        {
-                            table[x, y] = (T)(object)buffer[bufIdx];
-                        }
-                        else if (typeof(T) == typeof(short))
-                        {
-                            table[x, y] = (T)(object)BitConverter.ToInt16(buffer, bufIdx);
-                        }
-                    }
-                }
-            }
-        }
-        /*private void LoadProperData(Tables tables)
-        {
-            // Load the 16-bit Short tables (Floor, Wall, Ceiling)
-            tables.FloorGlobalOffset = LoadFlatTable<short>(FloorGlobalOffsetFilename, 2);
-            tables.CeilingGlobalOffset = LoadFlatTable<short>(CeilingGlobalOffsetFilename, 2);
-            tables.CeilingTable = LoadFlatTable<short>(CeilingTableFilename, 2);
-            tables.BlockTypeTable = LoadFlatTable<byte>(BlockTypeTableFilename, 1);
-        }*/
-        /*private void LoadGridTables(Tables tables)
-        {
-            const int MAIN_SIZE = 16384 * 38; // 622592 bytes
-            //const int STRIDE = 19; // Your version
-
-            byte[] buffer = new byte[MAIN_SIZE];
-
-            using (FileStream fs = new FileStream(GridFilename, FileMode.Open, FileAccess.Read))
-            {
-                fs.Seek(6, SeekOrigin.Begin);
-                int bytesRead = fs.Read(buffer, 0, MAIN_SIZE);
-                if (bytesRead < MAIN_SIZE)
-                {
-                    // Partial — pad with zeros (client handles similar)
-                    Array.Clear(buffer, bytesRead, MAIN_SIZE - bytesRead);
-                }
-            }
-
-            LoadOverlayTable<byte>(buffer, STRIDE, 0, 1, out tables.LowTileID); //byte_6f4e90
-            LoadOverlayTable<byte>(buffer, STRIDE, 1, 1, out tables.table1); //byte_873f30
-            LoadOverlayTable<byte>(buffer, STRIDE, 2, 1, out tables.FloorDetail); //byte_8699a0
-            LoadOverlayTable<short>(buffer, STRIDE, 3, 2, out tables.FloorGlobalOffset);  // word_87FF30
-            LoadOverlayTable<short>(buffer, STRIDE, 4, 2, out tables.CeilingGlobalOffset); //word_7c740c
-            LoadOverlayTable<short>(buffer, STRIDE, 5, 2, out tables.CeilingTable);      // word_7E8DB8 (critical)
-            LoadOverlayTable<byte>(buffer, STRIDE, 6, 1, out tables.BlockTypeTable);      // byte_7B4C90
-            LoadOverlayTable<short>(buffer, STRIDE, 7, 2, out tables.table7); //word_6e4e8c
-            LoadOverlayTable<byte>(buffer, STRIDE, 8, 1, out tables.RawTileFlagTable); //byte_7f0db8
-            LoadOverlayTable<byte>(buffer, STRIDE, 9, 1, out tables.DetailMapIndexTable); //byte_7f4f48
-            LoadOverlayTable<byte>(buffer, STRIDE, 10, 1, out tables.RawThinTable); //byte_6f0e90
-            LoadOverlayTable<byte>(buffer, STRIDE, 11, 1, out tables.table11); //byte_7d0690
-            LoadOverlayTable<byte>(buffer, STRIDE, 12, 1, out tables.table12); //byte_7a8c90
-            LoadOverlayTable<byte>(buffer, STRIDE, 13, 1, out tables.table13); //byte_6e0e8c
-            LoadOverlayTable<short>(buffer, STRIDE, 14, 2, out tables.UpperTable);     // word_6CCE88
-            LoadOverlayTable<short>(buffer, STRIDE, 15, 2, out tables.table15); //word_7bf408
-            LoadOverlayTable<byte>(buffer, STRIDE, 16, 1, out tables.ModifierTemplateTable); //byte_7e4db8
-            LoadOverlayTable<byte>(buffer, STRIDE, 17, 1, out tables.ThinCollisionTable); //byte_87bf30
-            LoadOverlayTable<byte>(buffer, STRIDE, 18, 1,out tables.FinalModifier);       // byte_7ACC90 (subtractive)
-
-            using (FileStream fs = new FileStream(GridFilename, FileMode.Open, FileAccess.Read))
-            {
-                fs.Seek(0, SeekOrigin.Begin);
-                int bytesRead = fs.Read(buffer, 0, 20464);
-                if (bytesRead < 20464)
-                {
-                    // Partial — pad with zeros (client handles similar)
-                    Array.Clear(buffer, bytesRead, 20464 - bytesRead);
-                }
-            }
-
-            LoadStaticTables(buffer, tables);
-
-            LoadSubPixelLibrary(tables);
-
-            ProcessTileFlags(tables);
-
-            //LoadProperData(tables);
-
-            for (int y = 0; y < 128; y++)
-            {
-                for (int x = 0; x < 128; x++)
-                {
-                    if (tables.HighBoxZ[x, y] == 0 || tables.HighBoxZ[x, y] == 32767)
-                        tables.HighBoxZ[x, y] = 1024;
-
-                    if (tables.CeilingGlobalOffset[x, y] == 32767)
-                        tables.CeilingGlobalOffset[x, y] = 1024;
-
-                    if (tables.CeilingTable[x, y] == 32767)
-                        tables.CeilingTable[x, y] = 1024;
-
-                    if (tables.table13[x, y] == 0)
-                        tables.table13[x, y] = tables.FloorDetail[x, y];
-
-                    if (tables.table12[x, y] == 0)
-                        tables.table12[x, y] = tables.FloorDetail[x, y];
-
-                    if (tables.DetailMapIndexTable[x, y] >= 0x21 && tables.DetailMapIndexTable[x, y] <= 0x28)
-                    {
-                        tables.CeilingTable[x, y] = (byte)(tables.DetailMapIndexTable[x, y] - 0x20); // 1 through 8
-                        tables.DetailMapIndexTable[x, y] = 0;
-                    }
-
-                    if (tables.RawThinTable[x, y] >= 0x21 && tables.RawThinTable[x, y] <= 0x28)
-                    {
-                        tables.ThinCollisionTable[x, y] = (byte)(tables.RawThinTable[x, y] - 0x20);
-                        tables.RawThinTable[x, y] = 0;
-                    }
-
-                }
-            }
-        }*/
         private void LoadGrid(Boolean isServer, LogBox logBox)
         {
             const int MAIN_SIZE = 16384 * 38; // 622592 bytes
@@ -1207,9 +982,9 @@ namespace Helper
             }
             using (FileStream gridBuffer = new FileStream(GridFilename, FileMode.Open, FileAccess.Read))
             {
-                gridBuffer.Seek(622592, SeekOrigin.Begin);
+                gridBuffer.Seek(622596, SeekOrigin.Begin);
 
-                for (Int32 i = 1; i <= 997; i++)
+                for (Int32 i = 1; i <= 497; i++)
                 {
                     Byte[] gridBytes = new Byte[16];
                     gridBuffer.Read(gridBytes, 0, 16);
@@ -1219,10 +994,17 @@ namespace Helper
                         ObjectId = BitConverter.ToInt32(gridBytes, 0),
                         X = BitConverter.ToInt32(gridBytes, 4),
                         Y = BitConverter.ToInt32(gridBytes, 8),
-                        Z = BitConverter.ToInt32(gridBytes, 12)
+                        Z = BitConverter.ToInt16(gridBytes, 12), // Low Word
+                        Rotation = ((BitConverter.ToInt16(gridBytes, 14) << 12) / 360.0f) // High Word
                     };
 
+                    obj.GridBlockId = ((obj.X >> 6) << 7) + (obj.Y >> 6);
+
+                    obj.ContainerBox = new OrientedBoundingBox(new Vector3(obj.X, obj.Y, obj.Z), new Vector3(64, 64, 64), obj.Rotation);
+
                     GridObjects.Add(obj);
+
+                    ObjectMap[obj.GridBlockId] = obj;
                 }
             }
         }
@@ -1250,49 +1032,6 @@ namespace Helper
             }
             return candidates;
         }
-        /*public int GridHeightLookup(int worldX, int worldY, Grid grid)
-        {
-            GridBlock block = grid.GridBlocks.GetBlockByLocation(worldX, worldY);
-
-            int gX = worldX >> 6;
-            int gY = worldY >> 6;
-
-            // Column-Major index
-            int idx = (gY << 7) + gX;
-
-            // 1. Get Base Floor
-            int height = block.FloorZ;
-
-            // 2. Add Geometry Offset (HeightLibrary)
-            byte blockType = block.TileId;
-            if (blockType > 0 && blockType < grid.HeightLibrary.GetLength(0))
-            {
-                // Find which 8x8 cell we are in within the tile
-                int subX = (worldX >> 3) & 7; // 0-7
-                int subY = (worldY >> 3) & 7; // 0-7
-                int cellIdx = (subY * 8) + subX;
-
-                height += grid.HeightLibrary[blockType, cellIdx];
-
-                // 3. Apply Slope Math
-                int slopeId = grid.SlopeProperty[blockType];
-                if (slopeId > 0)
-                {
-                    int relX = worldX & 0x3F; // 0-63
-                    int relY = worldY & 0x3F; // 0-63
-
-                    // Use the slopeId to index into your SlopeX/Y/Z tables 
-                    // and add the result to 'height'
-                    // Slope math: Ensure SlopeX and SlopeY match the orientation
-                    height += ((int)Grid.SlopeX[slopeId] * relX) >> 6;
-                    height += ((int)Grid.SlopeY[slopeId] * relY) >> 6;
-                    height += Grid.SlopeZ[slopeId];
-                }
-            }
-
-            return height;
-        }*/
-
         public int GetFloorHeight(int worldX, int worldY, int Z, Grid grid)
         {
             GridBlock block = grid.GridBlocks.GetBlockByLocation(worldX, worldY);
@@ -1342,7 +1081,6 @@ namespace Helper
 
             return height;
         }
-
         public int GetCeilingHeight(int worldX, int worldY, int Z, Grid grid)
         {
             GridBlock block = grid.GridBlocks.GetBlockByLocation(worldX, worldY);
@@ -1384,34 +1122,6 @@ namespace Helper
 
             return height;
         }
-
-        /*public short GetFloorHeight(int gridX, int gridY, Tables tables)
-        {
-            if (gridX < 0 || gridX >= 128 || gridY < 0 || gridY >= 128)
-                return 0;  // or 32767 for ceiling-like, but floor usually 0 or low value
-
-            int index = gridY * 128 + gridX;
-            short baseZ = (short)GridBlocks[index].LowBoxTopZ;
-            int blockFlag = GridBlocks[index].BlockFlags;
-            short globalOffset = tables.FloorGlobalOffset[gridY, gridX];
-            byte finalModifier = tables.FinalModifier[gridY, gridX];
-            if (blockFlag == 0)
-                return (short)(baseZ + globalOffset);
-            else
-                return (short)(baseZ + globalOffset - finalModifier);
-        }
-        public short GetCeilingHeight(int gridX, int gridY, Tables tables)
-        {
-            if (gridX < 0 || gridX >= 128 || gridY < 0 || gridY >= 128) return 32767;
-            // Return UpperTable if it exists, otherwise return "Sky" height
-            short val = tables.UpperTable[gridY, gridX];
-            return val == 0 ? (short)32767 : val;
-        }
-        public short GetCeilingTable(int gridX, int gridY, Tables tables)
-        {
-            if (gridX < 0 || gridX >= 128 || gridY < 0 || gridY >= 128) return 32767;
-            return tables.CeilingTable[gridY, gridX];
-        }*/
         private void LoadObjectDefinitions()
         {
             using (FileStream objectBuffer = new FileStream(ObjectsFilename, FileMode.Open, FileAccess.Read))
@@ -1512,132 +1222,6 @@ namespace Helper
 
             return (false, null); // No collision
         }
-
-        /*public Boolean Collides(OrientedBoundingBox box)
-        {
-            try
-            {
-                GridBlockCollection gridBlockCollection = GridBlocks.GetBlocksNearBoundingBox(box);
-                if (gridBlockCollection == null) return true;
-
-                if (gridBlockCollection.Any(gridBlock => box.Collides(gridBlock.LowBox) || box.Collides(gridBlock.MidBox) || (box.Collides(gridBlock.HighBox) && !gridBlock.HasSkybox)))
-                {
-                    return true;
-                }
-
-                if (gridBlockCollection.Where(gridBlock => gridBlock.LowBoxTile != null).Any(gridBlock => gridBlock.LowBoxTile.TileBlocks.Where(tileBlock => tileBlock.BottomBoundingBox != null).Any(tileBlock => box.Collides(tileBlock.BottomBoundingBox))))
-                {
-                    return true;
-                }
-
-				if (Triggers.Where(t => t.TriggerType == TriggerType.Elevator).Where(t => (Int32)System.Math.Floor(box.Origin.X / 64) == t.X1 && (Int32)System.Math.Floor(box.Origin.Y / 64) == t.Y1).Any(t => box.Origin.Z > t.OffHeight && box.Origin.Z < t.Position.Z))
-                {
-                    return true;
-                }
-
-            }
-            catch (Exception)
-            {
-                return true;
-            }
-
-            return false;
-        }*/
-
-        public CollisionResult TileCollides(OrientedBoundingBox box, Vector3 projectileVelocity)
-        {
-            GridBlockCollection gridBlockCollection = GridBlocks.GetBlocksNearBoundingBox(box);
-            if (gridBlockCollection.Count == 0)
-                return new CollisionResult(false);
-
-            foreach (GridBlock gridBlock in gridBlockCollection)
-            {
-                if (gridBlock == null || gridBlock.LowBoxTile == null)
-                    continue;
-
-                foreach (TileBlock tileBlock in gridBlock.LowBoxTile.TileBlocks)
-                {
-                    // Check both top and bottom OBBs
-                    OrientedBoundingBox hitBox = null;
-                    if (tileBlock.TopBoundingBox != null && box.Collides(tileBlock.TopBoundingBox))
-                    {
-                        hitBox = tileBlock.TopBoundingBox;
-                    }
-                    else if (tileBlock.BottomBoundingBox != null && box.Collides(tileBlock.BottomBoundingBox))
-                    {
-                        hitBox = tileBlock.BottomBoundingBox;
-                    }
-
-                    if (hitBox != null)
-                    {
-                        // Calculate normal based on hit face
-                        Vector3 normal = CalculateTileNormal(hitBox, box.Origin, projectileVelocity);
-                        return new CollisionResult(true, tileBlock, normal);
-                    }
-                }
-            }
-
-            return new CollisionResult(false);
-        }
-
-        private Vector3 CalculateTileNormal(OrientedBoundingBox hitBox, Vector3 projectilePos, Vector3 projectileVelocity)
-        {
-            // Find which face was hit by checking position relative to box center
-            Vector3 toCenter = projectilePos - hitBox.Origin;
-            Vector3 extents = hitBox.Extents;
-
-            // Normalize position by extents to find closest face
-            float normX = System.Math.Abs(toCenter.X / extents.X);
-            float normY = System.Math.Abs(toCenter.Y / extents.Y);
-            float normZ = System.Math.Abs(toCenter.Z / extents.Z);
-
-            Vector3 normal = new Vector3(0, 0, 0);
-
-            // Pick dominant axis (closest face)
-            if (normX >= normY && normX >= normZ)
-                normal.X = System.Math.Sign(toCenter.X); // Left/right face
-            else if (normY >= normZ)
-                normal.Y = System.Math.Sign(toCenter.Y); // Front/back face
-            else
-                normal.Z = System.Math.Sign(toCenter.Z); // Top/bottom face
-
-            // Ensure normal points toward incoming projectile (opposite velocity)
-            float dot = Vector3.Dot(normal, -projectileVelocity);
-            if (dot < 0)
-                normal = -normal; // Flip to outward
-
-            return normal;
-        }
-
-        public Boolean TileCollides(OrientedBoundingBox box)
-        {
-            GridBlockCollection gridBlockCollection = GridBlocks.GetBlocksNearBoundingBox(box);
-
-            if (gridBlockCollection.Count == 0) return false;
-
-            foreach (GridBlock gridBlock in gridBlockCollection)
-            {
-                if (gridBlock != null && gridBlock.LowBoxTile != null)
-                {
-                    foreach (TileBlock tileBlock in gridBlock.LowBoxTile.TileBlocks)
-                    {
-                        if (tileBlock.TopBoundingBox != null)
-                        {
-                            if (box.Collides(tileBlock.TopBoundingBox)) return true;
-                        }
-
-                        if (tileBlock.BottomBoundingBox != null)
-                        {
-                            if (box.Collides(tileBlock.BottomBoundingBox)) return true;
-                        }
-                    }
-                }
-            }
-
-            return false;
-        }
-
-
         public Boolean LineToBoxIsBlocked(Vector3 startPoint, OrientedBoundingBox targetBox)
         {
             try

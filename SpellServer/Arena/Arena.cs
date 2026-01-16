@@ -116,8 +116,6 @@ namespace SpellServer
 
         public Int32 DebugNumber;
 
-        public bool WallCollisionFlag;
-
         public Wall CollidedWall;
 
         public Projectile CollidedSpell;
@@ -237,7 +235,7 @@ namespace SpellServer
                 MaxPlayers = Grid.MaxPlayers;
                 EndState = State.Normal;
                 IsDurationLocked = false;
-                DebugFlags = ArenaSpecialFlag.ProjectileTracking;
+                DebugFlags = ArenaSpecialFlag.None;
 
                 StartTime = DateTime.UtcNow;
 
@@ -836,6 +834,8 @@ namespace SpellServer
         }
         public int UpdateProjectileMovement(Projectile projectile, Grid grid, float FrameTime)
         {
+            projectile.WallCollisionFlag = false;
+
             int width = projectile.Spell.Width;
 
             float velocity = (projectile.Gravity == 0) ? projectile.Velocity : projectile.Velocity - (projectile.Velocity * 0.10f * FrameTime);
@@ -894,7 +894,7 @@ namespace SpellServer
             if (sweepIntY <= (int)projectile.Location.Y) sweepIntY -= (sweepIntY < (int)projectile.Location.Y) ? width : 0;
             else sweepIntY += width;
 
-            if (WallCollisionFlag == false && Walls.Count > 0)
+            if (projectile.WallCollisionFlag == false && Walls.Count > 0)
             {
                 for (Int32 w = Walls.Count - 1; w >= 0; w--)
                 {
@@ -910,7 +910,7 @@ namespace SpellServer
                 }
 
                 projectile.hitWall = CollidedWall;
-                WallCollisionFlag = true;
+                projectile.WallCollisionFlag = true;
             }
 
             float moveMagnitudeRemaining = Math.Abs(totalMoveMagnitude);
@@ -970,16 +970,13 @@ namespace SpellServer
 
                 // 3. Collision Check
                 int collisionType = CollisionClassifier(projectile, nextStepPos, projectile.Location, verticalStep, grid);
-
-                //Program.ServerForm.MainLog.WriteMessage($"collisionType: {collisionType}", Color.Red);
-
+                                
                 if (collisionType != 0)
                 {
                     // Handle collision (Bounce/Remove)
                     bool stopped = UpdateProjectileState(projectile, collisionType, nextStepPos, grid);
                     if (stopped && projectile.State == ObjectState.Collision)
                     {
-                        //Program.ServerForm.MainLog.WriteMessage($"stopped: {stopped}, State: {projectile.State}", Color.Red);
                         return 0;
                     }
                     else
@@ -1066,18 +1063,14 @@ namespace SpellServer
 
             if (projectile.State == ObjectState.Active)
             {
-                GridBlock block = grid.GridBlocks.GetBlockByLocation(leadingX, leadingY);
+                GridBlock block = grid.GridBlocks.GetBlockByLocation(leadingX, oY);
 
                 if (block.SpecialCollision == 1)
                 {
                     projectile.hitBlock = block;
                     return 9;
                 }
-
-                int test = CollisionHeightDetection(oZ, oZ, leadingX, oY, projectile, grid, grid.GridBlocks.GetBlockByLocation(leadingX, oY));
-
-                //Program.ServerForm.MainLog.WriteMessage($"1st CollisionHeightDetectionResult: {test}", Color.Red);
-
+                                
                 if (CollisionHeightDetection(oZ, oZ, leadingX, oY, projectile, grid, grid.GridBlocks.GetBlockByLocation(leadingX, oY)) == 0)
                 {
                     var detectedBlock = grid.GridBlocks.GetBlockByLocation(oX, leadingY);
@@ -1086,6 +1079,21 @@ namespace SpellServer
                         if (Grid.HollowZonesGrid0.Contains(Pack(oX >> 6, leadingY >> 6)))
                         {
                             return 0;
+                        }
+
+                        GridObject obj = grid.GridObjects.GetObjectByLocation(oX, leadingY, grid);
+
+                        if (obj != null)
+                        {
+                            if (obj.GridBlockId == detectedBlock.BlockId)
+                            {
+                                OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(new Vector3(oX, leadingY, oZ), projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
+
+                                if (obj.ContainerBox.Collides(testProjectileBox))
+                                {
+                                    return 9;
+                                }
+                            }
                         }
 
                         if (detectedBlock != null)
@@ -1103,6 +1111,21 @@ namespace SpellServer
                             return 0;
                         }
 
+                        GridObject obj = grid.GridObjects.GetObjectByLocation(leadingX, leadingY, grid);
+
+                        if (obj != null)
+                        {
+                            if (obj.GridBlockId == detectedBlock.BlockId)
+                            {
+                                OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(new Vector3(leadingX, leadingY, oZ), projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
+
+                                if (obj.ContainerBox.Collides(testProjectileBox))
+                                {
+                                    return 9;
+                                }
+                            }
+                        }
+
                         if (detectedBlock != null)
                         {
                             projectile.hitBlock = detectedBlock;
@@ -1116,6 +1139,21 @@ namespace SpellServer
 
                     if (FloorCeilingCollision == 1)
                     {
+                        GridObject obj = grid.GridObjects.GetObjectByLocation(leadingX, leadingY, grid);
+
+                        if (obj != null)
+                        {
+                            if (obj.GridBlockId == detectedBlock.BlockId)
+                            {
+                                OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(new Vector3(leadingX, leadingY, leadingZ), projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
+
+                                if (obj.ContainerBox.Collides(testProjectileBox))
+                                {
+                                    return 9;
+                                }
+                            }
+                        }
+
                         if (detectedBlock != null)
                         {
                             projectile.hitBlock = detectedBlock;
@@ -1123,7 +1161,22 @@ namespace SpellServer
                         return 6;
                     }
                     if (FloorCeilingCollision == 2)
-                    {                        
+                    {
+                        GridObject obj = grid.GridObjects.GetObjectByLocation(leadingX, leadingY, grid);
+
+                        if (obj != null)
+                        {
+                            if (obj.GridBlockId == detectedBlock.BlockId)
+                            {
+                                OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(new Vector3(leadingX, leadingY, leadingZ), projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
+
+                                if (obj.ContainerBox.Collides(testProjectileBox))
+                                {
+                                    return 9;
+                                }
+                            }
+                        }
+
                         if (detectedBlock != null)
                         {
                             projectile.hitBlock = detectedBlock;
@@ -1138,19 +1191,12 @@ namespace SpellServer
                         if (arenaPlayer == null || arenaPlayer.StatusFlags == ArenaPlayer.StatusFlag.Dead) continue;
 
                         OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(newPos, projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
-
-                        bool testcollides = arenaPlayer.BoundingBox.Collides(testProjectileBox);
-                        bool testintersect = arenaPlayer.BoundingBox.Intersects(testProjectileBox);
-
-                        //Program.ServerForm.MainLog.WriteMessage($"Collides: {testcollides}, Intersects: {testintersect}", Color.Red);
-
+                                                
                         if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) ||
                             (!arenaPlayer.IsAlive && projectile.Spell.Friendly != SpellFriendlyType.FriendlyDead) ||
                             projectile.Owner.WorldPlayer.PlayerId == arenaPlayer.WorldPlayer.PlayerId ||
                             !arenaPlayer.BoundingBox.Collides(testProjectileBox))
                             continue;
-
-                        //Program.ServerForm.MainLog.WriteMessage($"Proj owner: {projectile.Owner.WorldPlayer.PlayerId}, arenaPlayer: {arenaPlayer.WorldPlayer.PlayerId}", Color.Red);
 
                         if (projectile.Owner.WorldPlayer.PlayerId != arenaPlayer.WorldPlayer.PlayerId)
                         {
@@ -1160,13 +1206,12 @@ namespace SpellServer
 
                         if (projectile.BounceCount > 0 && projectile.Owner.WorldPlayer.PlayerId == arenaPlayer.WorldPlayer.PlayerId)
                         {
-                            //Program.ServerForm.MainLog.WriteMessage($"Bouncecount", Color.Red);
                             projectile.hitPlayer = projectile.Owner;
                             return 5;
                         }
                     }
 
-                    if (Walls.Count > 0 && WallCollisionFlag == false)
+                    if (Walls.Count > 0 && projectile.WallCollisionFlag == false)
                     {
                         for (Int32 w = Walls.Count - 1; w >= 0; w--)
                         {
@@ -1174,25 +1219,37 @@ namespace SpellServer
 
                             if (Walls[w].BoundingBox.Collides(testProjectileBox))
                             {
-                                //Program.ServerForm.MainLog.WriteMessage($"Wall collides [CollisionClassifier]- WallId: {Walls[w].ObjectId}, Owner: {Walls[w].Owner.ActiveCharacter.Name}", Color.Red);
                                 CollidedWall = Walls[w];
                                 break;
                             }
 
                         }
 
-                        //Program.ServerForm.MainLog.WriteMessage($"Wall loop", Color.Red);
-
                         projectile.hitWall = CollidedWall;
-                        WallCollisionFlag = true;
+                        projectile.WallCollisionFlag = true;
                         return 8;
                     }
                 }
                 else
                 {
-                    if (Grid.HollowZonesGrid0.Contains(Pack(leadingX >> 6, leadingY >> 6)))
+                    if (Grid.HollowZonesGrid0.Contains(Pack(leadingX >> 6, oY >> 6)))
                     {
                         return 0;
+                    }
+
+                    GridObject obj = grid.GridObjects.GetObjectByLocation(leadingX, oY, grid);
+
+                    if (obj != null)
+                    {
+                        if (obj.GridBlockId == block.BlockId)
+                        {
+                            OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(new Vector3(leadingX, oY, leadingZ), projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
+
+                            if (obj.ContainerBox.Collides(testProjectileBox))
+                            {
+                                return 9;
+                            }
+                        }
                     }
 
                     projectile.hitBlock = block;
@@ -1210,25 +1267,21 @@ namespace SpellServer
                 {
                     if (newZ < block.CeilingZ)
                     {
-                        //Program.ServerForm.MainLog.WriteMessage($"Return 2 first if: newZ: {newZ}, oldZ: {oldZ}, block.CeilingZ: {block.CeilingZ}, GetCeilingHeight: {grid.GetCeilingHeight(x, y, 0, grid)}", Color.Red);
                         return 2;
                     }
                     else
                     {
-                        //Program.ServerForm.MainLog.WriteMessage($"Return 1 first else if: newZ: {newZ}, oldZ: {oldZ}, block.CeilingZ: {block.CeilingZ}, GetCeilingHeight: {grid.GetCeilingHeight(x, y, 0, grid)}", Color.Red);
                         return 1;
                     }
                 }
 
                 if (projectile.Spell.Tall + oldZ > block.HighBoxZ)
                 {
-                    //Program.ServerForm.MainLog.WriteMessage($"Return 2 second if: newZ: {newZ}, oldZ: {oldZ}, block.HighBoxZ: {block.HighBoxZ}", Color.Red);
                     return 2; 
                 }
 
                 if (projectile.Spell.Tall > block.HighBoxZ - block.CeilingZ)
                 {
-                    //Program.ServerForm.MainLog.WriteMessage($"Return 1 third if: newZ: {newZ}, oldZ: {oldZ}, block.CeilingZ: {block.CeilingZ}, HighboxZ - CeilingZ: {block.HighBoxZ - block.CeilingZ}", Color.Red);
                     return 1;
                 }
             }
@@ -1236,25 +1289,21 @@ namespace SpellServer
             {
                 if (newZ >= block.CeilingZ)
                 {
-                    //Program.ServerForm.MainLog.WriteMessage($"Return 1 first if second else: newZ: {newZ}, oldZ: {oldZ}, block.CeilingZ: {block.CeilingZ}", Color.Red);
                     return 1;
                 }
 
                 if (oldZ < grid.GetFloorHeight(x, y, -1000, grid) - projectile.Spell.MaxStep)
                 {
-                    //Program.ServerForm.MainLog.WriteMessage($"Return 1 second if second else: newZ: {newZ}, oldZ: {oldZ}, GetFloorHeight: {grid.GetFloorHeight(x, y, -1000, grid)}", Color.Red);
                     return 1;
                 }
 
                 if (oldZ + projectile.Spell.Tall > grid.GetCeilingHeight(x, y, 0, grid))
                 {
-                    //Program.ServerForm.MainLog.WriteMessage($"Return 1 third if second else: newZ: {newZ}, oldZ: {oldZ}, GetCeilingHeight: {grid.GetCeilingHeight(x, y, 0, grid)}", Color.Red);
                     return 2;
                 }
 
                 if (projectile.Spell.Tall > grid.GetCeilingHeight(x, y, 0, grid) - grid.GetFloorHeight(x, y, -1000, grid))
                 {
-                    //Program.ServerForm.MainLog.WriteMessage($"Return 1 fourht if second else: newZ: {newZ}, oldZ: {oldZ}, GetCeilingHeight - GetFloorHeight: {grid.GetCeilingHeight(x, y, 0, grid) - grid.GetFloorHeight(x, y, -1000, grid)}", Color.Red);
                     return 1;
                 }
             }
@@ -1288,15 +1337,15 @@ namespace SpellServer
                 projectile.HitCount++;
             }
 
-            if (collisionType != 0 || WallCollisionFlag == true)
+            if (collisionType != 0 || projectile.WallCollisionFlag == true)
             {
                 isTerminal = true;
             }
 
-            //Program.ServerForm.MainLog.WriteMessage($"isTerminal: {isTerminal}, collisonType: {collisionType}, projectile.Bounce: {projectile.Bounce}, projectile.HitCount: {projectile.HitCount}, State: {projectile.State}", Color.Red);
-
             if (isTerminal)
-            {                
+            {
+                projectile.State = ObjectState.Collision;
+
                 if (collisionType == 9)
                 {
                     return true;
@@ -1319,8 +1368,6 @@ namespace SpellServer
                     HandleBounce(projectile, collisionType, testPos, grid);
                     return true;
                 }
-
-                projectile.State = ObjectState.Collision;
 
                 return true;
             }
@@ -1358,8 +1405,7 @@ namespace SpellServer
                     DoPlayerEffect(p.hitPlayer, p.Owner, p.Spell, EffectType.Death);
                 }
                 else if (p.Owner.ActiveTeam != p.hitPlayer.ActiveTeam)
-                {
-                    Program.ServerForm.MainLog.WriteMessage($"Enemy Fire", Color.Red);
+                {                    
                     DoPlayerDamage(p.hitPlayer, p.Owner, p.Spell, null, true);
                     DoPlayerEffect(p.hitPlayer, p.Owner, p.Spell, EffectType.Death);
                 }                
@@ -1369,20 +1415,12 @@ namespace SpellServer
                     DoAreaDamage(p.hitPlayer, p, p.BoundingBox);
                 }
             }
-
-            if (p.hitWall != null)
-            {
-                //Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - WallId: {p.hitWall.ObjectId}", Color.Red);
-            }
-            else
-            {
-                //Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - hitWall is null", Color.Red);
-            }
+                        
             // Specific logic for Case 8 (Shields/Walls)
             if (collisionType == 8 && p.hitWall != null && p.Owner != p.hitWall.Owner)
             {
                 SpellDamage damage = new SpellDamage(p.Spell);
-                Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - Damage: {damage}, WallId: {p.hitWall.ObjectId}", Color.Red);
+                //Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - Damage: {damage}, WallId: {p.hitWall.ObjectId}", Color.Red);
                 DoWallDamage(p.Owner, p.hitWall, p.Spell, damage);
             }
         }
@@ -1648,8 +1686,6 @@ namespace SpellServer
         }
         public void ProcessProjectiles(float FrameTime)
         {
-            WallCollisionFlag = false;
-
             for (int i = ProjectileGroups.Count - 1; i >= 0; i--)
             {
                 for (int j = ProjectileGroups[i].Projectiles.Count - 1; j >= 0; j--)

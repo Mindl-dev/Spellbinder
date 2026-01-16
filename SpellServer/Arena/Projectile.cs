@@ -72,6 +72,8 @@ namespace SpellServer
         public ArenaPlayer hitPlayer;
         public Projectile hitSpell;
 
+        public bool WallCollisionFlag = false;
+
         public ProjectileGroup ParentGroup;
 
         public Projectile(Vector3 location, Spell spell, Single direction, Single angle, ArenaPlayer owner)
