@@ -1223,8 +1223,7 @@ namespace SpellServer
                 case "level":
                 case "levelup":
                 {
-                    Boolean playerHasPlus = player.Flags.HasFlag(PlayerFlag.MagestormPlus);
-                    String validLevelString = String.Format("[System] You must specify a level. Valid levels are: {0}.", playerHasPlus ? "1-15" : "1-10");
+                    String validLevelString = String.Format("[System] You must specify a level. Valid levels are: {0}.", "1-25");
 
                     if (cmd.Arguments.Count < 1)
                     {
@@ -1244,13 +1243,13 @@ namespace SpellServer
                         return true;
                     }
 
-                    if (level <= 0 || level > 15 || (!playerHasPlus && level > 10))
+                    if (level <= 0 || level > 25)
                     {
                         Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, validLevelString));
                         return true;
                     }
 
-                    if (player.ActiveCharacter.Level > 15)
+                    if (player.ActiveCharacter.Level > 25)
                     {
                         Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, "[System] Your level is too high to use this service."));
                         return true;

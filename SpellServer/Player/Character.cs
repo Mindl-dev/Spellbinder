@@ -68,7 +68,11 @@ namespace SpellServer
 
         public UInt32 AvailableStatPoints
         {
-            get { return (UInt32)((((Level - 1) * 5) - SpentStatPoints) + (BonusStatPoints - BonusStatPointsSpent)); }
+            get
+            {
+                long points = (((long)Level - 1) * 5) - SpentStatPoints + (BonusStatPoints - BonusStatPointsSpent);
+                return (UInt32)Math.Max(0, points);
+            }
         }
         public Int16 MaxHealth
         {
@@ -109,7 +113,7 @@ namespace SpellServer
                     }
                 }
 
-                return Convert.ToInt16(baseHp + (Single)Math.Floor((baseHp * scaler) * ((Constitution - 50f) * 0.5f)));
+                return (baseHp == 0) ? Convert.ToInt16(20) : Convert.ToInt16(baseHp + (Single)Math.Floor((baseHp * scaler) * ((Constitution - 50f) * 0.5f)));
             }
         }
 
@@ -803,6 +807,8 @@ namespace SpellServer
                         else break;
                     }
 
+                    if (tCharacter.Experience > 2330000) tCharacter.Experience = 2330000;
+
                     if (clientCharacter != null)
                     {
                         tCharacter.SpellKey1 = clientCharacter.SpellKey1;
@@ -907,9 +913,7 @@ namespace SpellServer
 
                 Int32 numPicks = tCharacter.ListLevel1 + tCharacter.ListLevel2 + tCharacter.ListLevel3 + tCharacter.ListLevel4 + tCharacter.ListLevel5 + tCharacter.ListLevel6 + tCharacter.ListLevel7 + tCharacter.ListLevel8 + tCharacter.ListLevel9 + tCharacter.ListLevel10;
                 numPicks = (numPicks - SpellManager.GetNumLists(tCharacter.Class));
-
-                numPicks = 1;
-
+                                
                 if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !(player.IsAdmin || player.Admin == AdminLevel.Tester))
                 {
                     Program.ServerForm.CheatLog.WriteMessage(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red);
@@ -942,7 +946,7 @@ namespace SpellServer
 
 	    private static UInt64 GetLevelExperience(Int32 level)
         {
-            if (level <= 0 || level > 51) return 0;
+            if (level <= 0 || level > 25) return 0;
 
             UInt64 experience = LevelExp[level - 1] + (LevelExp[level - 1] * 4);
             experience += (experience * 4);
