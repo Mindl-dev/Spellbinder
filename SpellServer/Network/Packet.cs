@@ -33,7 +33,7 @@ namespace SpellServer
         UpdateShrinePoolState = 0x37,
         TableCreated = 0x42,
         TableDeleted = 0x43,
-        PlayWebMusic = 0x51,
+        SendAdminStatus = 0x51, // Was PlayWebMusic
         InviteToTable = 0x52,
         SwitchedToTable = 0x53,
         SendCharacterInSlot = 0x55,

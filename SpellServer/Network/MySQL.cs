@@ -322,7 +322,165 @@ namespace SpellServer
 				return false;
 			}
 	    }
+		public static class Cabals
+		{
+			public static DataTable FindByName(String name)
+			{
+				try
+				{
+					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+					{
+						sqlConnection.Open();
 
+						if (sqlConnection.State == ConnectionState.Open)
+						{
+							MySqlCommand sqlCommand = new MySqlCommand
+							{
+								Connection = sqlConnection,
+								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByName
+							};
+
+							sqlCommand.Parameters.AddWithValue("@name", name);
+
+							MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
+							DataTable result = new DataTable();
+
+							sqlAdapter.SelectCommand = sqlCommand;
+							sqlAdapter.Fill(result);
+
+							return result;
+						}
+
+						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+					}
+				}
+				catch (Exception ex)
+				{
+					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+				}
+
+				return null;
+			}
+
+			public static DataTable FindByNameAndAccountId(String name, Int32 accountId)
+			{
+				try
+				{
+					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+					{
+						sqlConnection.Open();
+
+						if (sqlConnection.State == ConnectionState.Open)
+						{
+							MySqlCommand sqlCommand = new MySqlCommand
+							{
+								Connection = sqlConnection,
+								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByNameAndAccountId
+							};
+
+							sqlCommand.Parameters.AddWithValue("@name", name);
+							sqlCommand.Parameters.AddWithValue("@accountid", accountId);
+
+							MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
+							DataTable result = new DataTable();
+
+							sqlAdapter.SelectCommand = sqlCommand;
+							sqlAdapter.Fill(result);
+
+							return result;
+						}
+
+						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+					}
+				}
+				catch (Exception ex)
+				{
+					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+				}
+
+				return null;
+			}
+
+			public static DataTable FindByAccountIdAndSlot(Int32 accountId, Byte slot)
+			{
+				try
+				{
+					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+					{
+						sqlConnection.Open();
+
+						if (sqlConnection.State == ConnectionState.Open)
+						{
+							MySqlCommand sqlCommand = new MySqlCommand
+							{
+								Connection = sqlConnection,
+								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByAccountIdAndSlot
+							};
+
+							sqlCommand.Parameters.AddWithValue("@accountid", accountId);
+							sqlCommand.Parameters.AddWithValue("@slot", slot);
+
+							MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
+							DataTable result = new DataTable();
+
+							sqlAdapter.SelectCommand = sqlCommand;
+							sqlAdapter.Fill(result);
+
+							return result;
+						}
+
+						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+					}
+				}
+				catch (Exception ex)
+				{
+					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+				}
+
+				return null;
+			}
+			/*public static bool Save(SpellServer.Character character, SpellServer.Cabal cabal, bool isNew)
+            {
+                try
+                {
+					if (character == null) return true;
+					else if (cabal == null) return true;
+
+						using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+						{
+							sqlConnection.Open();
+
+							if (sqlConnection.State == ConnectionState.Open)
+							{
+								MySqlCommand sqlCommand = new MySqlCommand
+								{
+									Connection = sqlConnection,
+									CommandText = isNew ? Resources.Strings_MySQL.NonQuery_Insert_Cabal_SaveNew : Resources.Strings_MySQL.NonQuery_Update_Cabal_SaveExisting
+								};
+
+								sqlCommand.Parameters.AddWithValue("@charid", character.CharacterId);
+								sqlCommand.Parameters.AddWithValue("@accountid", character.AccountId);
+								sqlCommand.Parameters.AddWithValue("@slot", character.Slot);
+								sqlCommand.Parameters.AddWithValue("@name", cabal.CabalName);
+								sqlCommand.Parameters.AddWithValue("@tag", cabal.CabalTag);
+								sqlCommand.Parameters.AddWithValue("@motto", cabal.CabalMotto);
+
+                            return sqlCommand.ExecuteNonQuery() >= 1;
+							}
+
+							throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+						}
+                }
+                catch (Exception ex)
+                {
+                    Program.ServerForm.MainLog.WriteMessage("MySQL Save", Color.Red);
+                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                }
+
+                return false;
+            }
+        }*/
+		}
 	    public static class Character
 	    {
 			public static DataTable GetHighScoreList(Int32 playerClass)
@@ -465,8 +623,11 @@ namespace SpellServer
                             sqlCommand.Parameters.AddWithValue("@spell_key_38", character.SpellKey38);
                             sqlCommand.Parameters.AddWithValue("@spell_key_39", character.SpellKey39);
                             sqlCommand.Parameters.AddWithValue("@spell_key_40", character.SpellKey40);
+							sqlCommand.Parameters.AddWithValue("@cabalname", character.CabalName);
+                            sqlCommand.Parameters.AddWithValue("@cabaltag", character.CabalTag);
+                            sqlCommand.Parameters.AddWithValue("@cabalid", character.CabalId);
 
-							return sqlCommand.ExecuteNonQuery() >= 1;
+                            return sqlCommand.ExecuteNonQuery() >= 1;
 						}
 
 						throw new Exception(Resources.Strings_MySQL.Error_Connecting);

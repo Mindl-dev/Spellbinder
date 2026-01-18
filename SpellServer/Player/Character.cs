@@ -233,6 +233,10 @@ namespace SpellServer
         public readonly Byte Slot;
         public String Name;
 
+        public String CabalName;
+        public String CabalTag;
+        public Int32 CabalId;
+
         public Byte Agility;
         public Byte Constitution;
         public Byte Memory;
@@ -332,6 +336,7 @@ namespace SpellServer
 
             CharacterId = data.Field<Int32>("charid");
             AccountId = data.Field<Int32>("accountid");
+            CabalId = data.Field<Int32>("cabalid");
             Slot = data.Field<Byte>("slot");
             Name = data.Field<String>("name");
             Agility = data.Field<Byte>("agility");
@@ -412,6 +417,8 @@ namespace SpellServer
             SpellKey38 = data.Field<UInt16>("spell_key_38");
             SpellKey39 = data.Field<UInt16>("spell_key_39");
             SpellKey40 = data.Field<UInt16>("spell_key_40");
+            CabalName = data.Field<String>("cabalname");
+            CabalTag = data.Field<String>("cabaltag");
             OpLevel = data.Field<Byte>("oplevel");
             PlayerFlags = (PlayerFlag)data.Field<UInt32>("flags");
 
@@ -480,7 +487,7 @@ namespace SpellServer
             LoadType = LoadedType.Client;
             PendingFlags = PendingFlag.None;
 
-            Byte[] stringBuffer = new Byte[20];
+            Byte[] stringBuffer = new Byte[32];
             Byte[] expBuffer = new Byte[4];
 
             AccountId = 0;
@@ -631,8 +638,13 @@ namespace SpellServer
             SpellKey40 = NetHelper.FlipBytes(BitConverter.ToUInt16(kBuffer, 0));
             inStream.Read(kBuffer, 0, 2);
 
-            inStream.Seek(37, SeekOrigin.Current);
+            inStream.Read(stringBuffer, 0, 32);
+            CabalName = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
 
+            inStream.Read(stringBuffer, 0, 8);
+            CabalTag = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
+
+            inStream.Seek(7, SeekOrigin.Current);
             OpLevel = (Byte)inStream.ReadByte();
 
             inStream.Read(expBuffer, 0, 4);
@@ -857,6 +869,16 @@ namespace SpellServer
 
                 if (clientCharacter != null)
                 {
+                    if (clientCharacter.CabalId != 0)
+                    {
+                        tCharacter.CabalId = clientCharacter.CabalId;
+                        tCharacter.CabalName = clientCharacter.CabalName;
+                        tCharacter.CabalTag = clientCharacter.CabalTag;
+                    }
+                }
+
+                if (clientCharacter != null)
+                {
                     tCharacter.OpLevel = player.IsAdmin ? clientCharacter.OpLevel : tCharacter.OpLevel;
 
                     if ((clientCharacter.ListLevel1 < tCharacter.ListLevel1 || clientCharacter.ListLevel2 < tCharacter.ListLevel2 || clientCharacter.ListLevel3 < tCharacter.ListLevel3 || clientCharacter.ListLevel4 < tCharacter.ListLevel4 || clientCharacter.ListLevel5 < tCharacter.ListLevel5 || clientCharacter.ListLevel6 < tCharacter.ListLevel6 || clientCharacter.ListLevel7 < tCharacter.ListLevel7 || clientCharacter.ListLevel8 < tCharacter.ListLevel8 || clientCharacter.ListLevel9 < tCharacter.ListLevel9 || clientCharacter.ListLevel10 < tCharacter.ListLevel10) && !player.IsAdmin)
@@ -895,8 +917,8 @@ namespace SpellServer
                         tCharacter.List9 = clientCharacter.List9;
                         tCharacter.List10 = 18; // Admin List
 
-                        tCharacter.Level = clientCharacter.Level;
-                        tCharacter.Experience = clientCharacter.Experience;
+                        //tCharacter.Level = clientCharacter.Level;
+                        //tCharacter.Experience = clientCharacter.Experience;
                     }
                 }
 
@@ -914,7 +936,7 @@ namespace SpellServer
                 Int32 numPicks = tCharacter.ListLevel1 + tCharacter.ListLevel2 + tCharacter.ListLevel3 + tCharacter.ListLevel4 + tCharacter.ListLevel5 + tCharacter.ListLevel6 + tCharacter.ListLevel7 + tCharacter.ListLevel8 + tCharacter.ListLevel9 + tCharacter.ListLevel10;
                 numPicks = (numPicks - SpellManager.GetNumLists(tCharacter.Class));
                                 
-                if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !(player.IsAdmin || player.Admin == AdminLevel.Tester))
+                if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !player.IsAdmin)
                 {
                     Program.ServerForm.CheatLog.WriteMessage(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red);
 
@@ -932,6 +954,8 @@ namespace SpellServer
                 tempFlag &= ~PlayerFlag.Hidden;
 
                 MySQL.Character.Save(tCharacter, isNew, tempFlag);
+
+                Network.Send(player, GamePacket.Outgoing.Study.SendCharacterInSlot(player, tCharacter.Slot, MySQL.Character.FindByAccountIdAndSlot(player.AccountId, tCharacter.Slot)));
 
                 if (!isNew)
                 {

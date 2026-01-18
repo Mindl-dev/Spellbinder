@@ -1,6 +1,7 @@
 ﻿using Helper;
 using Helper.Math;
 using Helper.Network;
+using MySqlX.XDevAPI.Relational;
 using Org.BouncyCastle.Security.Certificates;
 using SharpDX;
 using SpellServer.GamePacket.Incoming;
@@ -699,16 +700,15 @@ namespace SpellServer
                     switch (worldId)
                     {
                         case 0: // Enter Char Select Screen
-                            {
-                                SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
-                                break;
-                            }
+                        {
+                            SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                            break;
+                        }
                         case 255: // Enter Main Lobby
-                            {
-                                SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
-                                break;
-                            }
-
+                        {
+                            SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                            break;
+                        }
                         default:
                         {
                             if (worldId >= 0x65 && worldId <= 0x81)
@@ -725,27 +725,7 @@ namespace SpellServer
                             }
                             break;
                         }
-
                     }
-
-                    /*if ((worldId == 0x00) || (worldId == 0xFF) || (worldId >= 1 && worldId <= 16))
-                    {
-                        SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
-                    }
-                    else
-                    {
-                        inStream.Seek(3, SeekOrigin.Current);
-                        worldId = (Byte)inStream.ReadByte();
-                        inStream.Seek(1, SeekOrigin.Current);
-                        team = (Team)(Byte)inStream.ReadByte();
-                        nameBuffer = new Byte[12];
-                        inStream.Read(nameBuffer, 0, 12);
-                        charName = Encoding.ASCII.GetString(nameBuffer).Split((Char)0)[0];
-
-                        Program.ServerForm.MainLog.WriteMessage(String.Format("{0},{1},{2}", worldId.ToString("X2"), team.ToString(), charName), Color.Blue);
-
-                        SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
-                    }*/
                 }
                 public static void ExitWorld(SpellServer.Player player, bool UDP = false)
                 {
@@ -846,6 +826,83 @@ namespace SpellServer
 
             public static class World
             {
+                public static string Deobfuscate(string input)
+                {
+                    if (string.IsNullOrEmpty(input)) return input;
+
+                    char[] buffer = input.ToCharArray();
+
+                    for (int i = 0; i < buffer.Length; i++)
+                    {
+                        // Check if index is odd (test dl, 1)
+                        if ((i & 1) != 0)
+                        {
+                            byte b = (byte)buffer[i];
+                            // Swap Nibbles: (Low to High) | (High to Low)
+                            int swapped = ((b << 4) & 0xF0) | ((b >> 4) & 0x0F);
+                            buffer[i] = (char)swapped;
+                        }
+                    }
+
+                    return new string(buffer);
+                }
+                /*public static void HandleCabal(SpellServer.Player player, MemoryStream inStream)
+                {
+                    Byte[] tBuffer = new Byte[62];
+                    inStream.Seek(2, SeekOrigin.Begin);
+
+                    inStream.Read(tBuffer, 0, 60);
+
+                    ushort token = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 0));
+
+                    ushort targetId = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 2));
+
+                    string dataSegment = Encoding.ASCII.GetString(tBuffer, 4, tBuffer.Length - 4);
+
+                    string[] parts = dataSegment.Split(',');
+
+                    Cabal cabal = new Cabal(player);
+
+                    if (parts.Length >= 3)
+                    {
+                        cabal.CabalName = Deobfuscate(parts[0]);
+                        cabal.CabalTag = Deobfuscate(parts[1]);
+                        cabal.CabalMotto = Deobfuscate(parts[2]);
+                    }
+
+                    if (token == 0)
+                    {
+                        // --- STEP 1: INITIAL REQUEST ---
+                        if (cabal.IsCabalNameTaken(cabal.CabalName) || cabal.IsCabalTagTaken(cabal.CabalTag))
+                        {
+                            SendCabalError(player, "Name or Tag already exists.");
+                            return;
+                        }
+
+                        // Generate the token the client expects to see in Request 3
+                        ushort expectedToken = GenerateSessionToken(player);
+
+                        player.ExpectedCabalToken = expectedToken;
+
+                        // Send F_CreateCabal back to client to trigger Step 3
+                        // This packet must contain the expectedToken
+                        Network.Send(player, Outgoing.World.CreateCabal(expectedToken, cabal));
+                    }
+                    else
+                    {
+                        // --- STEP 3: FINAL COMMIT ---
+                        if (token == player.ExpectedCabalToken)
+                        {
+                            // Final validation and database insert
+                            int newId = cabal.Save(player.ActiveCharacter., cabal, true);
+
+                            // Success! Update player's guild state
+                            if (newId != 0) {
+                            player.ActiveCharacter.CabalId = newId;
+                            Network.Send(player, Outgoing.World.CreateCabal(player.ExpectedCabalToken, cabal));
+                        }
+                    }
+                }*/
                 public static void RequestedPlayer(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
                     Byte[] tBuffer = new Byte[2];
@@ -985,7 +1042,6 @@ namespace SpellServer
                     }
 
                     Network.Send(player, outStream, UDP);
-                    //Network.Send(player, Outgoing.Player.EstablishDatagram(player));
                 }
                 public static void RequestedArenaStatus(SpellServer.Player player, bool UDP = false)
                 {
@@ -1867,7 +1923,10 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.LoginConnected);
                     outStream.WriteByte(0x00);
-                    outStream.Write(Subscription.GameVersion, 0, 4);
+                    outStream.WriteByte(Subscription.GameVersion[0]);
+                    outStream.WriteByte(Subscription.GameVersion[1]);
+                    outStream.WriteByte(Subscription.GameVersion[2]);
+                    outStream.WriteByte(0x00);
                     outStream.Write(Encoding.ASCII.GetBytes(player.Username), 0, player.Username.Length);
                     outStream.Seek((12 - player.Username.Length), SeekOrigin.Current);
                     outStream.WriteByte(0x00);
@@ -2116,8 +2175,17 @@ namespace SpellServer
 
                     outStream.WriteByte(0);
                     outStream.WriteByte((Byte)PacketOutFunction.SendCharacterInSlot);
-                    outStream.Write(Encoding.ASCII.GetBytes(player.Username), 0, player.Username.Length);
-                    outStream.Seek((20 - player.Username.Length), SeekOrigin.Current);
+                    
+                    String username = player.Username;
+                    byte[] usernameBytes = Encoding.ASCII.GetBytes(username);
+                    int usernameLen = Math.Min(usernameBytes.Length, 20);
+                    outStream.Write(usernameBytes, 0, usernameLen);
+
+                    for (int i = 0; i < (20 - usernameLen); i++)
+                    {
+                        outStream.WriteByte(0x00);
+                    }
+                    
                     outStream.WriteByte(slot);
                     outStream.WriteByte(0);
                     outStream.WriteByte(0);
@@ -2127,9 +2195,16 @@ namespace SpellServer
                     {
                         DataRow charData = data.Rows[0];
 
-                        String name = charData.Field<String>("name");
-                        outStream.Write(Encoding.ASCII.GetBytes(name), 0, name.Length);
-                        outStream.Seek((20 - name.Length), SeekOrigin.Current);
+                        String charname = charData.Field<String>("name");
+                        byte[] charnameBytes = Encoding.ASCII.GetBytes(charname);
+                        int charnameLen = Math.Min(charnameBytes.Length, 20);
+                        outStream.Write(charnameBytes, 0, charnameLen);
+
+                        for (int i = 0; i < (20 - charnameLen); i++)
+                        {
+                            outStream.WriteByte(0x00);
+                        }
+                        
                         outStream.WriteByte(charData.Field<Byte>("agility"));
                         outStream.WriteByte(charData.Field<Byte>("constitution"));
                         outStream.WriteByte(charData.Field<Byte>("memory"));
@@ -2269,20 +2344,51 @@ namespace SpellServer
                         kBuffer = BitConverter.GetBytes(NetHelper.FlipBytes(charData.Field<UInt16>("spell_key_40")));
                         outStream.Write(kBuffer, 0, 2);
 
+                        for (int i = 0; i < 8; i++)
+                        {
+                            outStream.WriteByte(0x00);
+                        }
 
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
+                        String cabalname = charData.Field<String>("cabalname");
+                        if (cabalname != null)
+                        {
+                            byte[] nameBytes = Encoding.ASCII.GetBytes(cabalname);
+                            int nameLen = Math.Min(nameBytes.Length, 32);
+                            outStream.Write(nameBytes, 0, nameLen);
 
+                            for (int i = 0; i < (32 - nameLen); i++)
+                            {
+                                outStream.WriteByte(0x00);
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 32; i++)
+                            {
+                                outStream.WriteByte(0x00);
+                            }
+                        }
+
+                        String cabaltag = charData.Field<String>("cabaltag");
+                        if (cabaltag != null)
+                        {
+                            byte[] tagBytes = Encoding.ASCII.GetBytes(cabaltag);
+                            int tagLen = Math.Min(tagBytes.Length, 8);
+                            outStream.Write(tagBytes, 0, tagLen);
+
+                            for (int i = 0; i < (8 - tagLen); i++)
+                            {
+                                outStream.WriteByte(0x00);
+                            }
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 8; i++)
+                            {
+                                outStream.WriteByte(0x00);
+                            }
+                        }
+                                               
                         outStream.WriteByte(charData.Field<Byte>("oplevel"));
                         outStream.WriteByte(charData.Field<Byte>("oplevel"));
                         outStream.WriteByte(charData.Field<Byte>("oplevel"));
@@ -2326,7 +2432,21 @@ namespace SpellServer
                         }
                     }
                 }
-                public static MemoryStream PlayWebMusic(String songName, bool UDP = false)
+                public static MemoryStream SendAdminStatus(bool fullAdmin)
+                {
+                    MemoryStream outStream = new MemoryStream();
+                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((Byte)PacketOutFunction.SendAdminStatus);
+                    outStream.WriteByte(0x00);
+                    outStream.WriteByte(0x00);
+                    // The Admin Toggle (packet_data + 2)
+                    // 0x01 = Sets Permission to 5 (Developer)
+                    // 0x00 = Sets Permission to 3 (Staff)
+                    outStream.WriteByte(fullAdmin ? (byte)0x01 : (byte)0x00);
+
+                    return outStream;
+                }
+                /*public static MemoryStream PlayWebMusic(String songName, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
                     outStream.WriteByte(0x00);
@@ -2334,7 +2454,7 @@ namespace SpellServer
                     outStream.Write(Encoding.ASCII.GetBytes(songName), 0, songName.Length);
                     outStream.WriteByte(0x00);
                     return outStream;
-                }
+                }*/
                 public static MemoryStream DirectTextMessage(SpellServer.Player player, String message, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();

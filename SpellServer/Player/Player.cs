@@ -24,10 +24,8 @@ namespace SpellServer
     public enum AdminLevel
     {
         None = 0,
-        Tester = 1,
-        Moderator = 2,
         Staff = 3,
-        Developer = 4,
+        Developer = 5,
     }
 
     public enum WorldLocation
@@ -88,6 +86,8 @@ namespace SpellServer
 		private readonly Byte[] _receiveBuffer;
 
         public static readonly Dictionary<TcpClient, Player> Players = new Dictionary<TcpClient, Player>();
+
+        public ushort ExpectedCabalToken;
 
         private Boolean Connected
         {
@@ -213,7 +213,7 @@ namespace SpellServer
 
         public Boolean IsAdmin
         {
-            get { return Admin >= AdminLevel.Moderator; }
+            get { return Admin >= AdminLevel.Staff; }
         }
 
         public WorldLocation WorldLocation

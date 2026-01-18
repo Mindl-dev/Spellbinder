@@ -27,7 +27,6 @@ namespace SpellServer.Forms
 			ServerVersionTextBox1.Text = version[0];
 			ServerVersionTextBox2.Text = version[1];
 			ServerVersionTextBox3.Text = version[2];
-			ServerVersionTextBox4.Text = version[3];
 			NotifyEmailTextBox.Text = Settings.Default.NotifyEmail;
 			ListenPortTextBox.Text = Settings.Default.ListenPort.ToString(CultureInfo.CurrentCulture);
             UDPPortTextBox.Text = Settings.Default.UDPPort.ToString(CultureInfo.CurrentCulture);
@@ -79,21 +78,6 @@ namespace SpellServer.Forms
 			if (!e.KeyChar.ToString(CultureInfo.CurrentCulture).IsNumber(false) && e.KeyChar != (Char)Keys.Back)
 			{
 				ConfigToolTip.SetToolTip(ServerVersionTextBox3, "This box may only contain numbers.");
-				ConfigToolTip.ToolTipIcon = ToolTipIcon.Error;
-				ConfigToolTip.ToolTipTitle = "Numbers Only";
-				e.Handled = true;
-			}
-			else
-			{
-				ConfigToolTip.RemoveAll();
-			}
-		}
-
-		private void ServerVersionTextBox4_KeyPress(object sender, KeyPressEventArgs e)
-		{
-			if (!e.KeyChar.ToString(CultureInfo.CurrentCulture).IsNumber(false) && e.KeyChar != (Char)Keys.Back)
-			{
-				ConfigToolTip.SetToolTip(ServerVersionTextBox4, "This box may only contain numbers.");
 				ConfigToolTip.ToolTipIcon = ToolTipIcon.Error;
 				ConfigToolTip.ToolTipTitle = "Numbers Only";
 				e.Handled = true;
@@ -230,7 +214,7 @@ namespace SpellServer.Forms
 			String previousMessageOfTheDay = Settings.Default.MessageOfTheDay;
 			Single previousExpMultiplier = Settings.Default.ExpMultiplier;
 
-			String version = String.Format("{0}.{1}.{2}.{3}", ServerVersionTextBox1.Text, ServerVersionTextBox2.Text, ServerVersionTextBox3.Text, ServerVersionTextBox4.Text);
+			String version = String.Format("{0}.{1}.{2}", ServerVersionTextBox1.Text, ServerVersionTextBox2.Text, ServerVersionTextBox3.Text);
 			Settings.Default.ServerVersion = version;
 			Settings.Default.NotifyEmail = NotifyEmailTextBox.Text;
 			Settings.Default.ListenPort = Int32.TryParse(ListenPortTextBox.Text, out port) ? port : 10602;

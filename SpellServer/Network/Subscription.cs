@@ -31,7 +31,7 @@ namespace SpellServer
         static Subscription()
         {
             SubscriptionPage = String.Format("https://{0}/subscription.php", Settings.Default.SubscriptionHost);
-            //GameVersion = new[] { Convert.ToByte(Settings.Default.ServerVersion.Split('.')[3]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[0]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[1]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[2]) };
+            //GameVersion = new[] { Convert.ToByte(Settings.Default.ServerVersion.Split('.')[0]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[1]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[2]) };
             GameVersion = new[] { Convert.ToByte(49), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[0]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[1]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[2]) };
         }
 
@@ -191,7 +191,7 @@ namespace SpellServer
             player.Username = CultureInfo.CurrentCulture.TextInfo.ToTitleCase(accountData.Username);
             player.Admin = accountData.Admin;
             player.Flags |= accountData.MagestormPlus ? PlayerFlag.MagestormPlus : PlayerFlag.None;
-
+                        
             if (BitConverter.ToInt32(version, 0) != BitConverter.ToInt32(GameVersion, 0))
             {
                 if (player.IsAdmin)

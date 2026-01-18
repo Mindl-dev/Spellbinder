@@ -457,6 +457,11 @@ namespace SpellServer
                             GamePacket.Incoming.Arena.CastWall(player, inStream);
                             break;
                         }
+                        /*case 0xB7:
+                        {
+                            GamePacket.Incoming.World.HandleCabal(player, inStream);
+                            break;
+                        }*/
                         case 0xBC:
                         {
                             GamePacket.Incoming.Player.EstablishDatagram(player, inStream);

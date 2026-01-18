@@ -1076,7 +1076,7 @@ namespace SpellServer
                     var detectedBlock = grid.GridBlocks.GetBlockByLocation(oX, leadingY);
                     if (CollisionHeightDetection(oZ, oZ, oX, leadingY, projectile, grid, detectedBlock) != 0)
                     {
-                        if (Grid.HollowZonesGrid0.Contains(Pack(oX >> 6, leadingY >> 6)))
+                        if (grid.HollowZones.Contains(Pack(oX >> 6, leadingY >> 6)))
                         {
                             return 0;
                         }
@@ -1106,7 +1106,7 @@ namespace SpellServer
                     detectedBlock = grid.GridBlocks.GetBlockByLocation(leadingX, leadingY);
                     if (CollisionHeightDetection(oZ, oZ, leadingX, leadingY, projectile, grid, grid.GridBlocks.GetBlockByLocation(leadingX, leadingY)) != 0)
                     {
-                        if (Grid.HollowZonesGrid0.Contains(Pack(leadingX >> 6, leadingY >> 6)))
+                        if (grid.HollowZones.Contains(Pack(leadingX >> 6, leadingY >> 6)))
                         {
                             return 0;
                         }
@@ -1232,7 +1232,7 @@ namespace SpellServer
                 }
                 else
                 {
-                    if (Grid.HollowZonesGrid0.Contains(Pack(leadingX >> 6, oY >> 6)))
+                    if (grid.HollowZones.Contains(Pack(leadingX >> 6, oY >> 6)))
                     {
                         return 0;
                     }

@@ -142,6 +142,15 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to INSERT INTO `cabals` (charid, accountid, slot, name, agility, constitution, memory, reasoning, discipline, empathy, intuition, presence, quickness, strength, spent_stat, bonus_stat, bonus_spent, list_1, list_2, list_3, list_4, list_5, list_6, list_7, list_8, list_9, list_10, list_level_1, list_level_2, list_level_3, list_level_4, list_level_5, list_level_6, list_level_7, list_level_8, list_level_9, list_level_10, class, level, spell_picks, model, oplevel, experience, flags, spell_key_1, spell_key_2, spell_k [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string NonQuery_Insert_Cabal_SaveNew {
+            get {
+                return ResourceManager.GetString("NonQuery_Insert_Cabal_SaveNew", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to INSERT INTO `characters` (charid, accountid, slot, name, agility, constitution, memory, reasoning, discipline, empathy, intuition, presence, quickness, strength, spent_stat, bonus_stat, bonus_spent, list_1, list_2, list_3, list_4, list_5, list_6, list_7, list_8, list_9, list_10, list_level_1, list_level_2, list_level_3, list_level_4, list_level_5, list_level_6, list_level_7, list_level_8, list_level_9, list_level_10, class, level, spell_picks, model, oplevel, experience, flags, spell_key_1, spell_key_2, spe [rest of string was truncated]&quot;;.
         /// </summary>
         public static string NonQuery_Insert_Character_SaveNew {
@@ -196,6 +205,15 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to UPDATE `cabals` SET name=@name, agility=@agility, constitution=@constitution, memory=@memory, reasoning=@reasoning, discipline=@discipline, empathy=@empathy, intuition=@intuition, presence=@presence, quickness=@quickness, strength=@strength, spent_stat=@spent_stat, bonus_stat=@bonus_stat, bonus_spent=@bonus_spent, list_1=@list_1, list_2=@list_2, list_3=@list_3, list_4=@list_4, list_5=@list_5, list_6=@list_6, list_7=@list_7, list_8=@list_8, list_9=@list_9, list_10=@list_10, list_level_1=@list_level_1, list_l [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string NonQuery_Update_Cabal_SaveExisting {
+            get {
+                return ResourceManager.GetString("NonQuery_Update_Cabal_SaveExisting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to UPDATE `characters` SET name=@name, agility=@agility, constitution=@constitution, memory=@memory, reasoning=@reasoning, discipline=@discipline, empathy=@empathy, intuition=@intuition, presence=@presence, quickness=@quickness, strength=@strength, spent_stat=@spent_stat, bonus_stat=@bonus_stat, bonus_spent=@bonus_spent, list_1=@list_1, list_2=@list_2, list_3=@list_3, list_4=@list_4, list_5=@list_5, list_6=@list_6, list_7=@list_7, list_8=@list_8, list_9=@list_9, list_10=@list_10, list_level_1=@list_level_1, li [rest of string was truncated]&quot;;.
         /// </summary>
         public static string NonQuery_Update_Character_SaveExisting {
@@ -228,6 +246,33 @@ namespace SpellServer.Resources {
         public static string Query_Select_AccountData {
             get {
                 return ResourceManager.GetString("Query_Select_AccountData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE accountid = @accountid AND slot = @slot LIMIT 1.
+        /// </summary>
+        public static string Query_Select_Cabal_FindByAccountIdAndSlot {
+            get {
+                return ResourceManager.GetString("Query_Select_Cabal_FindByAccountIdAndSlot", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE name = @name LIMIT 1.
+        /// </summary>
+        public static string Query_Select_Cabal_FindByName {
+            get {
+                return ResourceManager.GetString("Query_Select_Cabal_FindByName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE name = @name AND accountid = @accountid LIMIT 1.
+        /// </summary>
+        public static string Query_Select_Cabal_FindByNameAndAccountId {
+            get {
+                return ResourceManager.GetString("Query_Select_Cabal_FindByNameAndAccountId", resourceCulture);
             }
         }
         

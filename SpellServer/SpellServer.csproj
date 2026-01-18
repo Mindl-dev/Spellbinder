@@ -183,6 +183,8 @@
     <Compile Include="Arena\ArenaManager.cs" />
     <Compile Include="Arena\BoltCollection.cs" />
     <Compile Include="Arena\ProjectileGroupCollection.cs" />
+    <Compile Include="Cabal\Cabal.cs" />
+    <Compile Include="Cabal\CabalManager.cs" />
     <Compile Include="Forms\ConfigurationForm.cs">
       <SubType>Form</SubType>
     </Compile>

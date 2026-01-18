@@ -21,7 +21,7 @@ namespace SpellServer.Statistics
         {
             CharacterId = character.CharacterId;
 
-            if (player.Admin == AdminLevel.Tester || character.OpLevel > 0)
+            if (character.OpLevel > 0)
             {
                 Hidden = 1;
             }

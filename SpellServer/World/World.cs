@@ -826,7 +826,7 @@ namespace SpellServer
 
                         return true;
                     }
-                    case "music":
+                    /*case "music":
                     {
                         if (cmd.Arguments.Count < 1)
                         {
@@ -934,11 +934,11 @@ namespace SpellServer
                         }
 
                         return true;
-                    }
+                    }*/
                 }
             }
 
-            if (player.Admin == AdminLevel.Tester)
+            if (player.Admin > AdminLevel.None)
             {
                 switch (cmd.Command)
                 {
@@ -1263,6 +1263,8 @@ namespace SpellServer
 
                     player.ActiveCharacter.GrantedLevel = level;
 
+                    Character.Save(player, null);
+
                     Program.ServerForm.MiscLog.WriteMessage(String.Format("[Misc] ({0}[{1}]) {2} has been granted level {3}.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, level), Color.Teal);
 
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] You have been granted level {0}.", level)));
@@ -1501,7 +1503,7 @@ namespace SpellServer
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] Your exp is now {0}.", player.Flags.HasFlag(PlayerFlag.ExpLocked) ? "locked" : "un-locked")));
                     return true;
                 }
-                case "togglemusic":
+                /*case "togglemusic":
                 {
                     player.Flags ^= PlayerFlag.MusicDisabled;
 
@@ -1510,7 +1512,7 @@ namespace SpellServer
                     Network.Send(player, GamePacket.Outgoing.System.PlayWebMusic("stop"));
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] Music has been {0}.", player.Flags.HasFlag(PlayerFlag.MusicDisabled) ? "disabled" : "enabled")));
                     return true;
-                }
+                }*/
                 default:
                 {
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, "[System] You have entered an unknown command."));
@@ -1590,6 +1592,18 @@ namespace SpellServer
 
                     Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player, UDP));
                     Network.Send(player, GamePacket.Outgoing.Player.HasEnteredWorld(UDP));
+
+                    if (player.IsAdmin)
+                    {
+                        if (player.Admin == AdminLevel.Developer)
+                        {
+                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(true));
+                        }
+                        else
+                        {
+                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(false));
+                        }
+                    }
 
                     break;
                 }

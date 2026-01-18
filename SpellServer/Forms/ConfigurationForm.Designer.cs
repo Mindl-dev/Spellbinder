@@ -32,15 +32,16 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ConfigurationForm));
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.label29 = new System.Windows.Forms.Label();
+            this.label30 = new System.Windows.Forms.Label();
+            this.UDPPortTextBox = new System.Windows.Forms.TextBox();
             this.label21 = new System.Windows.Forms.Label();
             this.label20 = new System.Windows.Forms.Label();
             this.label19 = new System.Windows.Forms.Label();
             this.label18 = new System.Windows.Forms.Label();
             this.MessageOfTheDayTextBox = new System.Windows.Forms.TextBox();
             this.label15 = new System.Windows.Forms.Label();
-            this.label14 = new System.Windows.Forms.Label();
             this.label12 = new System.Windows.Forms.Label();
-            this.ServerVersionTextBox4 = new System.Windows.Forms.TextBox();
             this.ServerVersionTextBox3 = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
             this.ServerVersionTextBox2 = new System.Windows.Forms.TextBox();
@@ -83,9 +84,6 @@
             this.ConfigToolTip = new System.Windows.Forms.ToolTip(this.components);
             this.SaveConfigurationButton = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
-            this.label29 = new System.Windows.Forms.Label();
-            this.label30 = new System.Windows.Forms.Label();
-            this.UDPPortTextBox = new System.Windows.Forms.TextBox();
             this.tabControl1.SuspendLayout();
             this.tabPage1.SuspendLayout();
             this.tabPage4.SuspendLayout();
@@ -118,9 +116,7 @@
             this.tabPage1.Controls.Add(this.label18);
             this.tabPage1.Controls.Add(this.MessageOfTheDayTextBox);
             this.tabPage1.Controls.Add(this.label15);
-            this.tabPage1.Controls.Add(this.label14);
             this.tabPage1.Controls.Add(this.label12);
-            this.tabPage1.Controls.Add(this.ServerVersionTextBox4);
             this.tabPage1.Controls.Add(this.ServerVersionTextBox3);
             this.tabPage1.Controls.Add(this.label11);
             this.tabPage1.Controls.Add(this.ServerVersionTextBox2);
@@ -139,6 +135,33 @@
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "General";
             // 
+            // label29
+            // 
+            this.label29.AutoSize = true;
+            this.label29.Location = new System.Drawing.Point(189, 35);
+            this.label29.Name = "label29";
+            this.label29.Size = new System.Drawing.Size(223, 24);
+            this.label29.TabIndex = 35;
+            this.label29.Text = "(1-65535) default = 10601";
+            // 
+            // label30
+            // 
+            this.label30.AutoSize = true;
+            this.label30.Location = new System.Drawing.Point(26, 35);
+            this.label30.Name = "label30";
+            this.label30.Size = new System.Drawing.Size(90, 24);
+            this.label30.TabIndex = 33;
+            this.label30.Text = "UDP Port:";
+            // 
+            // UDPPortTextBox
+            // 
+            this.UDPPortTextBox.Location = new System.Drawing.Point(127, 32);
+            this.UDPPortTextBox.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.UDPPortTextBox.MaxLength = 5;
+            this.UDPPortTextBox.Name = "UDPPortTextBox";
+            this.UDPPortTextBox.Size = new System.Drawing.Size(56, 31);
+            this.UDPPortTextBox.TabIndex = 34;
+            // 
             // label21
             // 
             this.label21.AutoSize = true;
@@ -151,11 +174,11 @@
             // label20
             // 
             this.label20.AutoSize = true;
-            this.label20.Location = new System.Drawing.Point(264, 120);
+            this.label20.Location = new System.Drawing.Point(317, 120);
             this.label20.Name = "label20";
-            this.label20.Size = new System.Drawing.Size(94, 24);
+            this.label20.Size = new System.Drawing.Size(79, 24);
             this.label20.TabIndex = 31;
-            this.label20.Text = "ex. 1.2.1.7";
+            this.label20.Text = "ex. 2.0.2";
             // 
             // label19
             // 
@@ -195,46 +218,25 @@
             this.label15.TabIndex = 27;
             this.label15.Text = "Message of the Day:";
             // 
-            // label14
-            // 
-            this.label14.AutoSize = true;
-            this.label14.Font = new System.Drawing.Font("Calibri", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label14.Location = new System.Drawing.Point(223, 123);
-            this.label14.Name = "label14";
-            this.label14.Size = new System.Drawing.Size(15, 24);
-            this.label14.TabIndex = 26;
-            this.label14.Text = ".";
-            // 
             // label12
             // 
             this.label12.AutoSize = true;
             this.label12.Font = new System.Drawing.Font("Calibri", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label12.Location = new System.Drawing.Point(188, 123);
+            this.label12.Location = new System.Drawing.Point(200, 122);
             this.label12.Name = "label12";
             this.label12.Size = new System.Drawing.Size(15, 24);
             this.label12.TabIndex = 25;
             this.label12.Text = ".";
             // 
-            // ServerVersionTextBox4
-            // 
-            this.ServerVersionTextBox4.Location = new System.Drawing.Point(233, 117);
-            this.ServerVersionTextBox4.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.ServerVersionTextBox4.MaxLength = 1;
-            this.ServerVersionTextBox4.Name = "ServerVersionTextBox4";
-            this.ServerVersionTextBox4.Size = new System.Drawing.Size(25, 31);
-            this.ServerVersionTextBox4.TabIndex = 24;
-            this.ServerVersionTextBox4.Text = "31";
-            this.ServerVersionTextBox4.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.ServerVersionTextBox4.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.ServerVersionTextBox4_KeyPress);
-            // 
             // ServerVersionTextBox3
             // 
-            this.ServerVersionTextBox3.Location = new System.Drawing.Point(198, 117);
+            this.ServerVersionTextBox3.Location = new System.Drawing.Point(210, 116);
             this.ServerVersionTextBox3.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.ServerVersionTextBox3.MaxLength = 1;
             this.ServerVersionTextBox3.Name = "ServerVersionTextBox3";
             this.ServerVersionTextBox3.Size = new System.Drawing.Size(25, 31);
             this.ServerVersionTextBox3.TabIndex = 23;
+            this.ServerVersionTextBox3.Text = "2";
             this.ServerVersionTextBox3.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.ServerVersionTextBox3.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.ServerVersionTextBox3_KeyPress);
             // 
@@ -242,7 +244,7 @@
             // 
             this.label11.AutoSize = true;
             this.label11.Font = new System.Drawing.Font("Calibri", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label11.Location = new System.Drawing.Point(153, 123);
+            this.label11.Location = new System.Drawing.Point(165, 122);
             this.label11.Name = "label11";
             this.label11.Size = new System.Drawing.Size(15, 24);
             this.label11.TabIndex = 22;
@@ -250,19 +252,20 @@
             // 
             // ServerVersionTextBox2
             // 
-            this.ServerVersionTextBox2.Location = new System.Drawing.Point(163, 117);
+            this.ServerVersionTextBox2.Location = new System.Drawing.Point(175, 116);
             this.ServerVersionTextBox2.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.ServerVersionTextBox2.MaxLength = 1;
             this.ServerVersionTextBox2.Name = "ServerVersionTextBox2";
             this.ServerVersionTextBox2.Size = new System.Drawing.Size(25, 31);
             this.ServerVersionTextBox2.TabIndex = 19;
+            this.ServerVersionTextBox2.Text = "0";
             this.ServerVersionTextBox2.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.ServerVersionTextBox2.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.ServerVersionTextBox2_KeyPress);
             // 
             // label9
             // 
             this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(34, 120);
+            this.label9.Location = new System.Drawing.Point(5, 120);
             this.label9.Name = "label9";
             this.label9.Size = new System.Drawing.Size(134, 24);
             this.label9.TabIndex = 17;
@@ -270,12 +273,13 @@
             // 
             // ServerVersionTextBox1
             // 
-            this.ServerVersionTextBox1.Location = new System.Drawing.Point(128, 129);
+            this.ServerVersionTextBox1.Location = new System.Drawing.Point(140, 116);
             this.ServerVersionTextBox1.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.ServerVersionTextBox1.MaxLength = 1;
             this.ServerVersionTextBox1.Name = "ServerVersionTextBox1";
             this.ServerVersionTextBox1.Size = new System.Drawing.Size(25, 31);
             this.ServerVersionTextBox1.TabIndex = 18;
+            this.ServerVersionTextBox1.Text = "2";
             this.ServerVersionTextBox1.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
             this.ServerVersionTextBox1.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.ServerVersionTextBox1_KeyPress);
             // 
@@ -349,7 +353,7 @@
             this.tabPage4.Controls.Add(this.PlusExpBonusTextBox);
             this.tabPage4.Location = new System.Drawing.Point(4, 33);
             this.tabPage4.Name = "tabPage4";
-            this.tabPage4.Size = new System.Drawing.Size(476, 170);
+            this.tabPage4.Size = new System.Drawing.Size(476, 198);
             this.tabPage4.TabIndex = 3;
             this.tabPage4.Text = "Game";
             // 
@@ -425,7 +429,7 @@
             this.tabPage2.Location = new System.Drawing.Point(4, 33);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(476, 170);
+            this.tabPage2.Size = new System.Drawing.Size(476, 198);
             this.tabPage2.TabIndex = 1;
             this.tabPage2.Text = "Database";
             // 
@@ -564,7 +568,7 @@
             this.tabPage3.Controls.Add(this.SubsciptionHostTextBox);
             this.tabPage3.Location = new System.Drawing.Point(4, 33);
             this.tabPage3.Name = "tabPage3";
-            this.tabPage3.Size = new System.Drawing.Size(476, 170);
+            this.tabPage3.Size = new System.Drawing.Size(476, 198);
             this.tabPage3.TabIndex = 2;
             this.tabPage3.Text = "Web";
             // 
@@ -632,33 +636,6 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
-            // label29
-            // 
-            this.label29.AutoSize = true;
-            this.label29.Location = new System.Drawing.Point(189, 35);
-            this.label29.Name = "label29";
-            this.label29.Size = new System.Drawing.Size(223, 24);
-            this.label29.TabIndex = 35;
-            this.label29.Text = "(1-65535) default = 10601";
-            // 
-            // label30
-            // 
-            this.label30.AutoSize = true;
-            this.label30.Location = new System.Drawing.Point(26, 35);
-            this.label30.Name = "label30";
-            this.label30.Size = new System.Drawing.Size(90, 24);
-            this.label30.TabIndex = 33;
-            this.label30.Text = "UDP Port:";
-            // 
-            // UDPPortTextBox
-            // 
-            this.UDPPortTextBox.Location = new System.Drawing.Point(127, 32);
-            this.UDPPortTextBox.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.UDPPortTextBox.MaxLength = 5;
-            this.UDPPortTextBox.Name = "UDPPortTextBox";
-            this.UDPPortTextBox.Size = new System.Drawing.Size(56, 31);
-            this.UDPPortTextBox.TabIndex = 34;
-            // 
             // ConfigurationForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(10F, 24F);
@@ -721,9 +698,7 @@
 		private System.Windows.Forms.Label label13;
 		private System.Windows.Forms.TextBox SubsciptionHostTextBox;
 		private System.Windows.Forms.ToolTip ConfigToolTip;
-		private System.Windows.Forms.Label label14;
 		private System.Windows.Forms.Label label12;
-		private System.Windows.Forms.TextBox ServerVersionTextBox4;
 		private System.Windows.Forms.TextBox ServerVersionTextBox3;
 		private System.Windows.Forms.Label label11;
 		private System.Windows.Forms.TextBox MessageOfTheDayTextBox;

@@ -104,8 +104,9 @@ namespace Helper
             Pools = new PoolCollection();
             Tables = new TablesCollection();
             Maps = new MapsCollection();
+            HollowZones = new HashSet<long>();
         }
-        public Grid(Grid grid)
+        public Grid(Grid grid) : this()
         {
             GridBlocks = grid.GridBlocks;
             Thins = grid.Thins;
@@ -200,7 +201,14 @@ namespace Helper
 
             _rawTerrainData = grid._rawTerrainData;
 
-            LoadHollowZones(grid.GridId);
+            if (grid.HollowZones != null)
+            {
+                this.HollowZones = new HashSet<long>(grid.HollowZones);
+            }
+            else
+            {
+                this.HollowZones = new HashSet<long>();
+            }
 
             ObjectMap = grid.ObjectMap;
 
@@ -246,10 +254,9 @@ namespace Helper
                 }
             }
         }
-        private void LoadHollowZones(int id)
+        private void LoadHollowZones(int id, LogBox logBox)
         {
-            HollowZones.Clear();
-            // Point to your static data definitions
+            // 1. Point to your static data definitions
             HashSet<long> sourceData = null;
 
             switch (id)
@@ -260,10 +267,19 @@ namespace Helper
                 case 3: sourceData = HollowZonesGrid3; break;
             }
 
-            if (sourceData != null)
+            // 2. Critical Check: If the ID is wrong, we cannot continue safely.
+            if (sourceData == null)
             {
-                foreach (var zone in sourceData) HollowZones.Add(zone);
+                // Instead of leaving it null or using wrong data, we initialize 
+                // it as an empty set to prevent the crash, but log a major error.
+                this.HollowZones = new HashSet<long>();
+                logBox.WriteMessage($"[ERROR] Grid ID {id} has no defined HollowZones! Physics will be broken.", System.Drawing.Color.Red);
+                return;
             }
+
+            // 3. Create a fresh instance for this specific Grid object
+            // This ensures grid.HollowZones is NEVER null.
+            this.HollowZones = new HashSet<long>(sourceData);
         }
         public static void LoadAllGrids(LogBox logBox)
 		{
@@ -410,6 +426,7 @@ namespace Helper
                 LoadObjectDefinitions();
                 LoadGrid(true, logBox);
                 LoadMapData(map);
+                LoadHollowZones(gridId, logBox);
 
                 Maps.Add(map);
 
