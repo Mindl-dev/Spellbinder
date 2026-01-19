@@ -530,6 +530,12 @@ namespace SpellServer
                 ArenaPlayer arenaPlayer = ArenaPlayers[i];
                 if (arenaPlayer == null) continue;
 
+                if (arenaPlayer.JustLoaded)
+                {
+                    World.UpdateAllArenaPlayers(arenaPlayer.WorldPlayer, null);
+                    arenaPlayer.JustLoaded = false;
+                }
+
                 switch (arenaPlayer.CurrentGridBlockFlagData.BlockFlag)
                 {
                     case GridBlockFlag.Valhalla:

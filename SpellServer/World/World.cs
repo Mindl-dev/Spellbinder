@@ -1773,8 +1773,6 @@ namespace SpellServer
                         {
                             new ArenaPlayer(player, arena);
 
-                            GamePacket.Incoming.World.RequestedAllPlayers(player);
-
                         }
                     }
                     break;

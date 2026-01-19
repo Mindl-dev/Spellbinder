@@ -90,6 +90,7 @@ namespace SpellServer
 
         private StatusFlag _statusFlags;
 
+        public bool JustLoaded = true;
         public StatusFlag StatusFlags
         {
             get { return _statusFlags; }
