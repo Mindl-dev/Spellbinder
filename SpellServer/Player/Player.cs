@@ -24,6 +24,7 @@ namespace SpellServer
     public enum AdminLevel
     {
         None = 0,
+        Tester = 1,
         Staff = 3,
         Developer = 5,
     }

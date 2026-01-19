@@ -21,6 +21,7 @@ using ZstdSharp.Unsafe;
 using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
 using static Mysqlx.Crud.Order.Types;
 using static SpellServer.ArenaPlayer;
+using static SpellServer.Character;
 using Color = System.Drawing.Color;
 using OrientedBoundingBox = Helper.Math.OrientedBoundingBox;
 
@@ -33,6 +34,39 @@ namespace SpellServer
         {
             public static class Arena
             {
+                public static void PlayerInit(SpellServer.Player player, MemoryStream inStream)
+                {
+                    inStream.Seek(2, SeekOrigin.Begin);
+
+                    byte[] data = new byte[6];
+                    inStream.Read(data, 0, 6);
+
+                    inStream.Read(data, 0, 2);
+                    Int16 xPos = NetHelper.FlipBytes(BitConverter.ToInt16(data, 0));
+
+                    inStream.Read(data, 0, 2);
+                    Int16 yPos = NetHelper.FlipBytes(BitConverter.ToInt16(data, 0));
+
+                    inStream.Read(data, 0, 2);
+                    ushort rawZ = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 2));
+                    int zPos = rawZ & 0x7FF;
+                    if ((rawZ & 0x800) != 0) zPos = -zPos;
+
+                    inStream.Seek(4, SeekOrigin.Current);
+                    Byte clientOpLevel = (Byte)inStream.ReadByte();
+
+                    if (player.IsAdmin && player.ActiveCharacter.OpLevel >= 3 && clientOpLevel < 3)
+                    {
+                        if (player.ActiveCharacter.OpLevel == 5)
+                        {
+                            Network.Send(player, Outgoing.System.SendAdminStatus(true));
+                        }
+                        else
+                        {
+                            Network.Send(player, Outgoing.System.SendAdminStatus(false));
+                        }
+                    }
+                }
                 public static void Jump(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null || !player.IsAdmin) return;
@@ -80,7 +114,7 @@ namespace SpellServer
                 }
                 public static void PlayerMoveState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
-                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
+                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
 
                     inStream.Seek(2, SeekOrigin.Begin);
 
@@ -130,51 +164,10 @@ namespace SpellServer
                     player.ActiveArena.PlayerMove(player.ActiveArenaPlayer, statusFlags, mSpeed, location, direction);
 
                     Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveState(player.ActiveArenaPlayer, data, UDP), false);
-
                 }
-                /*public static void PlayerMoveState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
-                {
-                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
-
-                    Byte[] tBuffer = new Byte[2];
-                    inStream.Seek(2, SeekOrigin.Begin);
-
-                    ArenaPlayer.StatusFlag statusFlags = ((ArenaPlayer.StatusFlag)inStream.ReadByte()) & ~ArenaPlayer.StatusFlag.Hurt;
-
-                    if (player.ActiveArenaPlayer.StatusFlags.HasFlag(ArenaPlayer.StatusFlag.Hurt))
-                    {
-                        statusFlags |= ArenaPlayer.StatusFlag.Hurt;
-                    }
-
-                    Byte mSpeed = (Byte) inStream.ReadByte();
-
-                    inStream.Read(tBuffer, 0, 2);
-                    Int16 zPos = (Int16) (NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)) & 0xFFF);
-                    zPos = zPos > 0x7FF ? (Int16) (-(zPos & 0x7FF)) : zPos;
-
-                    inStream.Read(tBuffer, 0, 2);
-                    Int16 xPos = NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0));
-
-                    inStream.Read(tBuffer, 0, 2);
-                    Int16 yPos = NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0));
-
-                    inStream.Read(tBuffer, 0, 2);
-                    Single direction = MathHelper.DirectionToRadians(NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)));
-
-                    SharpDX.Vector3 location = new SharpDX.Vector3(xPos, yPos, zPos) - ArenaPlayer.PlayerOrigin;
-
-                    Byte[] relayBuffer = new Byte[12];
-                    inStream.Seek(2, SeekOrigin.Begin);
-                    inStream.Read(relayBuffer, 0, 12);
-                    relayBuffer[0] = (Byte)player.ActiveArenaPlayer.StatusFlags;
-
-                    player.ActiveArena.PlayerMove(player.ActiveArenaPlayer, statusFlags, mSpeed, location, direction);
-
-                    Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveState(player.ActiveArenaPlayer, relayBuffer, UDP), false);
-                }*/
                 public static void PlayerMoveStateShort(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
-                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
+                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
 
                     inStream.Seek(2, SeekOrigin.Begin);
                     byte[] data = new byte[8];
@@ -208,24 +201,9 @@ namespace SpellServer
                     }
 
                     player.ActiveArena.PlayerMove(player.ActiveArenaPlayer, statusFlags, mSpeed, player.ActiveArenaPlayer.Location, player.ActiveArenaPlayer.Direction);
-
+                    
                     Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveStateShort(player.ActiveArenaPlayer, data, UDP), false);
-                }
-                /*public static void PlayerMoveStateShort(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
-                {
-                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || player.Flags.HasFlag(PlayerFlag.Hidden)) return;
-
-                    Byte[] tBuffer = new Byte[2];
-                    inStream.Seek(2, SeekOrigin.Begin);
-
-                    player.ActiveArenaPlayer.Direction = MathHelper.DirectionToRadians(NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)));
-
-                    Byte[] relayBuffer = new Byte[8];
-                    inStream.Seek(2, SeekOrigin.Begin);
-                    inStream.Read(relayBuffer, 0, 8);
-
-                    Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.PlayerMoveStateShort(player.ActiveArenaPlayer, relayBuffer, UDP), false);
-                }*/
+                }                
                 public static void TappedAtShrine(SpellServer.Player player)
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
@@ -700,31 +678,33 @@ namespace SpellServer
                     switch (worldId)
                     {
                         case 0: // Enter Char Select Screen
-                        {
-                            SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
-                            break;
-                        }
+                            {
+                                SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                                break;
+                            }
                         case 255: // Enter Main Lobby
-                        {
-                            SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
-                            break;
-                        }
+                            {
+                                SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                                break;
+                            }
                         default:
-                        {
-                            if (worldId >= 0x65 && worldId <= 0x81)
                             {
-                                worldId = (Byte)(worldId - 0x64);
+                                if (worldId >= 0x65 && worldId <= 0x81)
+                                {
+                                    worldId = (Byte)(worldId - 0x64);
 
-                                //Network.Send(player, Outgoing.Player.EstablishDatagram(player));
-
-                                SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                                    //Network.Send(player, Outgoing.Player.EstablishDatagram(player));
+                                    SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                                }
+                                else
+                                {
+                                    if (player.ActiveArenaPlayer == null)
+                                    {
+                                        SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                                    }
+                                }
+                                break;
                             }
-                            else
-                            {
-                                SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
-                            }
-                            break;
-                        }
                     }
                 }
                 public static void ExitWorld(SpellServer.Player player, bool UDP = false)
@@ -942,15 +922,16 @@ namespace SpellServer
                             for (Int32 i = 0; i < player.ActiveArena.ArenaPlayers.Count; i++)
                             {
                                 ArenaPlayer arenaPlayer = player.ActiveArena.ArenaPlayers[i];
-                                if (arenaPlayer == null || player.ActiveArenaPlayer == arenaPlayer || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) continue;
+                                if (arenaPlayer == null || player.ActiveArenaPlayer == arenaPlayer || (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) && !player.IsAdmin)) continue;
 
                                 outStream = Outgoing.Arena.ArenaPlayerEnterLarge(arenaPlayer, outStream);
 
-                                if (j++ < 10) continue;
-
-                                Network.Send(player, outStream, UDP);
-                                outStream = null;
-                                j = 0;
+                                if (j == 10)
+                                {
+                                    Network.Send(player, outStream, UDP);
+                                    outStream = null;
+                                    j = 0;
+                                }
                             }  
                         } 
                     }
@@ -961,7 +942,23 @@ namespace SpellServer
                             for (Int32 i = 0; i < PlayerManager.Players.Count; i++)
                             {
                                 SpellServer.Player p = PlayerManager.Players[i];
-                                if (p == null || p == player) continue;
+                                if (p == null) continue;
+
+                                if (p == player)
+                                {
+                                    if (player.IsAdmin)
+                                    {
+                                        if (player.ActiveCharacter.OpLevel == 5)
+                                        {
+                                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(true));
+                                        }
+                                        else if (player.ActiveCharacter.OpLevel == 3)
+                                        {
+                                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(false));
+                                        }
+                                    }
+                                    continue; 
+                                }
 
                                 if (player.ActiveArena == null)
                                 {
@@ -989,7 +986,9 @@ namespace SpellServer
 
                     for (Int32 x = 10 - j; x > 0; x--)
                     {
-                        for (Int32 r = 1; r <= 20; r++)
+                        // CRITICAL: This must match the exact size of one PlayerEnterLarge entry.
+                        // Based on our 24-byte alignment fix:
+                        for (Int32 r = 1; r <= 24; r++)
                         {
                             outStream.WriteByte(0x00);
                         }
@@ -1333,7 +1332,21 @@ namespace SpellServer
                     outStream.WriteByte((Byte) arenaPlayer.ActiveCharacter.Class);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.OpLevel);
-                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((byte)arenaPlayer.ActiveCharacter.CabalId);
+                    
+                    if (arenaPlayer.ActiveCharacter.CabalTag != null)
+                    {
+                        outStream.Write(Encoding.ASCII.GetBytes(arenaPlayer.ActiveCharacter.CabalTag), 0, arenaPlayer.ActiveCharacter.CabalTag.Length);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                    }
+                    
+                    //outStream.WriteByte(0x00);
                     return outStream;
                 }
                 public static MemoryStream PlayerJump(ArenaPlayer arenaPlayer, Int16 targetId, bool UDP = false)
@@ -1368,6 +1381,55 @@ namespace SpellServer
                 public static MemoryStream PlayerJoin(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
+
+                    // 1. Packet ID/Opcode is usually handled by the 'GenerateAndEnqueue' wrapper.
+                    // Assuming the wrapper handles the 1B 1B and Sequence:
+
+                    // Offset 0-1: Player ID (Word - Little Endian because of SwapSingleShortEndian call)
+                    outStream.Write(BitConverter.GetBytes((UInt16)arenaPlayer.ArenaPlayerId), 0, 2);
+
+                    // Offset 2: Status/Padding (Read into 'dl' at 004260A6)
+                    outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
+
+                    // Offset 3: World/Team ID (Read into 'al' at 00426071)
+                    outStream.WriteByte((Byte)arenaPlayer.ActiveTeam);
+
+                    // Offset 4-15: Character Name (12 bytes - used in repne scasb at 00426081)
+                    byte[] nameBytes = Encoding.ASCII.GetBytes(arenaPlayer.ActiveCharacter.Name.PadRight(12, '\0'));
+                    outStream.Write(nameBytes, 0, 12);
+
+                    // Offset 16 (0x10h): Player Class
+                    outStream.WriteByte((Byte)arenaPlayer.ActiveCharacter.Class);
+
+                    // Offset 17 (0x11h): Player Level
+                    outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
+
+                    // Offset 18 (0x12h): OpLevel (THIS SETS WORD_67FDC8 -> COMPARED TO SLOT 4)
+                    outStream.WriteByte(arenaPlayer.ActiveCharacter.OpLevel);
+
+                    // Offset 19 (0x13h): Cabal ID
+                    outStream.WriteByte((byte)arenaPlayer.ActiveCharacter.CabalId);
+
+                    if (arenaPlayer.ActiveCharacter.CabalTag != null)
+                    {
+                        outStream.Write(Encoding.ASCII.GetBytes(arenaPlayer.ActiveCharacter.CabalTag), 0, arenaPlayer.ActiveCharacter.CabalTag.Length);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                    }
+
+                    // Offset 24: Footer/Padding
+                    outStream.WriteByte(0x00);
+
+                    return outStream;
+                }
+                /*public static MemoryStream PlayerJoin(ArenaPlayer arenaPlayer, bool UDP = false)
+                {
+                    MemoryStream outStream = new MemoryStream();
                     outStream.WriteByte(arenaPlayer.ArenaPlayerId);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
@@ -1378,9 +1440,23 @@ namespace SpellServer
                     outStream.WriteByte((Byte) arenaPlayer.ActiveCharacter.Class);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.OpLevel);
+                    outStream.WriteByte((byte)arenaPlayer.ActiveCharacter.CabalId);
+                    
+                    if (arenaPlayer.ActiveCharacter.CabalTag != null)
+                    {
+                        outStream.Write(Encoding.ASCII.GetBytes(arenaPlayer.ActiveCharacter.CabalTag), 0, arenaPlayer.ActiveCharacter.CabalTag.Length);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                    }
+                    
                     outStream.WriteByte(0x00);
                     return outStream;
-                }
+                }*/
                 public static MemoryStream PlayerLeave(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
@@ -2581,6 +2657,20 @@ namespace SpellServer
                     outStream.WriteByte((Byte) player.ActiveCharacter.Class);
                     outStream.WriteByte(player.ActiveCharacter.Level);
                     outStream.WriteByte(player.ActiveCharacter.OpLevel);
+                    outStream.WriteByte((byte)player.ActiveCharacter.CabalId);
+                    
+                    if (player.ActiveCharacter.CabalTag != null)
+                    {
+                        outStream.Write(Encoding.ASCII.GetBytes(player.ActiveCharacter.CabalTag), 0, player.ActiveCharacter.CabalTag.Length);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                    }
+                    
                     outStream.WriteByte(0x00);
                     return outStream;
                 }
@@ -2610,7 +2700,21 @@ namespace SpellServer
                     outStream.WriteByte((Byte) player.ActiveCharacter.Class);
                     outStream.WriteByte(player.ActiveCharacter.Level);
                     outStream.WriteByte(player.ActiveCharacter.OpLevel);
-                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((byte)player.ActiveCharacter.CabalId);
+                    
+                    if (player.ActiveCharacter.CabalTag != null)
+                    {
+                        outStream.Write(Encoding.ASCII.GetBytes(player.ActiveCharacter.CabalTag), 0, player.ActiveCharacter.CabalTag.Length);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                    }
+                    
+                    //outStream.WriteByte(0x00);
                     return outStream;
                 }
                 public static MemoryStream WorldEnterLarge(SpellServer.Arena arena, MemoryStream outStream, bool UDP = false)

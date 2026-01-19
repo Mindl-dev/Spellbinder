@@ -649,7 +649,7 @@ namespace SpellServer
 
         public static SpellCheatInfo DoesPlayerHaveSpell(Player player, Spell spell)
         {
-            if (player.IsAdmin)
+            if (player.IsAdmin || player.Admin >= AdminLevel.Tester)
             {
                 return new SpellCheatInfo(true);
             }

@@ -1,11 +1,12 @@
-﻿using System;
-using System.Drawing;
-using System.Globalization;
-using System.Linq;
-using Helper;
+﻿using Helper;
 using Helper.Timing;
 using SpellServer.Properties;
 using SpellServer.Sound;
+using System;
+using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 
 namespace SpellServer
 {
@@ -226,7 +227,7 @@ namespace SpellServer
             if (cmd.Command == null) return false;
 
             // Generic Administrator Commands
-            if (player.IsAdmin)
+            if (player.ActiveCharacter.OpLevel > 1)
             {
                 switch (cmd.Command)
                 {
@@ -604,8 +605,10 @@ namespace SpellServer
                 }
             }
 
+            Program.ServerForm.MainLog.WriteMessage(String.Format("Character: {0}, OpLevel: {1}, AdminLevel: {2}, command: {3}", player.ActiveCharacter.Name, player.ActiveCharacter.OpLevel, player.Admin.ToString(), cmd.Command), Color.Blue);
+
             // Staff Commands and Developer Only Commands
-            if (player.Admin == AdminLevel.Staff || player.Admin == AdminLevel.Developer)
+            if (player.ActiveCharacter.OpLevel >= 3)
             {
                 switch (cmd.Command)
                 {
@@ -647,6 +650,108 @@ namespace SpellServer
 
                         return true;
                     }
+                    case "hidden":
+                    {
+                        bool targetState;
+
+                        if (cmd.Arguments.Count < 1)
+                        {
+                            // Toggle logic
+                            targetState = !player.Flags.HasFlag(PlayerFlag.Hidden);
+                        }
+                        else
+                        {
+                            // Explicit logic
+                            string arg = cmd.Arguments[0].ToLower();
+                            if (arg == "true" || arg == "on") targetState = true;
+                            else if (arg == "false" || arg == "off") targetState = false;
+                            else
+                            {
+                                SendSystemMessage(player, "[System] Invalid argument. Use: !hidden true/false");
+                                return true;
+                            }
+                        }
+
+                        player.Flags = targetState ? (player.Flags | PlayerFlag.Hidden) : (player.Flags & ~PlayerFlag.Hidden);
+
+                        if (player.IsInArena)
+                        {
+                            var syncPacket = targetState ?
+                                    GamePacket.Outgoing.Arena.PlayerLeave(player.ActiveArenaPlayer) :
+                                    GamePacket.Outgoing.Arena.PlayerJoin(player.ActiveArenaPlayer);
+
+                            lock (player.ActiveArena.ArenaPlayers.SyncRoot)
+                            {
+                                foreach (ArenaPlayer ap in player.ActiveArena.ArenaPlayers)
+                                {
+                                    // 1. Tell EVERYONE to spawn/despawn the Admin's 3D model
+                                    if (ap.WorldPlayer != player)
+                                        Network.Send(ap.WorldPlayer, syncPacket);
+
+                                    // 2. Refresh EVERYONE'S player list so names appear/disappear from the UI
+                                    // This "Pushes" the new list to each client
+                                    UpdateAllArenaPlayers(ap.WorldPlayer, player);
+                                }
+                            }
+                        }
+
+                        SendSystemMessage(player, $"[System] Stealth mode: {(targetState ? "ON" : "OFF")}");
+                        return true;
+                    }
+                        /*if (targetState) // Enabling Stealth
+                        {
+                            player.Flags |= PlayerFlag.Hidden;
+                                if (player.IsInArena)
+                                {
+                                    var syncPacket = targetState ?
+                                        GamePacket.Outgoing.Arena.PlayerLeave(player.ActiveArenaPlayer) :
+                                        GamePacket.Outgoing.Arena.PlayerJoin(player.ActiveArenaPlayer);
+                                    
+                                    lock (player.ActiveArena.ArenaPlayers.SyncRoot)
+                                    {
+                                        foreach (ArenaPlayer ap in player.ActiveArena.ArenaPlayers)
+                                        {
+                                            // 1. Tell EVERYONE to spawn/despawn the Admin's 3D model
+                                            if (ap.WorldPlayer != player)
+                                                Network.Send(ap.WorldPlayer, syncPacket);
+
+                                            // 2. Refresh EVERYONE'S player list so names appear/disappear from the UI
+                                            // This "Pushes" the new list to each client
+                                            UpdateAllArenaPlayers(ap.WorldPlayer, false);
+                                        }
+                                    }
+
+                                    Network.SendToArena(player.ActiveArenaPlayer, GamePacket.Outgoing.Arena.PlayerJoin(player.ActiveArenaPlayer), false);
+                                    UpdateAllArenaPlayers(player, true);
+                                    //Network.SendToArena(player.ActiveArenaPlayer, GamePacket.Outgoing.Arena.PlayerJoin(player.ActiveArenaPlayer), false);
+                                    //Network.SendTo(player.ActiveArenaPlayer.WorldPlayer, GamePacket.Outgoing.World.PlayerJoin(player.ActiveArenaPlayer.WorldPlayer), Network.SendToType.Tavern, false);
+                                }
+                                else
+                                {
+                                    Network.SendTo(GamePacket.Outgoing.World.PlayerLeave(player), Network.SendToType.Tavern);
+                                }
+
+                                SendSystemMessage(player, "[System] Stealth mode: ON");
+                        }
+                        else // Disabling Stealth
+                        {
+                            player.Flags &= ~PlayerFlag.Hidden;
+                            if (player.IsInArena)
+                            {
+                                    Network.SendToArena(player.ActiveArenaPlayer, GamePacket.Outgoing.Arena.PlayerLeave(player.ActiveArenaPlayer), false);
+                                    UpdateAllArenaPlayers(player, false);
+                                    //Network.SendTo(player.ActiveArenaPlayer.WorldPlayer, GamePacket.Outgoing.World.PlayerLeave(player.ActiveArenaPlayer.WorldPlayer), Network.SendToType.Tavern, false);
+                                }
+                            else
+                            {
+                                Network.SendTo(player, GamePacket.Outgoing.World.PlayerJoin(player), Network.SendToType.Tavern, false);
+                            }
+
+                            SendSystemMessage(player, "[System] Stealth mode: OFF");
+                        }
+
+                        return true;
+                    }*/
                     case "pp":
                     {
                         if (cmd.Arguments.Count < 3)
@@ -704,7 +809,7 @@ namespace SpellServer
             }
 
             // Developer Only Commands
-            if (player.Admin == AdminLevel.Developer)
+            if (player.ActiveCharacter.OpLevel == 5)
             {
                 switch (cmd.Command)
                 {
@@ -938,7 +1043,7 @@ namespace SpellServer
                 }
             }
 
-            if (player.Admin > AdminLevel.None)
+            if (player.ActiveCharacter.OpLevel == 1)
             {
                 switch (cmd.Command)
                 {
@@ -1522,7 +1627,56 @@ namespace SpellServer
 
             return true;
         }
-        
+        public static void UpdateAllArenaPlayers(SpellServer.Player targetplayer, SpellServer.Player sourceplayer)
+        {
+            MemoryStream outStream = null;
+            Int32 j = 0;
+
+            if (!targetplayer.IsInArena) return;
+
+            lock (targetplayer.ActiveArena.ArenaPlayers.SyncRoot)
+            {
+                for (Int32 i = 0; i < targetplayer.ActiveArena.ArenaPlayers.Count; i++)
+                {
+                    ArenaPlayer arenaPlayer = targetplayer.ActiveArena.ArenaPlayers[i];
+                    if (arenaPlayer == null) continue;
+
+                    // 1. Don't send the target player to themselves (usually handled by the client)
+                    if (targetplayer.ActiveArenaPlayer == arenaPlayer) continue;
+
+                    // 2. THE VISIBILITY RULE
+                    // If the person in the list is HIDDEN...
+                    if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
+                    {
+                        // ...ONLY show them if the person RECEIVING the list is an Admin.
+                        if (!targetplayer.IsAdmin) continue;
+                    }
+
+                    outStream = GamePacket.Outgoing.Arena.ArenaPlayerEnterLarge(arenaPlayer, outStream);
+                    j++;
+
+                    if (j == 10)
+                    {
+                        Network.Send(targetplayer, outStream);
+                        outStream = null;
+                        j = 0;
+                    }
+                }
+
+                // Handle the Remainder (1-9 players)
+                if (j > 0 && outStream != null)
+                {
+                    for (Int32 x = 10 - j; x > 0; x--)
+                    {
+                        for (Int32 r = 1; r <= 24; r++)
+                        {
+                            outStream.WriteByte(0x00);
+                        }
+                    }
+                    Network.Send(targetplayer, outStream);
+                }
+            }
+        }
         public static void PlayerEnteredWorld(Player player, Byte worldId, Team team, String charName, bool UDP = false)
         {
             player.ActiveTeam = team;
@@ -1572,9 +1726,21 @@ namespace SpellServer
                         return;
                     }
 
-					player.Flags |= player.ActiveCharacter.PlayerFlags;
+                    if (player.IsAdmin)
+                    {
+                        if (player.ActiveCharacter.OpLevel == 5)
+                        {
+                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(true));
+                        }
+                        else if (player.ActiveCharacter.OpLevel == 3)
+                        {
+                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(false));
+                        }
+                    }
 
-                    if (player.ActiveCharacter.OpLevel == 5)
+                    player.Flags |= player.ActiveCharacter.PlayerFlags;
+
+                    if (player.ActiveCharacter.OpLevel >= 3)
                     {
                         player.Flags |= PlayerFlag.Hidden;
                     }
@@ -1593,18 +1759,6 @@ namespace SpellServer
                     Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player, UDP));
                     Network.Send(player, GamePacket.Outgoing.Player.HasEnteredWorld(UDP));
 
-                    if (player.IsAdmin)
-                    {
-                        if (player.Admin == AdminLevel.Developer)
-                        {
-                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(true));
-                        }
-                        else
-                        {
-                            Network.Send(player, GamePacket.Outgoing.System.SendAdminStatus(false));
-                        }
-                    }
-
                     break;
                 }
 
@@ -1618,6 +1772,9 @@ namespace SpellServer
                         if (arena != null)
                         {
                             new ArenaPlayer(player, arena);
+
+                            GamePacket.Incoming.World.RequestedAllPlayers(player);
+
                         }
                     }
                     break;

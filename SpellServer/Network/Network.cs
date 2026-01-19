@@ -1,7 +1,8 @@
 ﻿using Helper;
 using Helper.Network;
-using SpellServer.Properties;
 using MySqlX.XDevAPI;
+using Org.BouncyCastle.Asn1.X509;
+using SpellServer.Properties;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -177,7 +178,7 @@ namespace SpellServer
             PlayerManager.Players.Remove(player);
         }
 
-	    private static Int32 GetChecksum(Byte[] data, Int32 position, Int32 length)
+        /*private static Int32 GetChecksum(Byte[] data, Int32 position, Int32 length)
         {
             Int32 x = 0x7E, y = x;
 
@@ -188,47 +189,89 @@ namespace SpellServer
             }
 
             return (y - ((x + y) << 8) & 0xFFFF);
+        }*/
+        private static Int32 GetChecksum(Byte[] data, Int32 position, Int32 length)
+        {
+            // The assembly uses bl (sumA) and dl (sumB) initialized to 126 (0x7E)
+            byte sumA = 0x7E;
+            byte sumB = 0x7E;
+
+            // IMPORTANT: The assembly range 'esi' is PayloadLength + 10.
+            // Total Packet is PayloadLength + 14. 
+            // This means we skip the first 2 bytes (1B 1B) 
+            // and stop before the last 2 bytes (Checksum).
+            int start = position + 2;
+            int end = position + length - 2;
+
+            for (int i = start; i < end; i++)
+            {
+                // byte cast ensures 0-255 wrapping like the 8-bit registers bl/dl
+                sumA = (byte)(sumA + data[i]);
+                sumB = (byte)(sumB + sumA);
+            }
+
+            unchecked
+            {
+                // Final assembly logic: return v4 - ((v4 + a1) << 8)
+                // where v4 is sumB and a1 is sumA
+                int eax_reg = sumB;
+                int ecx_reg = (byte)(sumA + sumB);
+                int result = eax_reg - (ecx_reg << 8);
+
+                return (UInt16)result;
+            }
         }
 
         public static Int32 GameRecv(Player player, Byte[] data, Int32 size)
         {
             Int32 position = 0;
 
-            while (position < size)
+            while (position < size - 1)
             {
-                if (BitConverter.ToInt16(data, position) != 0x1B1B) break;
-
-                Int32 length = NetHelper.FlipBytes(BitConverter.ToInt16(data, position+2)) + PacketHeaderFooterLength;
-                Int32 packetEnd = length + position;
-
-                if (length <= 0 || packetEnd > size) break;
-
-                if (NetHelper.FlipBytes((BitConverter.ToUInt16(data, packetEnd-2))) == GetChecksum(data, position, length))
+                if (data[position] != 0x1B || data[position + 1] != 0x1B)
                 {
-                    Int32 packetNumber = NetHelper.FlipBytes((BitConverter.ToUInt16(data, position + 4)));
+                    position++;
+                    continue;
+                }
 
-                    if (packetNumber != player.PacketCounter)
-                    {
-                        if (player.PacketCounter >= 65535 || (player.PacketCounter == 10000 && packetNumber == 0))
-                        {
-                            player.PacketCounter = 0;
-                        }
-                        else if (player.PacketCounter == 0)
-                        {
-                            player.PacketCounter = packetNumber;
-                        }
-                        else
-                        {
-                            player.DisconnectReason = String.Format("Packet Order Corruption (E: {0:X4}, G: {1:X4})", player.PacketCounter, packetNumber);
-                            player.Disconnect = true;
-                            break;
-                        }
-                    }
+                if (position + 6 > size) break;
 
-                    player.PacketCounter++;
+                Int32 rawPayloadLen = NetHelper.FlipBytes(BitConverter.ToInt16(data, position + 2));
+                Int32 fullPacketLength = rawPayloadLen + PacketHeaderFooterLength;
+                Int32 packetEnd = position + fullPacketLength;
 
-                    MemoryStream inStream = new MemoryStream(data, position+10, length-12, false);
+                if (rawPayloadLen <= 0 || packetEnd > size)
+                {
+                    // This might be a false positive 1B 1B or a partial packet.
+                    // Move forward and keep scanning.
+                    position++;
+                    continue;
+                }
 
+                UInt16 receivedChecksum = NetHelper.FlipBytes(BitConverter.ToUInt16(data, packetEnd - 2));
+                UInt16 calculatedChecksum = (UInt16)GetChecksum(data, position, fullPacketLength);
+
+                if (receivedChecksum != calculatedChecksum)
+                {
+                    // Checksum failed. Likely a false positive 1B 1B. 
+                    //position++;
+                    //continue;
+                    Program.ServerForm.MainLog.WriteMessage($"[CRC] Op: 0x{data[position + 11]:X2} Client:{receivedChecksum:X4} Server:{calculatedChecksum:X4}", Color.Orange);
+                }
+
+                Int32 packetNumber = NetHelper.FlipBytes(BitConverter.ToUInt16(data, position + 4));
+
+                if (packetNumber != player.PacketCounter)
+                {                    
+                    player.PacketCounter = packetNumber;
+                }
+                                
+                player.PacketCounter++;
+
+                Byte opcode = data[position + 11];
+
+                using (MemoryStream inStream = new MemoryStream(data, position + 10, fullPacketLength - 12, false))
+                {
                     switch (data[position + 11])
                     {
                         case 0x01:
@@ -407,6 +450,11 @@ namespace SpellServer
                             GamePacket.Incoming.Study.IsNameValid(player, inStream);
                             break;
                         }
+                        case 0x7C:
+                        {
+                            GamePacket.Incoming.Arena.PlayerInit(player, inStream); 
+                            break;
+                        }
                         /*case 0xA0:
                         {
                             GamePacket.Incoming.Arena.ObjectDeath(player, inStream);
@@ -482,12 +530,9 @@ namespace SpellServer
                             break;
                         }
                     }
-
-                    inStream.Dispose();
                 }
-                else break;
-
-                position += length;
+                
+                position += fullPacketLength;
             }
 
             return position;
@@ -779,6 +824,8 @@ namespace SpellServer
             Arena arena = arenaPlayer.WorldPlayer.ActiveArena;
             if (arena == null) return;
 
+            bool senderIsHidden = arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden);
+
             Packet packet = new Packet(inStream);
 
             for (Byte i = 0; i < arena.ArenaPlayers.Count; i++)
@@ -787,11 +834,15 @@ namespace SpellServer
 
                 if (targetArenaPlayer == null || (targetArenaPlayer == arenaPlayer && !sendToSource)) continue;
 
+                if (senderIsHidden && !targetArenaPlayer.WorldPlayer.IsAdmin)
+                {
+                    continue;
+                }
+
                 Send(targetArenaPlayer.WorldPlayer, packet);
             }
-        }
-
-	    private static void SendCallback(IAsyncResult ar)
+        }       
+        private static void SendCallback(IAsyncResult ar)
         {
             SendCallbackSyncResult result = (SendCallbackSyncResult)ar.AsyncState;
 

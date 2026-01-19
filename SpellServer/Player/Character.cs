@@ -776,6 +776,23 @@ namespace SpellServer
                     tCharacter.List8 = SpellManager.GetListId(tCharacter.Class, 7);
                     tCharacter.List9 = SpellManager.GetListId(tCharacter.Class, 8);
                     tCharacter.List10 = SpellManager.GetListId(tCharacter.Class, 9);
+
+                    if (player.IsAdmin)
+                    {
+                        if (player.Admin == AdminLevel.Staff)
+                        {
+                            tCharacter.OpLevel = 3;
+                        }
+                        else if (player.Admin == AdminLevel.Developer)
+                        {
+                            tCharacter.OpLevel = 5;
+                        }
+                        else
+                        {
+                            tCharacter.OpLevel = 1;
+                        }
+                    }
+
                 }
                 else
                 {
@@ -879,12 +896,37 @@ namespace SpellServer
 
                 if (clientCharacter != null)
                 {
-                    tCharacter.OpLevel = player.IsAdmin ? clientCharacter.OpLevel : tCharacter.OpLevel;
+                    if (player.IsAdmin)
+                    {
+                        if (player.Admin == AdminLevel.Staff)
+                        {
+                            tCharacter.OpLevel = 3;
+                        }
+                        else if (player.Admin == AdminLevel.Developer)
+                        {
+                            tCharacter.OpLevel = 5;
+                        }
+                        else
+                        {
+                            tCharacter.OpLevel = 1;
+                        }
+                    }
+
+                    if (tCharacter.PendingFlags.HasFlag(PendingFlag.ListReset))
+                    {
+                        ResetCharacterLists(tCharacter);
+                    }
+
+                    if (tCharacter.PendingFlags.HasFlag(PendingFlag.GrantLevel))
+                    {
+                        ResetCharacterLists(tCharacter);
+                        ResetCharacterStats(tCharacter);
+                    }
 
                     if ((clientCharacter.ListLevel1 < tCharacter.ListLevel1 || clientCharacter.ListLevel2 < tCharacter.ListLevel2 || clientCharacter.ListLevel3 < tCharacter.ListLevel3 || clientCharacter.ListLevel4 < tCharacter.ListLevel4 || clientCharacter.ListLevel5 < tCharacter.ListLevel5 || clientCharacter.ListLevel6 < tCharacter.ListLevel6 || clientCharacter.ListLevel7 < tCharacter.ListLevel7 || clientCharacter.ListLevel8 < tCharacter.ListLevel8 || clientCharacter.ListLevel9 < tCharacter.ListLevel9 || clientCharacter.ListLevel10 < tCharacter.ListLevel10) && !player.IsAdmin)
                     {
                         Program.ServerForm.CheatLog.WriteMessage(String.Format("[List Hack] AID: {0}, {1} ({2}), {3}, {4}, {5}, {6}", player.AccountId, player.Username, tCharacter.Name, clientCharacter.ListLevel1, tCharacter.ListLevel1, clientCharacter.ListLevel2, tCharacter.ListLevel2), Color.Red);
-                        Program.ServerForm.CheatLog.WriteMessage("List", Color.Red);
+                        
                         player.DisconnectReason = Resources.Strings_Disconnect.ListHack;
                         player.Disconnect = true;
                         return SaveError.ListHack;
@@ -922,21 +964,10 @@ namespace SpellServer
                     }
                 }
 
-                if (tCharacter.PendingFlags.HasFlag(PendingFlag.ListReset))
-                {
-                    ResetCharacterLists(tCharacter);
-                }
-
-                if (tCharacter.PendingFlags.HasFlag(PendingFlag.GrantLevel))
-                {
-                    ResetCharacterLists(tCharacter);
-                    ResetCharacterStats(tCharacter);
-                }
-
                 Int32 numPicks = tCharacter.ListLevel1 + tCharacter.ListLevel2 + tCharacter.ListLevel3 + tCharacter.ListLevel4 + tCharacter.ListLevel5 + tCharacter.ListLevel6 + tCharacter.ListLevel7 + tCharacter.ListLevel8 + tCharacter.ListLevel9 + tCharacter.ListLevel10;
                 numPicks = (numPicks - SpellManager.GetNumLists(tCharacter.Class));
                                 
-                if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !player.IsAdmin)
+                if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !(player.IsAdmin || player.Admin >= AdminLevel.Tester))
                 {
                     Program.ServerForm.CheatLog.WriteMessage(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red);
 
