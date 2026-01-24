@@ -234,6 +234,28 @@ namespace SpellServer
                     continue;
                 }
 
+                /*int playerId = (Int32)data[position+7];
+
+                if (data[position + 11] != 0xB8 || data[position + 11] != 0x0F)
+                {
+                    if (player.WorldLocation == WorldLocation.Arena)
+                    {
+                        if (playerId != player.ActiveArenaPlayer.ArenaPlayerId)
+                        {
+                            Program.ServerForm.MainLog.WriteMessage($"Wrong arena player ID received from {player.Username}. Received {playerId}, but the assigned arena playerId is {player.ActiveArenaPlayer.ArenaPlayerId}", Color.Red);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (playerId != player.PlayerId)
+                        {
+                            Program.ServerForm.MainLog.WriteMessage($"Wrong player ID received from {player.Username}. Received {playerId}, but the assigned playerId is {player.PlayerId}", Color.Red);
+                            break;
+                        }
+                    }
+                }*/
+
                 if (position + 6 > size) break;
 
                 Int32 rawPayloadLen = NetHelper.FlipBytes(BitConverter.ToInt16(data, position + 2));
@@ -272,7 +294,7 @@ namespace SpellServer
 
                 using (MemoryStream inStream = new MemoryStream(data, position + 10, fullPacketLength - 12, false))
                 {
-                    switch (data[position + 11])
+                    switch (opcode)
                     {
                         case 0x01:
                         {
@@ -455,11 +477,11 @@ namespace SpellServer
                             GamePacket.Incoming.Arena.PlayerInit(player, inStream); 
                             break;
                         }
-                        /*case 0xA0:
+                        case 0xA0:
                         {
-                            GamePacket.Incoming.Arena.ObjectDeath(player, inStream);
+                            GamePacket.Incoming.Arena.ScoreRegistered(player, inStream);
                             break;
-                        }*/
+                        }
                         case 0xA1:
                         {
                             GamePacket.Incoming.Study.HighScores(player, inStream);
@@ -505,16 +527,36 @@ namespace SpellServer
                             GamePacket.Incoming.Arena.CastWall(player, inStream);
                             break;
                         }
-                        /*case 0xB7:
+                        case 0xB5:
                         {
-                            GamePacket.Incoming.World.HandleCabal(player, inStream);
+                            GamePacket.Incoming.Study.InviteCabal(player, inStream);
                             break;
-                        }*/
+                        }
+                        case 0xB6:
+                        {
+                            GamePacket.Incoming.Study.LeaveCabal(player, inStream);
+                            break;
+                        }
+                        case 0xB7:
+                        {
+                            GamePacket.Incoming.Study.HandleCabals(player, inStream);
+                            break;
+                        }
+                        case 0xB9:
+                        {
+                            GamePacket.Incoming.Study.RequestCabalList(player, inStream);
+                            break;
+                        }
                         case 0xBC:
                         {
                             GamePacket.Incoming.Player.EstablishDatagram(player, inStream);
                             break;
                         }
+                        /*case 0xBB:
+                        {
+                            GamePacket.Incoming.Study.RequestCabalList(player, inStream);
+                            break;
+                        }*/
                         case 0xE0:
                         {
                             GamePacket.Incoming.MageHook.HackNotification(player, inStream);

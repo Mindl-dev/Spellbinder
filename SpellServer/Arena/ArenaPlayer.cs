@@ -88,6 +88,10 @@ namespace SpellServer
         private Int32 _objectiveExp;
         private Int32 _bonusExp;
 
+        public Int32 SessionKillExp { get; set; } = 0;
+
+        public Int32 SessionScore { get; set; } = 0;
+
         private StatusFlag _statusFlags;
 
         public bool JustLoaded = true;
@@ -108,6 +112,51 @@ namespace SpellServer
             }
         }
 
+        public void OnKill(ArenaPlayer killer, ArenaPlayer victim)
+        {
+            int baseExp = 100; // Example base
+            int levelDiff = victim.ActiveCharacter.Level - killer.ActiveCharacter.Level;
+
+            // Scale EXP: Reward more for higher levels, less for "noob-killing"
+            int earned = baseExp + (levelDiff * 25);
+            if (earned < 10) earned = 10; // Minimum floor
+
+            killer.SessionKillExp += earned;
+        }
+
+        public void OnPlayerDeath(ArenaPlayer victim)
+        {
+            if (victim.ActiveCharacter.Level <= 2) return;
+
+            // Standard 10% loss on death
+            int penalty = (int)(victim.SessionKillExp * 0.10f);
+            victim.SessionKillExp -= penalty;
+        }
+
+        public void OnNodeResurrect(ArenaPlayer player)
+        {
+            // If they bypass a player-raise, lose an additional 20%
+            int nodePenalty = (int)(player.SessionKillExp * 0.20f);
+            player.SessionKillExp -= nodePenalty;
+        }
+        public void AwardFinalMatchExp(Arena arena)
+        {
+            int timeRemainingSeconds = arena.TimeLimit - (short)arena.elaspedTime.TotalSeconds;
+            float timeBonusMultiplier = 1.0f + (timeRemainingSeconds / 600f); // Example: 10% bonus per 1 min left
+
+            foreach (var ap in arena.ArenaPlayers)
+            {
+                int finalExp = (int)(ap.SessionKillExp * timeBonusMultiplier);
+
+                ap.WorldPlayer.ActiveCharacter.AwardExp = finalExp;
+
+                // Final Database Commit
+                MySQL.Character.Save(ap.WorldPlayer.ActiveCharacter, false, ap.WorldPlayer.ActiveCharacter.PlayerFlags);
+
+                // Inform the client
+                //Network.Send(ap.WorldPlayer, Outgoing.Arena.GameEndStats(finalExp));
+            }
+        }
         public Vector3 PreviousLocation
         {
             set
@@ -287,7 +336,7 @@ namespace SpellServer
                 if (value < 0) value = 0;
                 if (value > 999999) value = 999999;
 
-                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 2)
+                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 4)
                 {
                     _combatExp = value;
 
@@ -305,7 +354,7 @@ namespace SpellServer
                 if (value < 0) value = 0;
                 if (value > 999999) value = 999999;
 
-                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 2)
+                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 4)
                 {
                     _objectiveExp = value;
 
@@ -340,7 +389,7 @@ namespace SpellServer
         {
             set
             {
-                Single normalPenalty = (Single)Math.Ceiling(value * 0.5f);
+                Single normalPenalty = (Single)Math.Ceiling(value * 0.1f);
                 Single objectivePenalty = normalPenalty;
 
                 if (normalPenalty > CombatExp)

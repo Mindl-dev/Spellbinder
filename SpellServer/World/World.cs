@@ -690,8 +690,28 @@ namespace SpellServer
 
                                     // 2. Refresh EVERYONE'S player list so names appear/disappear from the UI
                                     // This "Pushes" the new list to each client
-                                    UpdateAllArenaPlayers(ap.WorldPlayer, player);
+                                    UpdateAllArenaPlayers(ap.WorldPlayer);
                                 }
+                            }
+                        }
+                        else
+                        {
+                            var syncPacket = targetState ?
+                                    GamePacket.Outgoing.World.PlayerLeave(player) :
+                                    GamePacket.Outgoing.World.PlayerJoin(player);
+                            
+                            lock (PlayerManager.Players.SyncRoot)
+                            {
+                                foreach (Player p in PlayerManager.Players)
+                                {
+                                    // 1. Tell EVERYONE to spawn/despawn the Admin's 3D model
+                                    if (p != player)
+                                        Network.Send(p, syncPacket);
+
+                                    // 2. Refresh EVERYONE'S player list so names appear/disappear from the UI
+                                    // This "Pushes" the new list to each client
+                                    UpdateAllPlayers(p);
+                                } 
                             }
                         }
 
@@ -1627,7 +1647,60 @@ namespace SpellServer
 
             return true;
         }
-        public static void UpdateAllArenaPlayers(SpellServer.Player targetplayer, SpellServer.Player sourceplayer)
+        public static void UpdateAllPlayers(SpellServer.Player targetplayer)
+        {
+            MemoryStream outStream = null;
+            Int32 j = 0;
+
+            if (targetplayer.IsInArena) return;
+
+            lock (PlayerManager.Players.SyncRoot)
+            {
+                for (Int32 i = 0; i < PlayerManager.Players.Count; i++)
+                {
+                    Player player = PlayerManager.Players[i];
+
+                    if (player == null) continue;
+
+                    // 1. Don't send the target player to themselves (usually handled by the client)
+                    if (targetplayer == player) continue;
+
+                    // 2. THE VISIBILITY RULE
+                    // If the person in the list is HIDDEN...
+                    if (player.Flags.HasFlag(PlayerFlag.Hidden))
+                    {
+                        // ...ONLY show them if the person RECEIVING the list is an Admin.
+                        if (!targetplayer.IsAdmin) continue;
+                    }
+
+                    outStream = GamePacket.Outgoing.World.PlayerEnterLarge(player, outStream);
+
+                    j++;
+
+                    if (j == 10)
+                    {
+                        Network.Send(targetplayer, outStream);
+                        outStream = null;
+                        j = 0;
+                    }
+                }
+
+                // Handle the Remainder (1-9 players)
+                if (j > 0 && outStream != null)
+                {
+                    for (Int32 x = 10 - j; x > 0; x--)
+                    {
+                        for (Int32 r = 0; r < 24; r++)
+                        {
+                            outStream.WriteByte(0x00);
+                        }
+                    }
+                    
+                    Network.Send(targetplayer, outStream);
+                }
+            }
+        }
+        public static void UpdateAllArenaPlayers(SpellServer.Player targetplayer)
         {
             MemoryStream outStream = null;
             Int32 j = 0;
@@ -1653,10 +1726,12 @@ namespace SpellServer
                     }
 
                     outStream = GamePacket.Outgoing.Arena.ArenaPlayerEnterLarge(arenaPlayer, outStream);
+
                     j++;
 
                     if (j == 10)
                     {
+                        Program.ServerForm.MainLog.WriteMessage("[UpdateAllArenaPlayers] Send target j is 10", Color.Red);
                         Network.Send(targetplayer, outStream);
                         outStream = null;
                         j = 0;
@@ -1668,11 +1743,12 @@ namespace SpellServer
                 {
                     for (Int32 x = 10 - j; x > 0; x--)
                     {
-                        for (Int32 r = 1; r <= 24; r++)
+                        for (Int32 r = 0; r < 24; r++)
                         {
                             outStream.WriteByte(0x00);
                         }
                     }
+                    Program.ServerForm.MainLog.WriteMessage("[UpdateAllArenaPlayers] Send target j < 10", Color.Red);
                     Network.Send(targetplayer, outStream);
                 }
             }
@@ -1750,14 +1826,22 @@ namespace SpellServer
                     }
 
                     player.TableId = worldId;   
+                                        
+
+                    Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player));                    
 
                     if (!player.Flags.HasFlag(PlayerFlag.Hidden))
                     {
-                        Network.SendTo(player, GamePacket.Outgoing.World.PlayerJoin(player, UDP), Network.SendToType.Tavern, false);
+                        Network.SendTo(player, GamePacket.Outgoing.World.PlayerJoin(player), Network.SendToType.Tavern, false);
                     }
 
-                    Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player, UDP));
-                    Network.Send(player, GamePacket.Outgoing.Player.HasEnteredWorld(UDP));
+                    Network.Send(player, GamePacket.Outgoing.Player.HasEnteredWorld());
+                    Network.Send(player, GamePacket.Outgoing.Arena.SuccessfulArenaEntry());
+
+                    /*if (player.ActiveCharacter.CabalId != 0)
+                    {
+                        Network.Send(player, GamePacket.Outgoing.Study.CabalJoin(player));
+                    }*/
 
                     break;
                 }

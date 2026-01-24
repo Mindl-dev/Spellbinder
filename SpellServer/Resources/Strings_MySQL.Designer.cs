@@ -142,7 +142,7 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to INSERT INTO `cabals` (charid, accountid, slot, name, agility, constitution, memory, reasoning, discipline, empathy, intuition, presence, quickness, strength, spent_stat, bonus_stat, bonus_spent, list_1, list_2, list_3, list_4, list_5, list_6, list_7, list_8, list_9, list_10, list_level_1, list_level_2, list_level_3, list_level_4, list_level_5, list_level_6, list_level_7, list_level_8, list_level_9, list_level_10, class, level, spell_picks, model, oplevel, experience, flags, spell_key_1, spell_key_2, spell_k [rest of string was truncated]&quot;;.
+        ///   Looks up a localized string similar to INSERT INTO `cabals` (cabalid, cabalname, cabaltag, caballeader) VALUES (@cabalid, @cabalname, @cabaltag, @caballeader).
         /// </summary>
         public static string NonQuery_Insert_Cabal_SaveNew {
             get {
@@ -205,7 +205,7 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to UPDATE `cabals` SET name=@name, agility=@agility, constitution=@constitution, memory=@memory, reasoning=@reasoning, discipline=@discipline, empathy=@empathy, intuition=@intuition, presence=@presence, quickness=@quickness, strength=@strength, spent_stat=@spent_stat, bonus_stat=@bonus_stat, bonus_spent=@bonus_spent, list_1=@list_1, list_2=@list_2, list_3=@list_3, list_4=@list_4, list_5=@list_5, list_6=@list_6, list_7=@list_7, list_8=@list_8, list_9=@list_9, list_10=@list_10, list_level_1=@list_level_1, list_l [rest of string was truncated]&quot;;.
+        ///   Looks up a localized string similar to UPDATE `cabals` SET cabalid=@cabalid, cabalname=@cabalname, cabaltag=@cabaltag, caballeader=@caballeader WHERE cabalid=@cabalid AND cabalname=@cabalname.
         /// </summary>
         public static string NonQuery_Update_Cabal_SaveExisting {
             get {
@@ -250,16 +250,7 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE accountid = @accountid AND slot = @slot LIMIT 1.
-        /// </summary>
-        public static string Query_Select_Cabal_FindByAccountIdAndSlot {
-            get {
-                return ResourceManager.GetString("Query_Select_Cabal_FindByAccountIdAndSlot", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE name = @name LIMIT 1.
+        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE cabalname = @cabalname LIMIT 1.
         /// </summary>
         public static string Query_Select_Cabal_FindByName {
             get {
@@ -268,11 +259,29 @@ namespace SpellServer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE name = @name AND accountid = @accountid LIMIT 1.
+        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE cabalname = @cabalname AND cabalid = @cabalid LIMIT 1.
         /// </summary>
-        public static string Query_Select_Cabal_FindByNameAndAccountId {
+        public static string Query_Select_Cabal_FindByNameAndCabalId {
             get {
-                return ResourceManager.GetString("Query_Select_Cabal_FindByNameAndAccountId", resourceCulture);
+                return ResourceManager.GetString("Query_Select_Cabal_FindByNameAndCabalId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SELECT * FROM `cabals` WHERE cabaltag = @cabaltag LIMIT 1.
+        /// </summary>
+        public static string Query_Select_Cabal_FindByTag {
+            get {
+                return ResourceManager.GetString("Query_Select_Cabal_FindByTag", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SELECT `cabalid`, `cabalname`, `cabaltag`, `caballeader` FROM `cabals`.
+        /// </summary>
+        public static string Query_Select_Cabal_LoadAll {
+            get {
+                return ResourceManager.GetString("Query_Select_Cabal_LoadAll", resourceCulture);
             }
         }
         
@@ -282,6 +291,15 @@ namespace SpellServer.Resources {
         public static string Query_Select_Character_FindByAccountIdAndSlot {
             get {
                 return ResourceManager.GetString("Query_Select_Character_FindByAccountIdAndSlot", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to SELECT `charid` FROM `characters` WHERE cabalid=@cabalid.
+        /// </summary>
+        public static string Query_Select_Character_FindByCabalId {
+            get {
+                return ResourceManager.GetString("Query_Select_Character_FindByCabalId", resourceCulture);
             }
         }
         

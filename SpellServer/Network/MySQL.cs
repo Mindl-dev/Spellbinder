@@ -1,12 +1,15 @@
 ﻿using Helper.Timing;
-using SpellServer.Properties;
 using MySql.Data.MySqlClient;
+using SpellServer.Properties;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using System.Linq.Expressions;
 using System.Xml.Linq;
+using static SpellServer.Character;
 using static SpellServer.MySQL;
 
 namespace SpellServer
@@ -340,7 +343,7 @@ namespace SpellServer
 								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByName
 							};
 
-							sqlCommand.Parameters.AddWithValue("@name", name);
+							sqlCommand.Parameters.AddWithValue("@cabalname", name);
 
 							MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
 							DataTable result = new DataTable();
@@ -361,129 +364,209 @@ namespace SpellServer
 
 				return null;
 			}
-
-			public static DataTable FindByNameAndAccountId(String name, Int32 accountId)
-			{
-				try
-				{
-					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
-					{
-						sqlConnection.Open();
-
-						if (sqlConnection.State == ConnectionState.Open)
-						{
-							MySqlCommand sqlCommand = new MySqlCommand
-							{
-								Connection = sqlConnection,
-								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByNameAndAccountId
-							};
-
-							sqlCommand.Parameters.AddWithValue("@name", name);
-							sqlCommand.Parameters.AddWithValue("@accountid", accountId);
-
-							MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
-							DataTable result = new DataTable();
-
-							sqlAdapter.SelectCommand = sqlCommand;
-							sqlAdapter.Fill(result);
-
-							return result;
-						}
-
-						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
-					}
-				}
-				catch (Exception ex)
-				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
-				}
-
-				return null;
-			}
-
-			public static DataTable FindByAccountIdAndSlot(Int32 accountId, Byte slot)
-			{
-				try
-				{
-					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
-					{
-						sqlConnection.Open();
-
-						if (sqlConnection.State == ConnectionState.Open)
-						{
-							MySqlCommand sqlCommand = new MySqlCommand
-							{
-								Connection = sqlConnection,
-								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByAccountIdAndSlot
-							};
-
-							sqlCommand.Parameters.AddWithValue("@accountid", accountId);
-							sqlCommand.Parameters.AddWithValue("@slot", slot);
-
-							MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
-							DataTable result = new DataTable();
-
-							sqlAdapter.SelectCommand = sqlCommand;
-							sqlAdapter.Fill(result);
-
-							return result;
-						}
-
-						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
-					}
-				}
-				catch (Exception ex)
-				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
-				}
-
-				return null;
-			}
-			/*public static bool Save(SpellServer.Character character, SpellServer.Cabal cabal, bool isNew)
+            public static DataTable FindByTag(String tag)
             {
                 try
                 {
-					if (character == null) return true;
-					else if (cabal == null) return true;
+                    using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+                    {
+                        sqlConnection.Open();
 
-						using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
-						{
-							sqlConnection.Open();
+                        if (sqlConnection.State == ConnectionState.Open)
+                        {
+                            MySqlCommand sqlCommand = new MySqlCommand
+                            {
+                                Connection = sqlConnection,
+                                CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByTag
+                            };
 
-							if (sqlConnection.State == ConnectionState.Open)
-							{
-								MySqlCommand sqlCommand = new MySqlCommand
-								{
-									Connection = sqlConnection,
-									CommandText = isNew ? Resources.Strings_MySQL.NonQuery_Insert_Cabal_SaveNew : Resources.Strings_MySQL.NonQuery_Update_Cabal_SaveExisting
-								};
+                            sqlCommand.Parameters.AddWithValue("@cabaltag", tag);
 
-								sqlCommand.Parameters.AddWithValue("@charid", character.CharacterId);
-								sqlCommand.Parameters.AddWithValue("@accountid", character.AccountId);
-								sqlCommand.Parameters.AddWithValue("@slot", character.Slot);
-								sqlCommand.Parameters.AddWithValue("@name", cabal.CabalName);
-								sqlCommand.Parameters.AddWithValue("@tag", cabal.CabalTag);
-								sqlCommand.Parameters.AddWithValue("@motto", cabal.CabalMotto);
+                            MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
+                            DataTable result = new DataTable();
 
-                            return sqlCommand.ExecuteNonQuery() >= 1;
-							}
+                            sqlAdapter.SelectCommand = sqlCommand;
+                            sqlAdapter.Fill(result);
 
-							throw new Exception(Resources.Strings_MySQL.Error_Connecting);
-						}
+                            return result;
+                        }
+
+                        throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Program.ServerForm.MainLog.WriteMessage("MySQL Save", Color.Red);
                     Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
                 }
 
-                return false;
+                return null;
             }
-        }*/
+            public static DataTable FindByNameAndCabalId(String name, Int32 accountId)
+			{
+				try
+				{
+					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+					{
+						sqlConnection.Open();
+
+						if (sqlConnection.State == ConnectionState.Open)
+						{
+							MySqlCommand sqlCommand = new MySqlCommand
+							{
+								Connection = sqlConnection,
+								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_FindByNameAndCabalId
+							};
+
+							sqlCommand.Parameters.AddWithValue("@cabalname", name);
+							sqlCommand.Parameters.AddWithValue("@cabalid", accountId);
+
+							MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
+							DataTable result = new DataTable();
+
+							sqlAdapter.SelectCommand = sqlCommand;
+							sqlAdapter.Fill(result);
+
+							return result;
+						}
+
+						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+					}
+				}
+				catch (Exception ex)
+				{
+					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+				}
+
+				return null;
+			}
+
+			public static bool Save(Cabal cabal, bool isNew)
+			{
+				try
+				{
+					if (cabal == null) return true;
+
+					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+					{
+						sqlConnection.Open();
+
+						if(sqlConnection.State == ConnectionState.Open)
+						{
+							MySqlCommand sqlCommand = new MySqlCommand
+							{
+								Connection = sqlConnection,
+								CommandText = isNew ? Resources.Strings_MySQL.NonQuery_Insert_Cabal_SaveNew : Resources.Strings_MySQL.NonQuery_Update_Cabal_SaveExisting
+							};
+
+							sqlCommand.Parameters.AddWithValue("@cabalid", cabal.CabalId);
+							sqlCommand.Parameters.AddWithValue("@cabalname", cabal.CabalName);
+							sqlCommand.Parameters.AddWithValue("@cabaltag", cabal.CabalTag);
+							sqlCommand.Parameters.AddWithValue("@caballeader", cabal.CabalLeader);
+
+							return sqlCommand.ExecuteNonQuery() >= 1;
+						}
+
+						throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+					}
+				}
+                catch (Exception ex)
+				{
+                    Program.ServerForm.MainLog.WriteMessage("MySQL SaveCabal", Color.Red);
+                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                }
+
+				return false;
+
+            }
+			public static CabalManager LoadCabals()
+			{
+				CabalManager cabalList = new CabalManager();
+
+				try
+				{
+					using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+					{
+						sqlConnection.Open();
+
+						if (sqlConnection.State == ConnectionState.Open)
+						{
+							MySqlCommand sqlCommand = new MySqlCommand
+							{
+								Connection = sqlConnection,
+								CommandText = Resources.Strings_MySQL.Query_Select_Cabal_LoadAll
+							};
+
+							using (sqlCommand)
+							{
+								using (MySqlDataReader reader = sqlCommand.ExecuteReader())
+								{
+									while (reader.Read())
+									{
+										Cabal cabal = new Cabal();
+										
+										cabal.CabalId = reader.GetInt32(0);
+										cabal.CabalName = reader.GetString(1);
+										cabal.CabalTag = reader.GetString(2);
+										cabal.CabalLeader = reader.GetString(3);
+										
+										cabalList.Add(cabal);
+
+									}
+								}
+							}
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+                    Program.ServerForm.MainLog.WriteMessage("MySQL LoadCabals", Color.Red);
+                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                }
+
+                return cabalList;
+			}			
 		}
 	    public static class Character
 	    {
-			public static DataTable GetHighScoreList(Int32 playerClass)
+			public static DataTable FindByCabalId(int cabalId)
+			{
+                try
+                {
+                    using (MySqlConnection sqlConnection = new MySqlConnection(ConnectionString))
+                    {
+                        sqlConnection.Open();
+
+                        if (sqlConnection.State == ConnectionState.Open)
+                        {
+                            MySqlCommand sqlCommand = new MySqlCommand
+                            {
+                                Connection = sqlConnection,
+                                CommandText = Resources.Strings_MySQL.Query_Select_Character_FindByCabalId
+                            };
+
+                            sqlCommand.Parameters.AddWithValue("@cabalid", cabalId);
+
+                            MySqlDataAdapter sqlAdapter = new MySqlDataAdapter();
+                            DataTable result = new DataTable();
+
+                            sqlAdapter.SelectCommand = sqlCommand;
+                            sqlAdapter.Fill(result);
+
+                            return result;
+                        }
+
+                        throw new Exception(Resources.Strings_MySQL.Error_Connecting);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                }
+
+                return null;
+            }
+
+            public static DataTable GetHighScoreList(Int32 playerClass)
 			{
 				try
 				{
@@ -623,8 +706,6 @@ namespace SpellServer
                             sqlCommand.Parameters.AddWithValue("@spell_key_38", character.SpellKey38);
                             sqlCommand.Parameters.AddWithValue("@spell_key_39", character.SpellKey39);
                             sqlCommand.Parameters.AddWithValue("@spell_key_40", character.SpellKey40);
-							sqlCommand.Parameters.AddWithValue("@cabalname", character.CabalName);
-                            sqlCommand.Parameters.AddWithValue("@cabaltag", character.CabalTag);
                             sqlCommand.Parameters.AddWithValue("@cabalid", character.CabalId);
 
                             return sqlCommand.ExecuteNonQuery() >= 1;

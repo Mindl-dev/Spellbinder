@@ -532,7 +532,13 @@ namespace SpellServer
 
                 if (arenaPlayer.JustLoaded)
                 {
-                    World.UpdateAllArenaPlayers(arenaPlayer.WorldPlayer, null);
+                    if (!arenaPlayer.ActiveCharacter.PlayerFlags.HasFlag(PlayerFlag.Hidden))
+                    {
+                        World.UpdateAllArenaPlayers(arenaPlayer.WorldPlayer);
+                        Network.SendToArena(arenaPlayer, GamePacket.Outgoing.World.PlayerJoin(arenaPlayer.WorldPlayer), false);
+                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Study.CabalIDUpdate(arenaPlayer.WorldPlayer));
+                    }
+                    
                     arenaPlayer.JustLoaded = false;
                 }
 

@@ -79,6 +79,8 @@ namespace SpellServer
 			MySQL.OnlineCharacters.SetAllOffline();
 		    MySQL.ServerSettings.SetExpMultiplier(Settings.Default.ExpMultiplier);
 
+			CabalManager.LoadCabals();
+
 			Network.Listen();
 	    }
 

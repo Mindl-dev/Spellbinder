@@ -1,7 +1,8 @@
 ﻿using Helper;
 using Helper.Network;
-using SpellServer.Statistics;
+using MySqlX.XDevAPI.Relational;
 using Org.BouncyCastle.Math.EC;
+using SpellServer.Statistics;
 using System;
 using System.Data;
 using System.Drawing;
@@ -9,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace SpellServer
@@ -217,7 +219,7 @@ namespace SpellServer
             }
         }
 
-		private static readonly ListCollection<String> FilteredNames = new ListCollection<String>();
+		public static readonly ListCollection<String> FilteredNames = new ListCollection<String>();
 	    private static readonly UInt64[] LevelExp =
         {
             0, 5, 50, 150, 300, 500, 800, 1200, 1700, 2300, 3000, 3800, 4700, 5700, 6800, 8000, 9300, 10700, 12200, 13800, 15500, 17300, 19200, 21200, 23300, 25500, 27800, 30200, 32700, 35300, 38000, 41000, 44000, 47000, 50000, 53000, 56000, 59000, 62000, 65000, 68000, 71000, 74000, 77000, 80000, 83000, 86000, 89000, 92000, 95000, 100000
@@ -233,8 +235,26 @@ namespace SpellServer
         public readonly Byte Slot;
         public String Name;
 
-        public String CabalName;
-        public String CabalTag;
+        public string CabalName
+        {
+            get
+            {
+                if (this.CabalId <= 0) return "";
+                var cabal = CabalManager.Cabals.FindById(this.CabalId);
+                return cabal != null ? cabal.CabalName : "";
+            }
+        }
+
+        public string CabalTag
+        {
+            get
+            {
+                if (this.CabalId <= 0) return "";
+                var cabal = CabalManager.Cabals.FindById(this.CabalId);
+                return cabal != null ? cabal.CabalTag : "";
+            }
+        }
+
         public Int32 CabalId;
 
         public Byte Agility;
@@ -417,8 +437,6 @@ namespace SpellServer
             SpellKey38 = data.Field<UInt16>("spell_key_38");
             SpellKey39 = data.Field<UInt16>("spell_key_39");
             SpellKey40 = data.Field<UInt16>("spell_key_40");
-            CabalName = data.Field<String>("cabalname");
-            CabalTag = data.Field<String>("cabaltag");
             OpLevel = data.Field<Byte>("oplevel");
             PlayerFlags = (PlayerFlag)data.Field<UInt32>("flags");
 
@@ -636,19 +654,24 @@ namespace SpellServer
             SpellKey39 = NetHelper.FlipBytes(BitConverter.ToUInt16(kBuffer, 0));
             inStream.Read(kBuffer, 0, 2);
             SpellKey40 = NetHelper.FlipBytes(BitConverter.ToUInt16(kBuffer, 0));
-            inStream.Read(kBuffer, 0, 2);
 
-            inStream.Read(stringBuffer, 0, 32);
-            CabalName = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
+            //inStream.Seek(4, SeekOrigin.Current);
 
-            inStream.Read(stringBuffer, 0, 8);
-            CabalTag = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
+            //inStream.Seek(32, SeekOrigin.Current);
+            //inStream.Read(stringBuffer, 0, 32);
+            //CabalName = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
 
-            inStream.Seek(7, SeekOrigin.Current);
-            OpLevel = (Byte)inStream.ReadByte();
+            //inStream.Seek(8, SeekOrigin.Current);
+            //inStream.Read(stringBuffer, 0, 8);
+            //CabalTag = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
 
-            inStream.Read(expBuffer, 0, 4);
-            PlayerFlags = (PlayerFlag)NetHelper.FlipBytes(BitConverter.ToUInt32(expBuffer, 0));
+            //CabalId = 0;
+
+            //inStream.Seek(7, SeekOrigin.Current);
+            //OpLevel = (Byte)inStream.ReadByte();
+
+            //inStream.Read(expBuffer, 0, 4);
+            //PlayerFlags = (PlayerFlag)NetHelper.FlipBytes(BitConverter.ToUInt32(expBuffer, 0));
 
 			SpellTrees = new SpellTreeCollection
                          {
@@ -691,9 +714,9 @@ namespace SpellServer
 
         public static Boolean IsNameTaken(String name)
         {
-            return MySQL.Character.FindByName(name.Escape()).Rows.Count > 0;
+            var table = MySQL.Character.FindByName(name.Escape());
+            return table != null && table.Rows.Count > 0;
         }
-
         public static Boolean IsNameValid(String name, Boolean allowAllCharacters)
         {
             name = name.Escape();
@@ -705,7 +728,8 @@ namespace SpellServer
 
 	    private static Boolean IsInSlot(Int32 accountId, Byte slot)
 	    {
-            return MySQL.Character.FindByAccountIdAndSlot(accountId, slot).Rows.Count > 0;
+            var slotnumber = MySQL.Character.FindByAccountIdAndSlot(accountId, slot);
+            return slotnumber != null && slotnumber.Rows.Count > 0;
         }
 
         public static Character LoadByName(Player player, String name)
@@ -889,8 +913,6 @@ namespace SpellServer
                     if (clientCharacter.CabalId != 0)
                     {
                         tCharacter.CabalId = clientCharacter.CabalId;
-                        tCharacter.CabalName = clientCharacter.CabalName;
-                        tCharacter.CabalTag = clientCharacter.CabalTag;
                     }
                 }
 
