@@ -1666,12 +1666,12 @@ namespace SpellServer
                     if (targetplayer == player) continue;
 
                     // 2. THE VISIBILITY RULE
-                    // If the person in the list is HIDDEN...
-                    if (player.Flags.HasFlag(PlayerFlag.Hidden))
+                    // Disabled for now...need to test more. Random player invis
+                    /*if (player.Flags.HasFlag(PlayerFlag.Hidden))
                     {
                         // ...ONLY show them if the person RECEIVING the list is an Admin.
                         if (!targetplayer.IsAdmin) continue;
-                    }
+                    }*/
 
                     outStream = GamePacket.Outgoing.World.PlayerEnterLarge(player, outStream);
 
@@ -1718,20 +1718,19 @@ namespace SpellServer
                     if (targetplayer.ActiveArenaPlayer == arenaPlayer) continue;
 
                     // 2. THE VISIBILITY RULE
-                    // If the person in the list is HIDDEN...
-                    if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
+                    // Disabled for now...need to test more. Random player invis
+                    /*if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
                     {
                         // ...ONLY show them if the person RECEIVING the list is an Admin.
                         if (!targetplayer.IsAdmin) continue;
-                    }
+                    }*/
 
                     outStream = GamePacket.Outgoing.Arena.ArenaPlayerEnterLarge(arenaPlayer, outStream);
 
                     j++;
 
                     if (j == 10)
-                    {
-                        Program.ServerForm.MainLog.WriteMessage("[UpdateAllArenaPlayers] Send target j is 10", Color.Red);
+                    {                        
                         Network.Send(targetplayer, outStream);
                         outStream = null;
                         j = 0;
@@ -1748,7 +1747,7 @@ namespace SpellServer
                             outStream.WriteByte(0x00);
                         }
                     }
-                    Program.ServerForm.MainLog.WriteMessage("[UpdateAllArenaPlayers] Send target j < 10", Color.Red);
+                    
                     Network.Send(targetplayer, outStream);
                 }
             }
@@ -1830,18 +1829,13 @@ namespace SpellServer
 
                     Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player));                    
 
-                    if (!player.Flags.HasFlag(PlayerFlag.Hidden))
-                    {
+                    //if (!player.Flags.HasFlag(PlayerFlag.Hidden))
+                    //{
                         Network.SendTo(player, GamePacket.Outgoing.World.PlayerJoin(player), Network.SendToType.Tavern, false);
-                    }
+                    //}
 
                     Network.Send(player, GamePacket.Outgoing.Player.HasEnteredWorld());
                     Network.Send(player, GamePacket.Outgoing.Arena.SuccessfulArenaEntry());
-
-                    /*if (player.ActiveCharacter.CabalId != 0)
-                    {
-                        Network.Send(player, GamePacket.Outgoing.Study.CabalJoin(player));
-                    }*/
 
                     break;
                 }

@@ -9,6 +9,7 @@ using SpellServer.Properties;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -980,8 +981,16 @@ namespace SpellServer
                     nextStepPos = new Vector3(stepXFinal, stepYFinal, projectile.Location.Z + verticalStep);
                 }
 
-                // 3. Collision Check
-                int collisionType = CollisionClassifier(projectile, nextStepPos, projectile.Location, verticalStep, grid);
+                int collisionType = 0;
+
+                if (projectile.WallCollisionFlag)
+                {
+                    collisionType = 8;
+                }
+                else
+                {
+                    collisionType = CollisionClassifier(projectile, nextStepPos, projectile.Location, verticalStep, grid);
+                }
                                 
                 if (collisionType != 0)
                 {
@@ -1142,6 +1151,7 @@ namespace SpellServer
                         {
                             projectile.hitBlock = detectedBlock;
                         }
+                        
                         return 10;
                     }
 
@@ -1223,7 +1233,7 @@ namespace SpellServer
                         }
                     }
 
-                    if (Walls.Count > 0 && projectile.WallCollisionFlag == false)
+                    /*if (Walls.Count > 0 && projectile.WallCollisionFlag == false)
                     {
                         for (Int32 w = Walls.Count - 1; w >= 0; w--)
                         {
@@ -1240,7 +1250,7 @@ namespace SpellServer
                         projectile.hitWall = CollidedWall;
                         projectile.WallCollisionFlag = true;
                         return 8;
-                    }
+                    }*/
                 }
                 else
                 {
@@ -1427,12 +1437,14 @@ namespace SpellServer
                     DoAreaDamage(p.hitPlayer, p, p.BoundingBox);
                 }
             }
-                        
+
+            Program.ServerForm.MainLog.WriteMessage($"CollisionType: {collisionType}", Color.Red);
+
             // Specific logic for Case 8 (Shields/Walls)
             if (collisionType == 8 && p.hitWall != null && p.Owner != p.hitWall.Owner)
             {
                 SpellDamage damage = new SpellDamage(p.Spell);
-                //Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - Damage: {damage}, WallId: {p.hitWall.ObjectId}", Color.Red);
+                Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - Damage: {damage}, WallId: {p.hitWall.ObjectId}", Color.Red);
                 DoWallDamage(p.Owner, p.hitWall, p.Spell, damage);
             }
         }
@@ -2438,6 +2450,7 @@ namespace SpellServer
         {
             if (wall == null)
             {
+                Program.ServerForm.MainLog.WriteMessage($"wall is null", Color.Red);
                 return;
             }
             if (spellDamage == null) spellDamage = new SpellDamage(spell);
@@ -2485,6 +2498,7 @@ namespace SpellServer
 
             if (spellDamage.Damage <= 0 && spellDamage.Power <= 0)
             {
+                Program.ServerForm.MainLog.WriteMessage($"spellDamage and Power <= 0", Color.Red);
                 return;
             }
 
@@ -2502,9 +2516,15 @@ namespace SpellServer
 
         public void DoWallDamage(ArenaPlayer arenaPlayer, Wall wall, Int16 damage, bool UDP = false)
         {
-            if (wall == null || damage <= 0) return;
+            if (wall == null || damage <= 0)
+            {
+                Program.ServerForm.MainLog.WriteMessage($"Wall null and damage <= 0", Color.Red);
+                return;
+            }
 
             wall.CurrentHp -= damage;
+
+            Program.ServerForm.MainLog.WriteMessage($"Wall CurrentHp: {wall.CurrentHp}", Color.Red);
 
             if (wall.CurrentHp <= 0)
             {

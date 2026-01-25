@@ -1,5 +1,6 @@
 ﻿using Helper;
 using Helper.Network;
+using MySqlX.XDevAPI.Common;
 using MySqlX.XDevAPI.Relational;
 using Org.BouncyCastle.Math.EC;
 using SpellServer.Statistics;
@@ -655,23 +656,23 @@ namespace SpellServer
             inStream.Read(kBuffer, 0, 2);
             SpellKey40 = NetHelper.FlipBytes(BitConverter.ToUInt16(kBuffer, 0));
 
-            //inStream.Seek(4, SeekOrigin.Current);
+            inStream.Seek(4, SeekOrigin.Current);
 
-            //inStream.Seek(32, SeekOrigin.Current);
-            //inStream.Read(stringBuffer, 0, 32);
-            //CabalName = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
+            CabalId = (Byte)inStream.ReadByte();
 
-            //inStream.Seek(8, SeekOrigin.Current);
-            //inStream.Read(stringBuffer, 0, 8);
-            //CabalTag = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
+            /*inStream.Seek(3, SeekOrigin.Current);
+            
+            inStream.Read(stringBuffer, 0, 32);
+            CabalName = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
 
-            //CabalId = 0;
+            inStream.Read(stringBuffer, 0, 32);
+            CabalTag = Encoding.ASCII.GetString(stringBuffer).Split((Char)0)[0];
 
-            //inStream.Seek(7, SeekOrigin.Current);
-            //OpLevel = (Byte)inStream.ReadByte();
+            inStream.Seek(7, SeekOrigin.Current);
+            OpLevel = (Byte)inStream.ReadByte();
 
-            //inStream.Read(expBuffer, 0, 4);
-            //PlayerFlags = (PlayerFlag)NetHelper.FlipBytes(BitConverter.ToUInt32(expBuffer, 0));
+            inStream.Read(expBuffer, 0, 4);
+            PlayerFlags = (PlayerFlag)NetHelper.FlipBytes(BitConverter.ToUInt32(expBuffer, 0));*/
 
 			SpellTrees = new SpellTreeCollection
                          {
@@ -746,6 +747,8 @@ namespace SpellServer
 
         public static SaveError Save(Player player, Character clientCharacter)
         {
+            if (clientCharacter == null) return SaveError.Generic;
+
             lock (PlayerManager.Players.SyncRoot)
             {
                 Boolean isNew = false;
@@ -753,8 +756,6 @@ namespace SpellServer
 
                 if (tCharacter == null)
                 {
-                    if (clientCharacter == null) return SaveError.Generic;
-
                     tCharacter = LoadByName(player, clientCharacter.Name);
 
                     if (tCharacter != null)
@@ -816,6 +817,8 @@ namespace SpellServer
                             tCharacter.OpLevel = 1;
                         }
                     }
+
+                    tCharacter.CabalId = 0;
 
                 }
                 else

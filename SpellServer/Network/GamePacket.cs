@@ -603,9 +603,11 @@ namespace SpellServer
             {
                 public static void Save(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
-                    SaveError save = SpellServer.Character.Save(player, new SpellServer.Character(inStream));
+                    SpellServer.Character tempChar = new SpellServer.Character(inStream);
 
-                    if (save == SaveError.Success) Network.Send(player, Outgoing.Player.SaveSuccess(player, player.ActiveCharacter.Slot));
+                    SaveError save = SpellServer.Character.Save(player, tempChar);                  
+
+                    if (save == SaveError.Success) Network.Send(player, Outgoing.Player.SaveSuccess(player, tempChar.Slot));
                 }
                 public static void Delete(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -1528,7 +1530,7 @@ namespace SpellServer
                     outStream.WriteByte((byte)arenaPlayer.ActiveCharacter.CabalId);
 
                     byte[] tagBuf = new byte[4];
-                    string tagStr = arenaPlayer.ActiveCharacter.CabalTag;
+                    string tagStr = CabalManager.Cabals.FindById(arenaPlayer.ActiveCharacter.CabalId).CabalTag;
 
                     if (!string.IsNullOrEmpty(tagStr))
                     {
