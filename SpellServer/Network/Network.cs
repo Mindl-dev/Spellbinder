@@ -160,6 +160,7 @@ namespace SpellServer
                     {
                         if (player.ActiveArenaPlayer != null)
                         {
+                            Program.ServerForm.MainLog.WriteMessage($"[Network Disconnect] Player Left", Color.Red);
                             player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
                         }
                     }

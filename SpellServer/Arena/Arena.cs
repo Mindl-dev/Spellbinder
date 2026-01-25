@@ -915,15 +915,15 @@ namespace SpellServer
 
                     if (Walls[w].BoundingBox.Collides(testProjectileBox))
                     {
-                        Program.ServerForm.MainLog.WriteMessage($"Wall collides [Projectile Move]- WallId: {Walls[w].ObjectId}, Owner: {Walls[w].Owner.ActiveCharacter.Name}", Color.Red);
                         CollidedWall = Walls[w];
+                        
+                        projectile.hitWall = CollidedWall;
+                        projectile.WallCollisionFlag = true;
+
                         break;
                     }
 
                 }
-
-                projectile.hitWall = CollidedWall;
-                projectile.WallCollisionFlag = true;
             }
 
             float moveMagnitudeRemaining = Math.Abs(totalMoveMagnitude);
@@ -1437,15 +1437,15 @@ namespace SpellServer
                     DoAreaDamage(p.hitPlayer, p, p.BoundingBox);
                 }
             }
-
-            Program.ServerForm.MainLog.WriteMessage($"CollisionType: {collisionType}", Color.Red);
-
-            // Specific logic for Case 8 (Shields/Walls)
-            if (collisionType == 8 && p.hitWall != null && p.Owner != p.hitWall.Owner)
+                        
+            if (p.hitWall != null)
             {
-                SpellDamage damage = new SpellDamage(p.Spell);
-                Program.ServerForm.MainLog.WriteMessage($"[Wall Damage] - Damage: {damage}, WallId: {p.hitWall.ObjectId}", Color.Red);
-                DoWallDamage(p.Owner, p.hitWall, p.Spell, damage);
+                if (collisionType == 8 && p.Owner != p.hitWall.Owner)
+                {
+                    SpellDamage damage = new SpellDamage(p.Spell);
+                    
+                    DoWallDamage(p.Owner, p.hitWall, p.Spell, damage);
+                }
             }
         }
         public int HandleBounce(Projectile projectile, int collisionType, Vector3 testPos, Grid grid)
@@ -1462,7 +1462,7 @@ namespace SpellServer
                 return 0;
             }
             else if (projectile.hitWall == null && collisionType == 8)
-            {
+            {                
                 return 0;
             }
             else if (collisionType == 5 || collisionType == 9)
@@ -1718,10 +1718,10 @@ namespace SpellServer
 
                     Grid grid = projectile.Owner.OwnerArena.Grid;
 
-                    if (DebugNumber == 0)
+                    /*if (DebugNumber == 0)
                     {
                         Program.ServerForm.MainLog.WriteMessage($"WorldX: {(int)projectile.Location.X}, WorldY: {(int)projectile.Location.Y}, GridX: {(int)projectile.Location.X >> 6}, GridY: {(int)projectile.Location.Y >> 6}", Color.Red);
-                    }
+                    }*/
 
                     DebugNumber++;
 
@@ -2449,8 +2449,7 @@ namespace SpellServer
         public void DoWallDamage(ArenaPlayer arenaPlayer, Wall wall, Spell spell, SpellDamage spellDamage, bool UDP = false)
         {
             if (wall == null)
-            {
-                Program.ServerForm.MainLog.WriteMessage($"wall is null", Color.Red);
+            {               
                 return;
             }
             if (spellDamage == null) spellDamage = new SpellDamage(spell);
@@ -2497,15 +2496,12 @@ namespace SpellServer
             }
 
             if (spellDamage.Damage <= 0 && spellDamage.Power <= 0)
-            {
-                Program.ServerForm.MainLog.WriteMessage($"spellDamage and Power <= 0", Color.Red);
+            {                
                 return;
             }
 
             wall.CurrentHp -= (Int16)(spellDamage.Damage + spellDamage.Power);
-
-            Program.ServerForm.MainLog.WriteMessage($"Wall HP: {wall.CurrentHp}", Color.Red);
-
+                        
             if (wall.CurrentHp <= 0)
             {
                 Network.SendTo(this, GamePacket.Outgoing.Arena.ThinDamage(wall.ObjectId, 1000, UDP), Network.SendToType.Arena);
@@ -2518,13 +2514,10 @@ namespace SpellServer
         {
             if (wall == null || damage <= 0)
             {
-                Program.ServerForm.MainLog.WriteMessage($"Wall null and damage <= 0", Color.Red);
                 return;
             }
 
             wall.CurrentHp -= damage;
-
-            Program.ServerForm.MainLog.WriteMessage($"Wall CurrentHp: {wall.CurrentHp}", Color.Red);
 
             if (wall.CurrentHp <= 0)
             {
