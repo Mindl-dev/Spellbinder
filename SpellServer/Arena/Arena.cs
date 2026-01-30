@@ -78,6 +78,7 @@ namespace SpellServer
 	    public Interval IdleDuration;
         public State CurrentState;
         public State EndState;
+        public bool EnabledStatus;
 
 		public Int32 FounderCharId;
         public String Founder;
@@ -87,9 +88,9 @@ namespace SpellServer
         public Int16 TimeLimit;
         public String ShortGameName;
         public DateTime StartTime;
-        public TimeSpan elaspedTime;
-        public Int32 elaspedSeconds;
-        public Int32 baseTime = 100000000;
+        public TimeSpan elapsedTime;
+        public Int32 elapsedSeconds;
+        public Int32 baseTime = 3600;
 
         public Int32 AveragePlayerLevel;
         public Int32 EventExp;
@@ -120,6 +121,12 @@ namespace SpellServer
         public Wall CollidedWall;
 
         public Projectile CollidedSpell;
+
+        public bool AFFromClients = false;
+
+        public Interval CleanupTick;
+
+        private bool statsProcessed = false;
 
         public Arena(Player player, Grid grid, Byte levelRange, ArenaRuleset ruleset)
         {
@@ -207,6 +214,7 @@ namespace SpellServer
                 ProjectileTrackingTick = new Interval(100, true);
                 PlayerTrackingTick = new Interval(10, true);
                 ThinTrackingTick = new Interval(3000, true);
+                CleanupTick = new Interval(5000, false);
 
                 GameName = String.Format("[{0}] {1}", ruleset.ModeString, Grid.GameName);
 
@@ -260,11 +268,72 @@ namespace SpellServer
 
                 DebugNumber = 0;
 
+                EnabledStatus = true;
+
                 ArenaManager.Arenas.Add(this);
             }
         }
 
         public Team WinningTeam
+        {
+            get
+            {
+                lock (SyncRoot)
+                {
+                    // Don't calculate victory if the match is already cleaning up
+                    if (CurrentState == State.CleanUp) return Team.Neutral;
+
+                    bool dragonDead = ArenaTeams.Dragon.Shrine.IsDead || ArenaTeams.Dragon.Shrine.IsDisabled;
+                    bool pheonixDead = ArenaTeams.Pheonix.Shrine.IsDead || ArenaTeams.Pheonix.Shrine.IsDisabled;
+                    bool gryphonDead = ArenaTeams.Gryphon.Shrine.IsDead || ArenaTeams.Gryphon.Shrine.IsDisabled;
+
+                    // 1. Gryphon Victory (Dragon and Phoenix are both dead)
+                    if (!gryphonDead && dragonDead && pheonixDead)
+                    {
+                        EndState = State.GryphonVictory;
+                        return Team.Gryphon; 
+                    }
+
+                    // 2. Phoenix Victory (Dragon and Gryphon are both dead)
+                    if (!pheonixDead && dragonDead && gryphonDead)
+                    {
+                        EndState = State.PheonixVictory;
+                        return Team.Pheonix;
+                    }
+
+                    // 3. Dragon Victory (Phoenix and Gryphon are both dead)
+                    if (!dragonDead && pheonixDead && gryphonDead)
+                    {
+                        EndState = State.DragonVictory;
+                        return Team.Dragon;
+                    }
+
+                    // 4. Guild Rules / Points Tie-breaker (Keep your existing points logic here if needed)
+                    if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.GuildRules) && Duration.HasElapsed)
+                    {
+                        if (ArenaTeams.Gryphon.Shrine.GuildPoints > ArenaTeams.Dragon.Shrine.GuildPoints && ArenaTeams.Gryphon.Shrine.GuildPoints > ArenaTeams.Pheonix.Shrine.GuildPoints)
+                        {
+                            EndState = State.GryphonVictory;
+                            return Team.Gryphon;
+                        }
+                        if (ArenaTeams.Pheonix.Shrine.GuildPoints > ArenaTeams.Dragon.Shrine.GuildPoints && ArenaTeams.Pheonix.Shrine.GuildPoints > ArenaTeams.Gryphon.Shrine.GuildPoints)
+                        {
+                            EndState = State.PheonixVictory;
+                            return Team.Pheonix;
+                        }
+                        if (ArenaTeams.Dragon.Shrine.GuildPoints > ArenaTeams.Gryphon.Shrine.GuildPoints && ArenaTeams.Dragon.Shrine.GuildPoints > ArenaTeams.Pheonix.Shrine.GuildPoints)
+                        {
+                            EndState = State.DragonVictory;
+                            return Team.Dragon;
+                        }
+                    }
+
+                    return Team.Neutral;
+                }
+            }
+        }
+
+        /*public Team WinningTeam
         {
             get
             {
@@ -348,11 +417,11 @@ namespace SpellServer
 
                 return Team.Neutral;
             }
-        }
+        }*/
 
         private void ProcessArena()
         {
-            while (CurrentState != State.Ended)
+            while (CurrentState != State.CleanUp)
             {
                 if (!ProcessingTick.HasElapsed)
                 {
@@ -366,40 +435,48 @@ namespace SpellServer
 
                 lock (SyncRoot)
                 {
-                    try
-                    {
-                        ProcessArenaPlayers();
-                        ProcessProjectiles(FrameTime);
-                        ProcessRunes();
-                        ProcessBolts();
-                        ProcessWalls();
-                        ProcessTriggers();
-                        ProcessMisc();
+                    if (CurrentState != State.Ended)
+                    {                                              
+                        try
+                        {
+                            ProcessArenaPlayers();
+                            ProcessProjectiles(FrameTime);
+                            ProcessRunes();
+                            ProcessBolts();
+                            ProcessWalls();
+                            ProcessTriggers();
+                            ProcessMisc();
 
-                        elaspedTime = DateTime.UtcNow - StartTime;
-                        elaspedSeconds = (int)elaspedTime.TotalSeconds;
+                            elapsedTime = DateTime.UtcNow - StartTime;
+                            elapsedSeconds = (int)elapsedTime.TotalSeconds;
+                        }
+                        catch (Exception ex)
+                        {
+                            Program.ServerForm.MainLog.WriteMessage(String.Format("[Arena Exception] {0}", ex.GetStackTrace()), Color.Red);
+
+                            EndState = State.Ended;
+                            EndMatch(false);
+
+                            return;
+                        }
+
+                        CleanupTick.Reset();
                     }
-                    catch (Exception ex)
+                    else 
                     {
-                        Program.ServerForm.MainLog.WriteMessage(String.Format("[Arena Exception] {0}", ex.GetStackTrace()), Color.Red);
+                        EndMatch(true);
                         
-                        EndState = State.Ended;
-                        EndMatch(false);
-
-                        return;
+                        Thread.Sleep(10);
                     }
-
                 }
-            }
-
-            EndMatch(true);
+            }            
         }
 
         public void EndMatch(Boolean isCleanEnding)
         {
             lock (SyncRoot)
-            {
-                if (isCleanEnding)
+            {        
+                if (isCleanEnding && !statsProcessed)
                 {
                     Team winningTeam = WinningTeam;
 
@@ -463,6 +540,8 @@ namespace SpellServer
 
                             GivePlayerExperience(arenaPlayer, bonusExp, ArenaPlayer.ExperienceType.Bonus);
 
+                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.ArenaState(this, arenaPlayer.WorldPlayer, false));
+
                             Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
 
                             if (arenaPlayer.SecondsPlayed >= 300 && ArenaPlayers.Count >= 3)
@@ -477,28 +556,39 @@ namespace SpellServer
                                 arenaPlayer.ActiveCharacter.Statistics.Losses++;
                             }
                         }
-
-                        for (Int32 j = 0; j < ArenaPlayers.Count; j++)
-                        {
-                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerState(ArenaPlayers[j]));
-                        }
                     }
 
+                    statsProcessed = true;
+
                     Thread.Sleep(100);
+
                 }
+
+                bool isDone = AFFromClients || CleanupTick.HasElapsed;
 
                 for (Int32 i = 0; i < ArenaPlayers.Count; i++)
                 {
                     ArenaPlayer arenaPlayer = ArenaPlayers[i];
                     if (arenaPlayer == null) continue;
+                    
+                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.ArenaState(this, arenaPlayer.WorldPlayer, true));
 
-                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.ArenaState(this, arenaPlayer.WorldPlayer));
-                    Network.SendTo(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.PlayerLeave(arenaPlayer.WorldPlayer), Network.SendToType.Tavern, false);
+                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerState(ArenaPlayers[i]));
+
+                    if (isDone)
+                    {
+                        Network.SendTo(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.PlayerLeave(arenaPlayer.WorldPlayer), Network.SendToType.Tavern, true);
+                    }
+
                 }
+                                
+                if (isDone)
+                {
+                    Network.SendTo(GamePacket.Outgoing.World.ArenaDeleted(this), Network.SendToType.Tavern);
+                    Network.SendTo(GamePacket.Outgoing.World.ArenaDeleted(this), Network.SendToType.Arena);
 
-                Network.SendTo(GamePacket.Outgoing.World.ArenaDeleted(this), Network.SendToType.Tavern);
-
-                CurrentState = State.CleanUp;
+                    CurrentState = State.CleanUp;
+                }      
             }
         }
 
@@ -2810,7 +2900,7 @@ namespace SpellServer
             }
         }
 
-        public void BiasedShrine(ArenaPlayer arenaPlayer, Byte shrineId, bool UDP = false)
+        public void BiasedShrine(ArenaPlayer arenaPlayer, Byte shrineId, Byte team, Byte biasStrength)
         {
             Shrine shrine = Grid.GetShrineById(shrineId);
             if (shrine == null || shrine.IsIndestructible || !arenaPlayer.IsAlive || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
@@ -2883,7 +2973,7 @@ namespace SpellServer
                         shrine.CurrentBias += (Byte) biasAmount;
 
                         if (shrine.CurrentBias == shrine.MaxBias) biasAmount = (Byte) shrine.MaxBias;
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte) biasAmount, UDP), Network.SendToType.Arena);
+                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte) biasAmount), Network.SendToType.Arena);
                     }
                     else
                     {
@@ -2903,19 +2993,24 @@ namespace SpellServer
                             biasAmount = -biasAmount & 0xFF;
                         }
 
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte) biasAmount, UDP), Network.SendToType.Arena);
+                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte) biasAmount), Network.SendToType.Arena);
                     }
 
-                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer, UDP));
+                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
                 }
                 else
                 {
-                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0, UDP));
+                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
                 }
             }
+
+            /*if (shrine.CurrentBias <= 0)
+            {
+                shrine.IsDisabled = true;
+            }*/
         }
 
-        public void BiasedPool(ArenaPlayer arenaPlayer, Byte poolId, bool UDP = false)
+        public void BiasedPool(ArenaPlayer arenaPlayer, Byte poolId, Byte poolTeam, Byte biasStrength)
         {
             Pool pool = Grid.Pools.FindById(poolId);
             if (pool == null || !arenaPlayer.IsAlive || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoPoolBiasing) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
@@ -2984,7 +3079,7 @@ namespace SpellServer
                         pool.CurrentBias += (Byte) biasAmount;
 
                         if (pool.CurrentBias == pool.MaxBias) biasAmount = Convert.ToByte(pool.MaxBias);
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte) biasAmount, UDP), Network.SendToType.Arena);
+                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte) biasAmount), Network.SendToType.Arena);
                     }
                     else
                     {
@@ -3002,7 +3097,7 @@ namespace SpellServer
                                 if (pool.CurrentBias == 0) pool.CurrentBias = 1;
                                 if (pool.CurrentBias == pool.MaxBias) biasAmount = Convert.ToByte(pool.MaxBias);
 
-                                Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte)biasAmount, UDP), Network.SendToType.Arena);
+                                Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte)biasAmount), Network.SendToType.Arena);
                             }
                             else
                             {
@@ -3015,14 +3110,14 @@ namespace SpellServer
                             biasAmount = -biasAmount & 0xFF;
                         }
 
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte) biasAmount, UDP), Network.SendToType.Arena);
+                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte) biasAmount), Network.SendToType.Arena);
                     }
 
-                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer, UDP));
+                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
                 }
                 else
                 {
-                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0, UDP));
+                    Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0));
                 }
             }
         }

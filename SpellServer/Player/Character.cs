@@ -658,7 +658,7 @@ namespace SpellServer
 
             inStream.Seek(4, SeekOrigin.Current);
 
-            CabalId = (Byte)inStream.ReadByte();
+            //CabalId = (Byte)inStream.ReadByte();
 
             /*inStream.Seek(3, SeekOrigin.Current);
             

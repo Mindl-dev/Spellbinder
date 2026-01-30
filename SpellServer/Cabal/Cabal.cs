@@ -135,7 +135,9 @@ namespace SpellServer
 
             Program.ServerForm.MainLog.WriteMessage($"{player.ActiveCharacter.Name} is leaving Cabal: {cabal.CabalName}({cabal.CabalTag})", Color.Red);
 
-            Save(player, CabalManager.Cabals.FindById(player.ActiveCharacter.CabalId), false);
+            //Save(player, CabalManager.Cabals.FindById(player.ActiveCharacter.CabalId), false);
+
+            MySQL.Character.Save(player.ActiveCharacter, false, player.Flags);
 
             UpdateAllPlayers(player, cabal, false);
         }
@@ -165,7 +167,11 @@ namespace SpellServer
                                 
                 player.ActiveCharacter.CabalId = cabal.CabalId;
 
-                MySQL.Cabals.Save(cabal, isNew);
+                if (isNew)
+                {
+                    MySQL.Cabals.Save(cabal, isNew);
+                }
+
                 MySQL.Character.Save(player.ActiveCharacter, false, player.Flags);
 
                 return CabalSaveError.Success;

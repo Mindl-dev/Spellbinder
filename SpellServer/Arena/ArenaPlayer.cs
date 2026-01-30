@@ -141,7 +141,7 @@ namespace SpellServer
         }
         public void AwardFinalMatchExp(Arena arena)
         {
-            int timeRemainingSeconds = arena.TimeLimit - (short)arena.elaspedTime.TotalSeconds;
+            int timeRemainingSeconds = arena.TimeLimit - (short)arena.elapsedTime.TotalSeconds;
             float timeBonusMultiplier = 1.0f + (timeRemainingSeconds / 600f); // Example: 10% bonus per 1 min left
 
             foreach (var ap in arena.ArenaPlayers)
@@ -539,7 +539,7 @@ namespace SpellServer
 
             lock (OwnerArena.SyncRoot)
             {
-                Network.Send(WorldPlayer, GamePacket.Outgoing.Arena.UpdateShrinePoolState(arena));
+                Network.Send(WorldPlayer, GamePacket.Outgoing.Arena.UpdateShrinePoolState(arena, this, true));
             }
 
             Thread.Sleep(500);

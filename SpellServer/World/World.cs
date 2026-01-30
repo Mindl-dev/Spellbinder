@@ -1667,11 +1667,11 @@ namespace SpellServer
 
                     // 2. THE VISIBILITY RULE
                     // Disabled for now...need to test more. Random player invis
-                    /*if (player.Flags.HasFlag(PlayerFlag.Hidden))
+                    if (player.Flags.HasFlag(PlayerFlag.Hidden))
                     {
                         // ...ONLY show them if the person RECEIVING the list is an Admin.
                         if (!targetplayer.IsAdmin) continue;
-                    }*/
+                    }
 
                     outStream = GamePacket.Outgoing.World.PlayerEnterLarge(player, outStream);
 
@@ -1719,11 +1719,11 @@ namespace SpellServer
 
                     // 2. THE VISIBILITY RULE
                     // Disabled for now...need to test more. Random player invis
-                    /*if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
+                    if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
                     {
                         // ...ONLY show them if the person RECEIVING the list is an Admin.
                         if (!targetplayer.IsAdmin) continue;
-                    }*/
+                    }
 
                     outStream = GamePacket.Outgoing.Arena.ArenaPlayerEnterLarge(arenaPlayer, outStream);
 

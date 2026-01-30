@@ -1,4 +1,5 @@
-﻿using Helper;
+﻿using Google.Protobuf.WellKnownTypes;
+using Helper;
 using Helper.Math;
 using Helper.Network;
 using MySqlX.XDevAPI.Relational;
@@ -24,6 +25,7 @@ using System.Windows.Forms;
 using ZstdSharp.Unsafe;
 using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
 using static Mysqlx.Crud.Order.Types;
+//using static Mysqlx.Datatypes.Scalar.Types;
 using static SpellServer.ArenaPlayer;
 using static SpellServer.Character;
 using static SpellServer.MySQL;
@@ -39,6 +41,10 @@ namespace SpellServer
         {
             public static class Arena
             {
+                public static void ArenaClientEndState(SpellServer.Player player, MemoryStream inStream)
+                {
+                    player.ActiveArena.AFFromClients = true;
+                }
                 public static void ScoreRegistered(SpellServer.Player player, MemoryStream inStream)
                 {
                     inStream.Seek(2, SeekOrigin.Begin);
@@ -267,9 +273,13 @@ namespace SpellServer
 
                     inStream.Seek(2, SeekOrigin.Begin);
 
+                    Byte poolId = (Byte)inStream.ReadByte();
+
                     Byte poolTeam = (Byte)inStream.ReadByte();
 
-                    player.ActiveArena.BiasedPool(player.ActiveArenaPlayer, poolTeam);
+                    Byte biasStrength = (Byte)inStream.ReadByte();
+
+                    player.ActiveArena.BiasedPool(player.ActiveArenaPlayer, poolId, poolTeam, biasStrength);
                 }
                 public static void BiasedShrine(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -277,9 +287,15 @@ namespace SpellServer
 
                     inStream.Seek(2, SeekOrigin.Begin);
 
+                    Byte shrineId = (Byte)inStream.ReadByte();
+
+                    int charlevel = inStream.ReadByte();
+
                     Byte shrineTeam = (Byte)inStream.ReadByte();
 
-                    player.ActiveArena.BiasedShrine(player.ActiveArenaPlayer, shrineTeam);
+                    Byte biasStrength = (Byte)inStream.ReadByte();
+
+                    player.ActiveArena.BiasedShrine(player.ActiveArenaPlayer, shrineId, shrineTeam, biasStrength);
                 }
                 public static void CastEffect(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -1013,64 +1029,7 @@ namespace SpellServer
                     }
 
                     return new string(buffer);
-                }
-                /*public static void HandleCabal(SpellServer.Player player, MemoryStream inStream)
-                {
-                    Byte[] tBuffer = new Byte[62];
-                    inStream.Seek(2, SeekOrigin.Begin);
-
-                    inStream.Read(tBuffer, 0, 60);
-
-                    ushort token = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 0));
-
-                    ushort targetId = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 2));
-
-                    string dataSegment = Encoding.ASCII.GetString(tBuffer, 4, tBuffer.Length - 4);
-
-                    string[] parts = dataSegment.Split(',');
-
-                    Cabal cabal = new Cabal(player);
-
-                    if (parts.Length >= 3)
-                    {
-                        cabal.CabalName = Deobfuscate(parts[0]);
-                        cabal.CabalTag = Deobfuscate(parts[1]);
-                        cabal.CabalMotto = Deobfuscate(parts[2]);
-                    }
-
-                    if (token == 0)
-                    {
-                        // --- STEP 1: INITIAL REQUEST ---
-                        if (cabal.IsCabalNameTaken(cabal.CabalName) || cabal.IsCabalTagTaken(cabal.CabalTag))
-                        {
-                            SendCabalError(player, "Name or Tag already exists.");
-                            return;
-                        }
-
-                        // Generate the token the client expects to see in Request 3
-                        ushort expectedToken = GenerateSessionToken(player);
-
-                        player.ExpectedCabalToken = expectedToken;
-
-                        // Send F_CreateCabal back to client to trigger Step 3
-                        // This packet must contain the expectedToken
-                        Network.Send(player, Outgoing.World.CreateCabal(expectedToken, cabal));
-                    }
-                    else
-                    {
-                        // --- STEP 3: FINAL COMMIT ---
-                        if (token == player.ExpectedCabalToken)
-                        {
-                            // Final validation and database insert
-                            int newId = cabal.Save(player.ActiveCharacter., cabal, true);
-
-                            // Success! Update player's guild state
-                            if (newId != 0) {
-                            player.ActiveCharacter.CabalId = newId;
-                            Network.Send(player, Outgoing.World.CreateCabal(player.ExpectedCabalToken, cabal));
-                        }
-                    }
-                }*/
+                }                
                 public static void RequestedPlayer(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
                     Byte[] tBuffer = new Byte[2];
@@ -1633,36 +1592,6 @@ namespace SpellServer
 
                     return outStream;
                 }
-                /*public static MemoryStream PlayerJoin(ArenaPlayer arenaPlayer, bool UDP = false)
-                {
-                    MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
-                    outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
-                    outStream.WriteByte(arenaPlayer.OwnerArena.ArenaId);
-                    outStream.WriteByte((Byte) arenaPlayer.ActiveTeam);
-                    outStream.Write(Encoding.ASCII.GetBytes(arenaPlayer.ActiveCharacter.Name), 0, arenaPlayer.ActiveCharacter.Name.Length);
-                    outStream.Seek((12 - arenaPlayer.ActiveCharacter.Name.Length), SeekOrigin.Current);
-                    outStream.WriteByte((Byte) arenaPlayer.ActiveCharacter.Class);
-                    outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
-                    outStream.WriteByte(arenaPlayer.ActiveCharacter.OpLevel);
-                    outStream.WriteByte((byte)arenaPlayer.ActiveCharacter.CabalId);
-                    
-                    if (arenaPlayer.ActiveCharacter.CabalTag != null)
-                    {
-                        outStream.Write(Encoding.ASCII.GetBytes(arenaPlayer.ActiveCharacter.CabalTag), 0, arenaPlayer.ActiveCharacter.CabalTag.Length);
-                    }
-                    else
-                    {
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-                    }
-                    
-                    outStream.WriteByte(0x00);
-                    return outStream;
-                }*/
                 public static MemoryStream PlayerLeave(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
@@ -1684,15 +1613,20 @@ namespace SpellServer
                 {
                     MemoryStream outStream = new MemoryStream();
 
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerState);
 
-                    outStream.WriteByte((Byte)arenaPlayer.DeathCount);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
+
                     outStream.WriteByte((Byte)arenaPlayer.KillCount);
+                    outStream.WriteByte((Byte)arenaPlayer.DeathCount);
+                    
                     outStream.WriteByte(arenaPlayer.IsAlive ? (Byte)0 : (Byte)1);
-                    outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
+                    outStream.WriteByte((Byte)arenaPlayer.ActiveTeam);
+                    outStream.WriteByte((Byte)arenaPlayer.ActiveCharacter.Level);
                     outStream.WriteByte((Byte)arenaPlayer.RaiseCount);
-                    outStream.WriteByte((Byte)arenaPlayer.ActiveCharacter.Class);
+
+                    //outStream.WriteByte((Byte)arenaPlayer.ActiveCharacter.Class);
 
                     /*outStream.WriteByte(0xFF);
                     outStream.WriteByte(0xFF);
@@ -1891,12 +1825,11 @@ namespace SpellServer
                     outStream.WriteByte((Byte)PacketOutFunction.BiasedShrine);
                     outStream.WriteByte(shrine.ShrineId);
                     outStream.WriteByte((Byte) shrine.Team);
-                    outStream.WriteByte((Byte) shrine.CurrentBias);
+                    outStream.WriteByte((Byte)shrine.CurrentBias);
                     outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)shrine.Power);
                     outStream.WriteByte(biasAmount);
                     outStream.WriteByte(0x00);
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     return outStream;
                 }
                 public static MemoryStream BiasedPool(ArenaPlayer arenaPlayer, Pool pool, Byte biasAmount, bool UDP = false)
@@ -1905,16 +1838,15 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.BiasedPool);
                     outStream.WriteByte(pool.PoolId);
-                    outStream.WriteByte((Byte) pool.Team);
-                    outStream.WriteByte((Byte) pool.CurrentBias);
+                    outStream.WriteByte((Byte)pool.Team);
+                    outStream.WriteByte((Byte)pool.CurrentBias);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(biasAmount);
-                    outStream.WriteByte((Byte) pool.Power);
                     outStream.WriteByte(0x00);
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     return outStream;
                 }
-                public static MemoryStream UpdateShrinePoolState(SpellServer.Arena arena, bool UDP = false)
+                public static MemoryStream UpdateShrinePoolState(SpellServer.Arena arena, SpellServer.ArenaPlayer arenaPlayer, bool JustLoaded)
                 {
                     MemoryStream outStream = new MemoryStream();
 
@@ -1931,8 +1863,15 @@ namespace SpellServer
                             outStream.WriteByte(0x00);
                             outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Power));
                             outStream.WriteByte(0x00); // Bias Amount //Figure out bias amount if needed
-                            outStream.WriteByte(0x00); // PlayerId
-                            outStream.WriteByte(0x00); // PlayerId 
+                            if (JustLoaded)
+                            {
+                                outStream.WriteByte(0x00);
+                                outStream.WriteByte(0x00);
+                            }
+                            else
+                            {
+                                outStream.Write(BitConverter.GetBytes(arenaPlayer.ArenaPlayerId), 0, 2);
+                            }
                             //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[0])); 
                             //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[1])); // PlayerId if needed
                             //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[2])); // PlayerId if needed
@@ -1949,36 +1888,6 @@ namespace SpellServer
                             outStream.WriteByte(0x00);
                         }
                     }
-                    /* 1st Nexus
-                    outStream.WriteByte(0x01); // Shrine index - Nexus disabled send 0xFF
-                    outStream.WriteByte(0x01); // Align/Team (00 - Sysop / 01 - Dragon / 02 - Gryphon / 03 - Pheonix)
-                    outStream.WriteByte(0x01); // Current bias
-                    outStream.WriteByte(0x00); // 
-                    outStream.WriteByte(0x64); // Health
-                    outStream.WriteByte(0x00); // Bias Amount
-                    outStream.WriteByte(0x01); // PlayerId
-                    outStream.WriteByte(0x00); // PlayerId
-
-                    // 2nd Nexus
-                    outStream.WriteByte(0x02); // Shrine index - Nexus disabled send 0xFF
-                    outStream.WriteByte(0x02); // Align/Team (00 - Sysop / 01 - Dragon / 02 - Gryphon / 03 - Pheonix)
-                    outStream.WriteByte(0x02); // Current bias
-                    outStream.WriteByte(0x00); // 
-                    outStream.WriteByte(0x64); // Health
-                    outStream.WriteByte(0x00); // Bias Amount
-                    outStream.WriteByte(0x01); // PlayerId
-                    outStream.WriteByte(0x00); // PlayerId
-
-                    // 3rd Nexus
-                    outStream.WriteByte(0x03); // Shrine index - Nexus disabled send 0xFF
-                    outStream.WriteByte(0x03); // Align/Team (00 - Sysop / 01 - Dragon / 02 - Gryphon / 03 - Pheonix)
-                    outStream.WriteByte(0x03); // Current bias
-                    outStream.WriteByte(0x00); // 
-                    outStream.WriteByte(0x64); // Health
-                    outStream.WriteByte(0x00); // Bias Amount
-                    outStream.WriteByte(0x01); // PlayerId
-                    outStream.WriteByte(0x00); // PlayerId
-                    */
                     for (Int32 i = 0; i < 20; i++)
                     {
                         if (arena.Grid.Pools[i] != null)
@@ -1990,7 +1899,15 @@ namespace SpellServer
                             outStream.WriteByte(0x00);
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].Power);
                             outStream.WriteByte(0x00);
-                            outStream.WriteByte(0x00);
+                            if (JustLoaded)
+                            {
+                                outStream.WriteByte(0x00);
+                                outStream.WriteByte(0x00);
+                            }
+                            else
+                            {
+                                outStream.Write(BitConverter.GetBytes(arenaPlayer.ArenaPlayerId), 0, 2);
+                            }
                         }
                         else
                         {
@@ -2004,101 +1921,17 @@ namespace SpellServer
                             outStream.WriteByte(0x00);
                         }
                     }
-                        /*outStream.WriteByte(0x00);
-                        outStream.WriteByte((Byte)PacketOutFunction.UpdateShrinePoolState);
-
-                        // Chaos Shrine
-                        outStream.WriteByte(arena.ArenaTeams.Chaos.Shrine.ShrineId);
-                        outStream.WriteByte((Byte) arena.ArenaTeams.Chaos.Shrine.Team);
-                        outStream.WriteByte((Byte) arena.ArenaTeams.Chaos.Shrine.CurrentBias);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-
-                        if (arena.ArenaTeams.Chaos.Shrine.IsIndestructible)
-                        {
-                            outStream.WriteByte(0x00);
-                        }
-                        else
-                        {
-                            outStream.WriteByte((Byte)arena.ArenaTeams.Chaos.Shrine.Power);
-                        }
-
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-
-                        // Balance Shrine
-                        outStream.WriteByte(arena.ArenaTeams.Balance.Shrine.ShrineId);
-                        outStream.WriteByte((Byte) arena.ArenaTeams.Balance.Shrine.Team);
-                        outStream.WriteByte((Byte) arena.ArenaTeams.Balance.Shrine.CurrentBias);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-
-                        if (arena.ArenaTeams.Balance.Shrine.IsIndestructible)
-                        {
-                            outStream.WriteByte(0x00);
-                        }
-                        else
-                        {
-                            outStream.WriteByte((Byte)arena.ArenaTeams.Balance.Shrine.Power);
-                        }
-
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-
-                        // Order Shrine
-                        outStream.WriteByte(arena.ArenaTeams.Order.Shrine.ShrineId);
-                        outStream.WriteByte((Byte) arena.ArenaTeams.Order.Shrine.Team);
-                        outStream.WriteByte((Byte) arena.ArenaTeams.Order.Shrine.CurrentBias);
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-
-                        if (arena.ArenaTeams.Order.Shrine.IsIndestructible)
-                        {
-                            outStream.WriteByte(0x00);
-                        }
-                        else
-                        {
-                            outStream.WriteByte((Byte)arena.ArenaTeams.Order.Shrine.Power);
-                        }
-
-                        outStream.WriteByte(0x00);
-                        outStream.WriteByte(0x00);
-
-                        for (Int32 i = 0; i < 20; i++)
-                        {
-                            if (arena.Grid.Pools[i] != null)
-                            {
-                                outStream.WriteByte(arena.Grid.Pools[i].PoolId);
-                                outStream.WriteByte((Byte) arena.Grid.Pools[i].Team);
-                                outStream.WriteByte((Byte) arena.Grid.Pools[i].CurrentBias);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte((Byte) arena.Grid.Pools[i].Power);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                            }
-                            else
-                            {
-                                outStream.WriteByte(0xFF);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                                outStream.WriteByte(0x00);
-                            }
-                        }*/
-                        return outStream;
+                    
+                    return outStream;
                 }
                 public static MemoryStream UpdateExperience(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.UpdateExperience);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((UInt32) arenaPlayer.CombatExp)), 0, 4);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((UInt32) arenaPlayer.BonusExp)), 0, 4);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((UInt32) arenaPlayer.ObjectiveExp)), 0, 4);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.KillCount)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.SessionKillExp)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.DeathCount)), 0, 2);
                     return outStream;
                 }
                 public static MemoryStream UpdateHealth(ArenaPlayer arenaPlayer, bool UDP = false)
@@ -2396,11 +2229,6 @@ namespace SpellServer
                 {
                     MemoryStream outStream = new MemoryStream();
 
-                    //outStream.WriteByte(0x01);
-                    //outStream.WriteByte(0x00);
-                    //outStream.WriteByte(0x00);
-                    //outStream.WriteByte(0x00);
-                    //outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.EstablishDatagram);
 
@@ -2420,33 +2248,6 @@ namespace SpellServer
                     outStream.Write(portBytes, 0, 2);//outStream.Write(player.UdpportLE, 0, 2);
 
                     return outStream;
-
-                    /*outStream.WriteByte(0x31);
-                    outStream.WriteByte(0x32);
-                    outStream.WriteByte(0x37);
-                    outStream.WriteByte(0x2E);
-                    outStream.WriteByte(0x30);
-                    outStream.WriteByte(0x2E);
-                    outStream.WriteByte(0x30);
-                    outStream.WriteByte(0x2E);
-                    outStream.WriteByte(0x31);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x29);
-                    outStream.WriteByte(0x69);
-
-                    return outStream;*/
                 }
 
             }
@@ -2821,18 +2622,19 @@ namespace SpellServer
                         }
 
                         byte cabalId = (byte)charData.Field<Int32>("cabalid");
+                        byte opLevel = charData.Field<Byte>("oplevel");
 
-                        outStream.WriteByte(cabalId);
-                        outStream.WriteByte(cabalId);
-                        outStream.WriteByte(cabalId);
-                        outStream.WriteByte(cabalId);
+                        outStream.WriteByte(opLevel); //cabalId
+                        outStream.WriteByte(opLevel); //cabalId
+                        outStream.WriteByte(opLevel); //cabalId
+                        outStream.WriteByte(opLevel); //cabalId
 
                         var characterCabal = CabalManager.Cabals.FindById(charData.Field<Int32>("cabalid"));
 
-                        string cabalName = (characterCabal != null) ? characterCabal.CabalName : "";
-                        string cabalTag = (characterCabal != null) ? characterCabal.CabalTag : "";
+                        string cabalName = (characterCabal.CabalName != "") ? characterCabal.CabalName : "";
+                        string cabalTag = (characterCabal.CabalTag != "") ? characterCabal.CabalTag : "";
 
-                        if (cabalName != "")
+                        if (cabalName != "" && characterCabal.CabalId != 0)
                         {
                             byte[] nameBytes = Encoding.ASCII.GetBytes(cabalName);
                             int nameLen = Math.Min(nameBytes.Length, 32);
@@ -2851,7 +2653,7 @@ namespace SpellServer
                             }
                         }
 
-                        if (cabalTag != "")
+                        if (cabalTag != "" && characterCabal.CabalId != 0)
                         {
                             byte[] tagBytes = Encoding.ASCII.GetBytes(cabalTag);
                             int tagLen = Math.Min(tagBytes.Length, 8);
@@ -3194,7 +2996,7 @@ namespace SpellServer
                     outStream.Write(Encoding.ASCII.GetBytes(arena.ShortGameName), 0, arena.ShortGameName.Length);
                     return outStream;
                 }
-                public static MemoryStream ArenaState(SpellServer.Arena arena, SpellServer.Player player, bool UDP = false)
+                public static MemoryStream ArenaState(SpellServer.Arena arena, SpellServer.Player player, bool endmatch = false)
                 {
                     MemoryStream outStream = new MemoryStream();
 
@@ -3203,108 +3005,140 @@ namespace SpellServer
                     outStream.WriteByte(arena.ArenaId); // 0x00 == 0
                     outStream.WriteByte(0x01); // Enables the game
                     outStream.WriteByte(arena.MaxPlayers);
-                    outStream.WriteByte(0x00);
+                    outStream.WriteByte(0x00); // Doesn't change cabal players overriding level restrictions
                     outStream.WriteByte((Byte)arena.EndState); // Winner
                     outStream.WriteByte(arena.LevelRange);
                     outStream.WriteByte(arena.TableId);
                     outStream.WriteByte(Convert.ToByte(arena.ArenaPlayers.Count));
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Dragon.Shrine.IsDisabled)); // Enables Chaos Team
-                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Gryphon.Shrine.IsDisabled)); // Enables Order Team
-                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Pheonix.Shrine.IsDisabled)); // Enables Balance Team
-                    outStream.WriteByte(0x00); // Enables Rogue Team
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
+
+                    outStream.WriteByte(0x00); //Team 0                      
+                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Dragon.Shrine.IsDisabled)); // Enables Dragon Team
+                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Gryphon.Shrine.IsDisabled)); // Enables Gryphon Team
+                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Pheonix.Shrine.IsDisabled)); // Enables Pheonix Team
+                    
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
+
+                    outStream.WriteByte(0x01); //16
+                    outStream.WriteByte(Convert.ToByte(arena.ArenaTeams.Dragon.Shrine.IsIndestructible)); // Sets Dragon Nexus Indestructible
+                    outStream.WriteByte(Convert.ToByte(arena.ArenaTeams.Gryphon.Shrine.IsIndestructible)); // Enables Gryphon Nexus Indestructible
+                    outStream.WriteByte(Convert.ToByte(arena.ArenaTeams.Pheonix.Shrine.IsIndestructible)); // Enables Pheonix Nexus Indestructible
+
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
+
+                    outStream.WriteByte(0x00); //24 match type / mode?
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
+                    outStream.WriteByte(0x02);
+                                        
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arena.baseTime + arena.elapsedSeconds)), 0, 4); //28
+
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((int)arena.TimeLimit)), 0, 4); //32
+
+                    if (endmatch)
+                    {
+                        // Force the UI state to match the Victory state
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x01);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                    }
+                    
+                    if (!endmatch)
+                    {
+                        outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)0)), 0, 4); //0x28 == 40
+                        outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)arena.ArenaTeams.Dragon.Shrine.CurrentBias)), 0, 4); 
+                        outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)arena.ArenaTeams.Gryphon.Shrine.CurrentBias)), 0, 4);
+                        outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)arena.ArenaTeams.Pheonix.Shrine.CurrentBias)), 0, 4);
+                    }
+                    else
+                    {
+                        uint loserHP = 0xFFFFFF9C;
+                        uint winnerHP = 100;
+
+                        if (arena.EndState == SpellServer.Arena.State.DragonVictory)
+                        {
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)0)), 0, 4); //0x28 == 40
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(winnerHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                        }
+                        else if (arena.EndState == SpellServer.Arena.State.GryphonVictory)
+                        {
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)0)), 0, 4); //0x28 == 40
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(winnerHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                        }
+                        else if (arena.EndState == SpellServer.Arena.State.PheonixVictory)
+                        {
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)0)), 0, 4); //0x28 == 40
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(winnerHP)), 0, 4);
+                        }
+                        else
+                        {
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)0)), 0, 4); //0x28 == 40
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(loserHP)), 0, 4);
+                        }
+                    }
+
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arena.baseTime + arena.elaspedSeconds)), 0, 4); //28
-                    //outStream.WriteByte(0x00);
-                    //outStream.WriteByte(0x00); //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arena.TimeLimit)), 0, 2);
-                    //outStream.WriteByte(0x00);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arena.baseTime)), 0, 4); //32
-                    //outStream.WriteByte(0x00); //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)arena.Duration.ElapsedSeconds)), 0, 2);
-                    //outStream.WriteByte(0x00);
-                    //outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)arena.CurrentState);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00); //0x28 == 40
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00); //outStream.WriteByte(arena.CountdownTick == null ? (Byte)0x00 : (Byte)(119 - (arena.CountdownTick.ElapsedSeconds * 4)));
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
+
+                    if (endmatch)
+                    {
+                        // Force the UI state to match the Victory state
+                        outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)106)), 0, 2);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00); 
+                        outStream.WriteByte(0x00);
+                    }
+                                        
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Pheonix.Shrine.IsDead)); //Team 3 nexus not destroyed
                     outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Gryphon.Shrine.IsDead)); //Team 2 nexus not destroyed
                     outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Dragon.Shrine.IsDead)); //Team 1 nexus not destoryed
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(player.LastArenaId);
 
-                    /*outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)PacketOutFunction.ArenaState);
-                    outStream.WriteByte(arena.ArenaId);
-                    outStream.WriteByte(0x01); // Enables the game
-                    outStream.WriteByte(arena.MaxPlayers);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte) arena.EndState); // Winner
-                    outStream.WriteByte(arena.LevelRange);
-                    outStream.WriteByte(arena.TableId);
-                    outStream.WriteByte(Convert.ToByte(arena.ArenaPlayers.Count));
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Chaos.Shrine.IsDisabled)); // Enables Chaos Team
-                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Order.Shrine.IsDisabled)); // Enables Order Team
-                    outStream.WriteByte(Convert.ToByte(!arena.ArenaTeams.Balance.Shrine.IsDisabled)); // Enables Balance Team
-                    outStream.WriteByte(0x00); // Enables Rogue Team
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
+                    if (endmatch)
+                    {
+                        // Force the UI state to match the Victory state
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x01);
+                    }
+                    else
+                    {
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte(0x00);
+                    }
+                                        
+
+                    if (endmatch)
+                        outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int32)arena.EndState)), 0, 4);
+                    else
+                        outStream.Write(BitConverter.GetBytes(0), 0, 4);
+
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
@@ -3312,55 +3146,21 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arena.TimeLimit)), 0, 2);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)arena.Duration.ElapsedSeconds)), 0, 2);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)arena.CurrentState);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
+
+                    if (endmatch)
+                    {
+                        // Force the UI state to match the Victory state
+                        outStream.Write(BitConverter.GetBytes(0xFFFFFFFF), 0, 4);
+                    }
+                    else
+                    {
+                        outStream.Write(BitConverter.GetBytes(0), 0, 4);
+                    }
+
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(arena.CountdownTick == null ? (Byte) 0x00 : (Byte) (119 - (arena.CountdownTick.ElapsedSeconds*4)));
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(player.LastArenaId);*/
+
+                    
                     return outStream;
                 }
                 public static MemoryStream ArenaForceEndState(SpellServer.Arena arena, SpellServer.Player player, bool UDP = false)
@@ -3446,6 +3246,7 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(player.LastArenaId);
+
                     return outStream;
                 }
                 public static MemoryStream ArenaDeleted(SpellServer.Arena arena, bool UDP = false)

@@ -103,7 +103,7 @@ namespace SpellServer
                                     }
                                 }
 
-                                arena.CountdownTick = new Interval(29000, false);
+                                arena.CountdownTick = new Interval(1000, false);
                             }
                             else if (winningTeam == Team.Neutral)
                             {

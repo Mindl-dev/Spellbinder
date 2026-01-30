@@ -503,6 +503,11 @@ namespace SpellServer
                             GamePacket.Incoming.Arena.God(player, inStream);
                             break;
                         }
+                        case 0xAF:
+                        {
+                            GamePacket.Incoming.Arena.ArenaClientEndState(player, inStream);
+                            break;
+                        }
                         case 0xB0:
                         {
                             GamePacket.Incoming.Arena.CastProjectile(player, inStream);

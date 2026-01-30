@@ -67,6 +67,7 @@ namespace SpellServer
         CabalLeave = 0xB6,
         CabalJoin = 0xB7,
         SendCabalList = 0xBA,
+        ResetPlayer = 0xBB,
         SpawnPlayer = 0x02,
         EstablishDatagram = 0x87,
     }

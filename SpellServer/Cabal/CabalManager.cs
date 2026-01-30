@@ -43,9 +43,13 @@ namespace SpellServer
         }
         public Cabal FindById(Int32 cabalId)
         {
-            if (cabalId <= 0) return null;
+            if (cabalId < 0 || cabalId > 255 ) return null;
 
-            return this.FirstOrDefault(c => cabalId == c.CabalId);
+            Cabal returnCabal = this.FirstOrDefault(c => cabalId == c.CabalId);
+
+            if (returnCabal == null) returnCabal = this.FirstOrDefault(c => 0 == c.CabalId);
+
+            return returnCabal;
         }
         public Cabal FindByCabalName(String cabalName)
         {
