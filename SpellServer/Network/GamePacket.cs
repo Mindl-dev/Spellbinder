@@ -742,10 +742,12 @@ namespace SpellServer
                             {
                                 if (worldId >= 0x65 && worldId <= 0x81)
                                 {
-                                    worldId = (Byte)(worldId - 0x64);
+                                    //worldId = (Byte)(worldId - 0x64);
 
-                                    //Network.Send(player, Outgoing.Player.EstablishDatagram(player));
-                                    SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                                    if (player.ActiveArenaPlayer == null)
+                                    {
+                                        SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
+                                    }
                                 }
                                 else
                                 {
@@ -754,6 +756,8 @@ namespace SpellServer
                                         SpellServer.World.PlayerEnteredWorld(player, worldId, team, charName);
                                     }
                                 }
+
+
                                 break;
                             }
                     }
@@ -1069,7 +1073,7 @@ namespace SpellServer
                             for (Int32 i = 0; i < player.ActiveArena.ArenaPlayers.Count; i++)
                             {
                                 ArenaPlayer arenaPlayer = player.ActiveArena.ArenaPlayers[i];
-                                if (arenaPlayer == null || player.ActiveArenaPlayer == arenaPlayer || (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) && !player.IsAdmin)) continue;
+                                if (arenaPlayer == null || arenaPlayer == player.ActiveArenaPlayer || (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) && !player.IsAdmin)) continue;
 
                                 outStream = Outgoing.Arena.ArenaPlayerEnterLarge(arenaPlayer, outStream);
 
@@ -1535,15 +1539,15 @@ namespace SpellServer
                 public static MemoryStream PlayerJoin(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-
-                    // 1. Packet ID/Opcode is usually handled by the 'GenerateAndEnqueue' wrapper.
-                    // Assuming the wrapper handles the 1B 1B and Sequence:
+                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
 
                     // Offset 0-1: Player ID (Word - Little Endian because of SwapSingleShortEndian call)
-                    outStream.Write(BitConverter.GetBytes((UInt16)arenaPlayer.ArenaPlayerId), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
 
                     // Offset 2: Status/Padding (Read into 'dl' at 004260A6)
-                    outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
+                    
+                    outStream.WriteByte(0x00);
 
                     // Offset 3: World/Team ID (Read into 'al' at 00426071)
                     outStream.WriteByte((Byte)arenaPlayer.ActiveTeam);

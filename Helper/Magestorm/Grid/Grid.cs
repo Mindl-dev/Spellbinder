@@ -1241,6 +1241,55 @@ namespace Helper
         }
         public Boolean LineToBoxIsBlocked(Vector3 startPoint, OrientedBoundingBox targetBox)
         {
+            Vector3 endPoint = targetBox.Origin;
+            Vector3 direction = endPoint - startPoint;
+            float totalDistance = direction.Length();
+
+            if (totalDistance < 1.0f) return false; // Already inside/at the target
+
+            direction.Normalize();
+
+            // We sample every 32 units (half a grid block width) to ensure we don't skip thin walls
+            float stepSize = 32.0f;
+            int steps = (int)(totalDistance / stepSize);
+
+            for (int i = 1; i <= steps; i++)
+            {
+                Vector3 checkPoint = startPoint + (direction * (i * stepSize));
+
+                int gx = (int)checkPoint.X;
+                int gy = (int)checkPoint.Y;
+                int gz = (int)checkPoint.Z;
+
+                GridBlock block = GridBlocks.GetBlockByLocation(gx, gy);
+                if (block == null) continue;
+
+                // 1. Check for Special/Solid Collision (Full Block)
+                if (block.SpecialCollision == 1) return true;
+
+                // 2. Check Height Collision (Floor/Ceiling)
+                // If the 'ray' is currently below the floor or above the ceiling of this block, it's blocked.
+                float floor = GetFloorHeight(gx, gy, gz, this);
+                float ceiling = GetCeilingHeight(gx, gy, gz, this);
+
+                if (gz <= floor || gz >= ceiling)
+                {
+                    // LOS is blocked by terrain/architecture
+                    return true;
+                }
+
+                // 3. Check for Static Grid Objects (Pillars, furniture, etc.)
+                GridObject obj = GridObjects.GetObjectByLocation(gx, gy, this);
+                if (obj != null && obj.GridBlockId == block.BlockId)
+                {
+                    if (obj.ContainerBox.PointInBox(checkPoint)) return true;
+                }
+            }
+
+            return false;
+        }
+        /*public Boolean LineToBoxIsBlocked(Vector3 startPoint, OrientedBoundingBox targetBox)
+        {
             try
             {
                 if (targetBox.Corners.Any(t => GridBlocks.GetBlocksInLine(startPoint, t).Count > 0))
@@ -1284,6 +1333,6 @@ namespace Helper
             }
 
             return false;
-        }
+        }*/
     }
 }

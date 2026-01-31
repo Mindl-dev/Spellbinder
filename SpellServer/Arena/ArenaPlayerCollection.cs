@@ -19,7 +19,17 @@ namespace SpellServer
             }
             return 0;
         }
-
+        
+        private byte _rollingOid = 0;
+        public byte GetNextRollingId()
+        {
+            lock (SyncRoot)
+            {
+                _rollingOid++;
+                if (_rollingOid >= 254) _rollingOid = 1; // Wrap around safely
+                return _rollingOid;
+            }
+        }
         public ArenaPlayer FindById(Byte playerId)
         {
             return this.FirstOrDefault(arenaPlayer => playerId == arenaPlayer.ArenaPlayerId);

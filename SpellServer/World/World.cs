@@ -1665,13 +1665,13 @@ namespace SpellServer
                     // 1. Don't send the target player to themselves (usually handled by the client)
                     if (targetplayer == player) continue;
 
-                    // 2. THE VISIBILITY RULE
+                    /* 2. THE VISIBILITY RULE
                     // Disabled for now...need to test more. Random player invis
                     if (player.Flags.HasFlag(PlayerFlag.Hidden))
                     {
                         // ...ONLY show them if the person RECEIVING the list is an Admin.
                         if (!targetplayer.IsAdmin) continue;
-                    }
+                    }*/
 
                     outStream = GamePacket.Outgoing.World.PlayerEnterLarge(player, outStream);
 
@@ -1717,13 +1717,13 @@ namespace SpellServer
                     // 1. Don't send the target player to themselves (usually handled by the client)
                     if (targetplayer.ActiveArenaPlayer == arenaPlayer) continue;
 
-                    // 2. THE VISIBILITY RULE
+                    /* 2. THE VISIBILITY RULE
                     // Disabled for now...need to test more. Random player invis
                     if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
                     {
                         // ...ONLY show them if the person RECEIVING the list is an Admin.
                         if (!targetplayer.IsAdmin) continue;
-                    }
+                    }*/
 
                     outStream = GamePacket.Outgoing.Arena.ArenaPlayerEnterLarge(arenaPlayer, outStream);
 
@@ -1853,7 +1853,13 @@ namespace SpellServer
 
                         }
                     }
-                    break;
+                    else if (worldId >= 0x65 &&  worldId <= 0x81)
+                    {
+                        Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player));
+                        Network.SendTo(player, GamePacket.Outgoing.World.PlayerLeave(player), Network.SendToType.Tavern, true);
+                    }
+
+                            break;
                 }
             }
         }

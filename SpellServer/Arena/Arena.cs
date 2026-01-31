@@ -244,7 +244,7 @@ namespace SpellServer
                 MaxPlayers = Grid.MaxPlayers;
                 EndState = State.Normal;
                 IsDurationLocked = false;
-                DebugFlags = ArenaSpecialFlag.None;
+                DebugFlags = ArenaSpecialFlag.ProjectileTracking;
 
                 StartTime = DateTime.UtcNow;
 
@@ -469,7 +469,10 @@ namespace SpellServer
                         Thread.Sleep(10);
                     }
                 }
-            }            
+            }
+            
+            this.ArenaPlayers.Clear();
+
         }
 
         public void EndMatch(Boolean isCleanEnding)
@@ -619,19 +622,7 @@ namespace SpellServer
             for (Int32 i = 0; i < ArenaPlayers.Count; i++)
             {
                 ArenaPlayer arenaPlayer = ArenaPlayers[i];
-                if (arenaPlayer == null) continue;
-
-                if (arenaPlayer.JustLoaded)
-                {
-                    if (!arenaPlayer.ActiveCharacter.PlayerFlags.HasFlag(PlayerFlag.Hidden))
-                    {
-                        World.UpdateAllArenaPlayers(arenaPlayer.WorldPlayer);
-                        Network.SendToArena(arenaPlayer, GamePacket.Outgoing.World.PlayerJoin(arenaPlayer.WorldPlayer), false);
-                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Study.CabalIDUpdate(arenaPlayer.WorldPlayer));
-                    }
-                    
-                    arenaPlayer.JustLoaded = false;
-                }
+                if (arenaPlayer == null) continue;               
 
                 switch (arenaPlayer.CurrentGridBlockFlagData.BlockFlag)
                 {
@@ -1487,17 +1478,27 @@ namespace SpellServer
             return false;
         }
         private void HandleImpactPayload(Projectile p, int collisionType, OrientedBoundingBox hitBox, Grid grid)
-        {
-            // Area Damage
-            if (p.Spell.EffectRadius > 0)
-            {
-                DoAreaDamage(p.Owner, p, hitBox);
-            }
-
+        {            
             // Secondary Spell Trigger (rand() % 100 logic from ASM)
             if (p.Spell.DeathSpellEffect != 0 && new Random().Next(100) < p.Spell.DeathEffectChance)
             {
                 //DoSpellDeathEffect(p.Owner, hitBox, EffectType.Death, grid);
+            }
+
+            if (p.hitWall != null)
+            {
+                if (collisionType == 8 && p.Owner != p.hitWall.Owner)
+                {
+                    SpellDamage damage = new SpellDamage(p.Spell);
+
+                    DoWallDamage(p.Owner, p.hitWall, p.Spell, damage);
+                }
+            }
+
+            // Area Damage
+            if (p.Spell.EffectRadius > 0 && collisionType != 5)
+            {
+                DoAreaDamage(p.Owner, p, hitBox);
             }
 
             // Specific logic for Case 5 (Players)
@@ -1520,23 +1521,11 @@ namespace SpellServer
                 {                    
                     DoPlayerDamage(p.hitPlayer, p.Owner, p.Spell, null, true);
                     DoPlayerEffect(p.hitPlayer, p.Owner, p.Spell, EffectType.Death);
-                }                
-
-                if (p.Spell.EffectRadius > 0)
-                {
-                    DoAreaDamage(p.hitPlayer, p, p.BoundingBox);
-                }
+                }              
             }
                         
-            if (p.hitWall != null)
-            {
-                if (collisionType == 8 && p.Owner != p.hitWall.Owner)
-                {
-                    SpellDamage damage = new SpellDamage(p.Spell);
-                    
-                    DoWallDamage(p.Owner, p.hitWall, p.Spell, damage);
-                }
-            }
+            
+
         }
         public int HandleBounce(Projectile projectile, int collisionType, Vector3 testPos, Grid grid)
         {
@@ -2178,14 +2167,14 @@ namespace SpellServer
 
                 if (effectType == EffectType.Area || effectType == EffectType.AuraCaster || effectType == EffectType.AuraTarget)
                 {
-                    Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, arenaEffect.EffectSpell.Id, UDP), true);
-                    Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastTargetedEx(targetPlayer, sourcePlayer, arenaEffect.OwnerSpell, UDP), true);
+                    Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, (short)spell.DeathSpellEffect, UDP), true);
+                    //Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastTargetedEx(targetPlayer, sourcePlayer, arenaEffect.OwnerSpell, UDP), true);
                     return true;
                 }
 
                 if (spell.Type == SpellType.Rune)
                 {
-                    Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, arenaEffect.EffectSpell.Id, UDP), true);
+                    Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, (short)spell.DeathSpellEffect, UDP), true);
                     return true;
                 }
             }
@@ -2199,76 +2188,39 @@ namespace SpellServer
             {
                 Vector3 impactVector = impactBox != null ? impactBox.LineImpactVector(projectile.OriginalOrigin, projectile.BoundingBox.Origin) : projectile.BoundingBox.Origin;
 
-                BoundingSphere areaEffectSphere = new BoundingSphere(impactVector, projectile.Spell.EffectRadius);
+                float blastRadius = projectile.Spell.EffectRadius;
+
+                if (blastRadius <= 0) return;
+
+                BoundingSphere areaEffectSphere = new BoundingSphere(impactVector, blastRadius);
+
+                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                {
+                    Program.ServerForm.MainLog.WriteMessage($"[AOE Triggered] {projectile.Spell.Name} at {impactVector}", Color.Yellow);
+                }
 
                 for (Int32 p = 0; p < ArenaPlayers.Count; p++)
                 {
                     ArenaPlayer arenaPlayer = ArenaPlayers[p];
-                    if (arenaPlayer == null) continue;
+                    if (arenaPlayer == null || !arenaPlayer.IsAlive) continue;
 
                     if ((ignorePlayer == arenaPlayer && projectile.Spell.AreaEffectSpell == 0) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) || arenaPlayer.SpecialFlags.HasFlag(ArenaPlayer.SpecialFlag.God)) continue;
-                    
-                    BoundingSphere boxSphere = arenaPlayer.BoundingBox.ExtentSphere;
 
-                    if (areaEffectSphere.Contains(ref boxSphere) == ContainmentType.Disjoint) continue;
-
-                    Boolean hasCollided = true;
-
-                    for (Int32 i = 0; i < Walls.Count; i++)
-                    {
-                        Wall wall = Walls[i];
-                        if (wall == null) continue;
-
-                        boxSphere = wall.BoundingBox.ExtentSphere;
-
-                        if (areaEffectSphere.Contains(ref boxSphere) == ContainmentType.Disjoint) continue;
-                        if (!arenaPlayer.BoundingBox.IsBoxVisibleToPoint(areaEffectSphere.Center, wall.BoundingBox)) continue;
-
-                        switch (projectile.Spell.Friendly)
-                        {
-                            case SpellFriendlyType.Friendly:
-                            case SpellFriendlyType.FriendlyDead:
-                            {
-                                if (wall.Spell.CollisionVelocity > 0) continue;
-                                break;
-                            }
-                        }
-
-                        hasCollided = false;
-                        break;
-                    }
-
-                    foreach (Thin thin in Grid.Thins)
-                    {
-                        if (thin.BoundingBox == null) continue;
-
-                        if (thin.BoundingBox.Collides(projectile.BoundingBox))
-                        {
-                            if (thin.TriggerId > 0)
-                            {
-                                Trigger trigger = Grid.Triggers[thin.TriggerId];
-
-                                if (trigger != null)
-                                {
-                                    if (!trigger.Enabled) continue;
-
-                                    if (trigger.TriggerType == TriggerType.Door && trigger.CurrentState == TriggerState.Active) continue;
-                                }
-                            }
-                            else
-                            {
-                                if (!thin.BlockProjectiles) continue;
-                            }
-
-                            hasCollided = false;
-                            break;
-                        }
-                    }
-
-                    // ToDo -> Add a check here for tiles so that area damage doesnt hit through them.
-                    if (!hasCollided || Grid.LineToBoxIsBlocked(areaEffectSphere.Center, arenaPlayer.BoundingBox)) continue;
-                    
                     if (projectile.Owner == null) continue;
+
+                    float distance = Vector3.Distance(impactVector, arenaPlayer.BoundingBox.Origin);
+
+                    if (distance > blastRadius) continue;
+
+                    if (Grid.LineToBoxIsBlocked(impactVector, arenaPlayer.BoundingBox)) continue;
+
+                    float falloff = 1.0f - (distance / blastRadius);
+
+                    float damageMultiplier = MathHelper.Clamp(falloff, 0.1f, 1.0f);
+
+                    SpellDamage baseDamage = new SpellDamage(projectile.Spell);
+                    baseDamage.Damage = (Int16)(baseDamage.Damage * damageMultiplier);
+                    baseDamage.Power = (Int16)(baseDamage.Power * damageMultiplier);
 
                     switch (projectile.Spell.Friendly)
                     {
@@ -2276,35 +2228,24 @@ namespace SpellServer
                         {
                             if ((projectile.Owner.ActiveTeam != arenaPlayer.ActiveTeam || (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.FriendlyFire) && arenaPlayer != projectile.Owner)) || (arenaPlayer.ActiveTeam == Team.Neutral && arenaPlayer != projectile.Owner))
                             {
-                                SpellDamage spellDamage = new SpellDamage(projectile.Spell);
+                                DoPlayerEffect(arenaPlayer, projectile.Owner, projectile.Spell, EffectType.Area);
 
-                                Single dist = arenaPlayer.BoundingBox.DistanceFromPointToClosestCorner(areaEffectSphere.Center);
-                                Single maxDist = areaEffectSphere.Radius + (arenaPlayer.BoundingBox.ExtentSphere.Radius / 2);
-
-                                Single fReduction = 0.6f - ((dist / maxDist) * 0.6f);
-
-                                if (fReduction > 0.0f)
+                                if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.FriendlyFire) && projectile.Owner.ActiveTeam == arenaPlayer.ActiveTeam)
                                 {
-                                    spellDamage.Damage = (Int16)(spellDamage.Damage * fReduction);
-                                    spellDamage.Healing = (Int16)(spellDamage.Healing * fReduction);
-                                    spellDamage.Power = (Int16)(spellDamage.Power * fReduction);
+                                    DoPlayerDamage(arenaPlayer, projectile.Owner, projectile.Spell, baseDamage, true);
 
-                                    DoPlayerEffect(arenaPlayer, projectile.Owner, projectile.Spell, EffectType.Area);
-                                    
-                                    if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.FriendlyFire) && projectile.Owner.ActiveTeam == arenaPlayer.ActiveTeam)
-                                    {
-                                        DoPlayerDamage(arenaPlayer, projectile.Owner, projectile.Spell, spellDamage, true);
-
-                                        spellDamage.Damage = (Int16)(spellDamage.Damage * 0.30f);
-                                        spellDamage.Power = (Int16)(spellDamage.Power * 0.30f);
-
-                                        DoPlayerDamage(projectile.Owner, projectile.Owner, projectile.Spell, spellDamage, false);
-                                    }
-                                    else
-                                    {
-                                        DoPlayerDamage(arenaPlayer, projectile.Owner, projectile.Spell, spellDamage, true);
-                                    }
+                                    DoPlayerDamage(projectile.Owner, projectile.Owner, projectile.Spell, baseDamage, false);
                                 }
+                                else
+                                {
+                                    DoPlayerDamage(arenaPlayer, projectile.Owner, projectile.Spell, baseDamage, true);
+                                }
+
+                                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                                {
+                                    Program.ServerForm.MainLog.WriteMessage($"[AOE] {projectile.Spell.Name} hit {arenaPlayer.ActiveCharacter.Name} for {baseDamage.Damage} at dist {distance}", Color.Cyan);
+                                }
+
                             }
 
                             break;
@@ -2328,6 +2269,67 @@ namespace SpellServer
                             break;
 
                         }
+                    }
+                }
+
+                for (Int32 i = 0; i < Walls.Count; i++)
+                {
+                    Wall wall = Walls[i];
+                    if (wall == null) continue;
+
+                    BoundingSphere boxSphere = wall.BoundingBox.ExtentSphere;
+
+                    if (areaEffectSphere.Contains(ref boxSphere) == ContainmentType.Disjoint) continue;
+
+                    switch (projectile.Spell.Friendly)
+                    {
+                        case SpellFriendlyType.Friendly:
+                        case SpellFriendlyType.FriendlyDead:
+                            {
+                                if (wall.Spell.CollisionVelocity > 0) continue;
+                                break;
+                            }
+                    }
+
+                    float dist = Vector3.Distance(impactVector, wall.BoundingBox.Origin);
+
+                    if (dist > blastRadius) continue;
+
+                    float fallo = 1.0f - (dist / blastRadius);
+
+                    float damageMulti = MathHelper.Clamp(fallo, 0.1f, 1.0f);
+
+                    SpellDamage baseSpellDamage = new SpellDamage(projectile.Spell);
+                    baseSpellDamage.Damage = (Int16)(baseSpellDamage.Damage * damageMulti);
+                    baseSpellDamage.Power = (Int16)(baseSpellDamage.Power * damageMulti);
+
+                    DoWallDamage(projectile.Owner, wall, baseSpellDamage.Damage);
+                    break;
+                }
+
+                foreach (Thin thin in Grid.Thins)
+                {
+                    if (thin.BoundingBox == null) continue;
+
+                    if (thin.BoundingBox.Collides(projectile.BoundingBox))
+                    {
+                        if (thin.TriggerId > 0)
+                        {
+                            Trigger trigger = Grid.Triggers[thin.TriggerId];
+
+                            if (trigger != null)
+                            {
+                                if (!trigger.Enabled) continue;
+
+                                if (trigger.TriggerType == TriggerType.Door && trigger.CurrentState == TriggerState.Active) continue;
+                            }
+                        }
+                        else
+                        {
+                            if (!thin.BlockProjectiles) continue;
+                        }
+
+                        break;
                     }
                 }
             }
@@ -2913,38 +2915,39 @@ namespace SpellServer
                 Int32 biasMin = 0;
                 Int32 biasMax = 0;
                 Int32 biasRollBonus = arenaPlayer.ActiveCharacter.Level/2;
+                bool isFriendly = (arenaPlayer.ActiveTeam == shrine.Team);
 
                 switch (arenaPlayer.ActiveCharacter.Class)
                 {
                     case Character.PlayerClass.Runemage:
                     {
                         penaltyDivider = 3;
-                        biasMin = 15;
-                        biasMax = 35;
-                        biasRollBonus = 22 + biasRollBonus;
+                        biasMin = isFriendly ? 10 : 8;
+                        biasMax = isFriendly ? 20 : 15;
+                        biasRollBonus = 25 + biasRollBonus;
                         break;
                     }
                     case Character.PlayerClass.Healer:
                     {
                         penaltyDivider = 2;
-                        biasMin = 35;
-                        biasMax = 70;
+                        biasMin = isFriendly ? 15 : 5;
+                        biasMax = isFriendly ? 30 : 10;
                         biasRollBonus = 40 + biasRollBonus;
                         break;
                     }
                     case Character.PlayerClass.Magician:
                     {
                         penaltyDivider = 3;
-                        biasMin = 15;
-                        biasMax = 35;
-                        biasRollBonus = 22 + biasRollBonus;
+                        biasMin = isFriendly ? 5 : 12;
+                        biasMax = isFriendly ? 15 : 22;
+                        biasRollBonus = 20 + biasRollBonus;
                         break;
                     }
                     case Character.PlayerClass.Mystic:
                     {
                         penaltyDivider = 3;
-                        biasMin = 20;
-                        biasMax = 45;
+                        biasMin = isFriendly ? 8 : 15;
+                        biasMax = isFriendly ? 15 : 28;
                         biasRollBonus = 30 + biasRollBonus;
                         break;
                     }
@@ -2954,48 +2957,39 @@ namespace SpellServer
                 {
                     Int32 penalty = ((AveragePlayerLevel - arenaPlayer.ActiveCharacter.Level) / penaltyDivider);
 
-                    biasMin = biasMin - (penalty * 2);
-                    biasMax = biasMax - (penalty * 2);
-                    biasRollBonus = biasRollBonus - penalty;
+                    biasMin = Math.Max(1, biasMin - penalty);
+                    biasMax = Math.Max(2, biasMax - penalty);
+                    biasRollBonus -= penalty;
                 }
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
-                if (biasAmount > 0 && CryptoRandom.GetInt32(biasRollBonus, 100) > 50)
+                if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70)
                 {
-                    if (arenaPlayer.ActiveTeam == shrine.Team)
+                    if (isFriendly)
                     {
                         if (shrine.CurrentBias >= 100) return;
 
-                        Single experience = (arenaPlayer.ActiveCharacter.Level*0.05f)*(ArenaPlayers.GetTeamPlayerCount(arenaPlayer.ActiveTeam)*biasAmount);
+                        shrine.CurrentBias = (Byte)Math.Min(100, shrine.CurrentBias + biasAmount);
+
+                        Single experience = (arenaPlayer.ActiveCharacter.Level * 0.05f) * (ArenaPlayers.GetTeamPlayerCount(arenaPlayer.ActiveTeam) * biasAmount);
                         GivePlayerExperience(arenaPlayer, (arenaPlayer.ActiveCharacter.Class == Character.PlayerClass.Runemage ? experience * 2 : experience), ArenaPlayer.ExperienceType.Objective);
 
-                        shrine.CurrentBias += (Byte) biasAmount;
-
-                        if (shrine.CurrentBias == shrine.MaxBias) biasAmount = (Byte) shrine.MaxBias;
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte) biasAmount), Network.SendToType.Arena);
+                        if (shrine.CurrentBias == 100) biasAmount = (Byte)shrine.MaxBias;                   
                     }
                     else
                     {
                         if (shrine.CurrentBias <= 0) return;
+                        shrine.CurrentBias = (Byte)Math.Max(0, shrine.CurrentBias - biasAmount);
 
-                        Single experience = (arenaPlayer.ActiveCharacter.Level*0.07f)*(ArenaPlayers.GetTeamPlayerCount(shrine.Team)*biasAmount);
+                        Single experience = (arenaPlayer.ActiveCharacter.Level * 0.07f) * (ArenaPlayers.GetTeamPlayerCount(shrine.Team) * biasAmount);
                         GivePlayerExperience(arenaPlayer, (arenaPlayer.ActiveCharacter.Class == Character.PlayerClass.Runemage ? experience * 2 : experience), ArenaPlayer.ExperienceType.Objective);
 
-                        shrine.CurrentBias -= (Byte) biasAmount;
-
-                        if (shrine.CurrentBias == 0)
-                        {
-                            biasAmount = -shrine.MaxBias & 0xFF;
-                        }
-                        else
-                        {
-                            biasAmount = -biasAmount & 0xFF;
-                        }
-
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte) biasAmount), Network.SendToType.Arena);
+                        if (shrine.CurrentBias == 0) biasAmount = -shrine.MaxBias & 0xFF;
+                        else biasAmount = -biasAmount & 0xFF;                      
                     }
 
+                    Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
                 }
                 else
@@ -3003,11 +2997,6 @@ namespace SpellServer
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
                 }
             }
-
-            /*if (shrine.CurrentBias <= 0)
-            {
-                shrine.IsDisabled = true;
-            }*/
         }
 
         public void BiasedPool(ArenaPlayer arenaPlayer, Byte poolId, Byte poolTeam, Byte biasStrength)
@@ -3021,39 +3010,40 @@ namespace SpellServer
                 Int32 biasMin = 0;
                 Int32 biasMax = 0;
                 Int32 biasRollBonus = arenaPlayer.ActiveCharacter.Level;
+                bool isFriendly = (pool.Team == arenaPlayer.ActiveTeam || pool.Team == Team.Neutral);
 
                 switch (arenaPlayer.ActiveCharacter.Class)
                 {
                     case Character.PlayerClass.Runemage:
                     {
                         penaltyDivider = 3;
-                        biasMin = 40;
-                        biasMax = 80;
-                        biasRollBonus = Math.Max(0, (50 + biasRollBonus) - (pool.Power / 2));
+                        biasMin = 30;
+                        biasMax = 50;
+                        biasRollBonus = Math.Max(0, (35 + biasRollBonus) - (pool.Power / 2));
                         break;
                     }
                     case Character.PlayerClass.Healer:
                     {
                         penaltyDivider = 3;
-                        biasMin = 15;
-                        biasMax = 40;
-                        biasRollBonus = Math.Max(0, (40 + biasRollBonus) - (pool.Power/2));
+                        biasMin = 10;
+                        biasMax = 25;
+                        biasRollBonus = Math.Max(0, (30 + biasRollBonus) - (pool.Power/2));
                         break;
                     }
                     case Character.PlayerClass.Magician:
                     {
                         penaltyDivider = 2;
-                        biasMin = 55;
-                        biasMax = 90;
-                        biasRollBonus = Math.Max(0, (40 + biasRollBonus) - (pool.Power/4));
+                        biasMin = 35;
+                        biasMax = 60;
+                        biasRollBonus = Math.Max(0, (50 + biasRollBonus) - (pool.Power/4));
                         break;
                     }
                     case Character.PlayerClass.Mystic:
                     {
                         penaltyDivider = 3;
-                        biasMin = 30;
-                        biasMax = 65;
-                        biasRollBonus = Math.Max(0, (35 + biasRollBonus) - (pool.Power/3));
+                        biasMin = 25;
+                        biasMax = 45;
+                        biasRollBonus = Math.Max(0, (40 + biasRollBonus) - (pool.Power/3));
                         break;
                     }
                 }
@@ -3062,57 +3052,50 @@ namespace SpellServer
                 {
                     Int32 penalty = (((AveragePlayerLevel - arenaPlayer.ActiveCharacter.Level) + 3) / penaltyDivider);
 
-                    biasMin = biasMin - penalty;
-                    biasMax = biasMax - (penalty * 3);
-                    biasRollBonus = biasRollBonus - penalty;
+                    biasMin = Math.Max(5, biasMin - penalty);
+                    biasMax = Math.Max(10, biasMax - penalty);
+                    biasRollBonus -= penalty;
                 }
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
-                if (biasAmount > 0 && CryptoRandom.GetInt32(biasRollBonus, 100) > 50)
+                if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 75)
                 {
                     GivePlayerExperience(arenaPlayer, (((arenaPlayer.ActiveCharacter.Level / 9.2f) + 0.48f) * biasAmount), ArenaPlayer.ExperienceType.Objective);
 
-                    if (pool.Team == arenaPlayer.ActiveTeam || pool.Team == Team.Neutral)
+                    if (isFriendly)
                     {
                         pool.Team = arenaPlayer.ActiveTeam;
-                        pool.CurrentBias += (Byte) biasAmount;
-
-                        if (pool.CurrentBias == pool.MaxBias) biasAmount = Convert.ToByte(pool.MaxBias);
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte) biasAmount), Network.SendToType.Arena);
+                        pool.CurrentBias = (Int16)Math.Min(pool.MaxBias, pool.CurrentBias + biasAmount);
+                        if (pool.CurrentBias == pool.MaxBias) biasAmount = Convert.ToByte(pool.MaxBias);                                                
                     }
                     else
                     {
-                        Int16 biasRemaining = (Int16)(biasAmount - pool.CurrentBias);
+                        Int16 oldBias = pool.CurrentBias;
+                        pool.CurrentBias -= (Int16)biasAmount;
 
-                        pool.CurrentBias -= (Int16) biasAmount;
-
-                        if (pool.CurrentBias == 0)
+                        if (pool.CurrentBias <= 0)
                         {
                             if (arenaPlayer.ActiveCharacter.Class == Character.PlayerClass.Magician)
                             {
                                 pool.Team = arenaPlayer.ActiveTeam;
-                                pool.CurrentBias += biasRemaining;
-
+                                pool.CurrentBias = (Int16)Math.Abs(pool.CurrentBias); // Magician "Flips" the node in one go
                                 if (pool.CurrentBias == 0) pool.CurrentBias = 1;
-                                if (pool.CurrentBias == pool.MaxBias) biasAmount = Convert.ToByte(pool.MaxBias);
-
-                                Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte)biasAmount), Network.SendToType.Arena);
                             }
                             else
                             {
                                 pool.Team = Team.Neutral;
-                                biasAmount = -pool.MaxBias & 0xFF;
+                                pool.CurrentBias = 0;
+                                biasAmount = -pool.MaxBias & 0xFF; // Notify client node is now Neutral
                             }
                         }
                         else
                         {
                             biasAmount = -biasAmount & 0xFF;
-                        }
-
-                        Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte) biasAmount), Network.SendToType.Arena);
+                        }                        
                     }
 
+                    Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
                 }
                 else

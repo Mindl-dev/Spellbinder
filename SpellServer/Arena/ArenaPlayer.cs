@@ -1,8 +1,9 @@
-﻿using System;
-using System.Threading;
-using Helper;
+﻿using Helper;
 using Helper.Timing;
 using SharpDX;
+using System;
+using System.Linq;
+using System.Threading;
 using OrientedBoundingBox = Helper.Math.OrientedBoundingBox;
 
 namespace SpellServer
@@ -431,21 +432,17 @@ namespace SpellServer
 
                 lock (OwnerArena.ArenaPlayers.SyncRoot)
                 {
-                    for (int i = OwnerArena.ArenaPlayers.Count - 1; i >= 0; i--)
-                    {
-                        var ap = OwnerArena.ArenaPlayers[i];
-                        if (ap.WorldPlayer == player)
-                        {
-                            OwnerArena.PlayerLeft(ap);
-                        }
-                    }
-                    /*OwnerArena.ArenaPlayers.ForEach(delegate(ArenaPlayer arenaPlayer)
-                    {
-                        if (arenaPlayer.WorldPlayer == player) OwnerArena.PlayerLeft(arenaPlayer);
-                    });*/
+                    // 1. Clean up ANY stale instance of this player first
+                    //var existing = OwnerArena.ArenaPlayers.FirstOrDefault(ap => ap.WorldPlayer.PlayerId == player.PlayerId);
+                    //if (existing != null) OwnerArena.PlayerLeft(existing);
+
+                    // 2. Assign a ROLLING ID, not the 'first available'
+                    ArenaPlayerId = OwnerArena.ArenaPlayers.GetNextRollingId();
                 }
 
-                if ((ArenaPlayerId = OwnerArena.ArenaPlayers.GetAvailablePlayerId()) == 0) return;
+                Program.ServerForm.MainLog.WriteMessage($"ArenaPlayerId: {ArenaPlayerId}, ArenaPlayerName: {player.ActiveCharacter.Name}", System.Drawing.Color.Red);
+
+                if (ArenaPlayerId == 0) return;
 
                 WorldPlayer.PingInitialized = false;
                 WorldPlayer.TableId = 0;
@@ -518,13 +515,13 @@ namespace SpellServer
 
                 Network.Send(WorldPlayer, GamePacket.Outgoing.Player.SendPlayerId(this));
 
-                if (!WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
-                {
+                //if (!WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
+                //{
                     Network.SendTo(WorldPlayer, GamePacket.Outgoing.World.PlayerLeave(WorldPlayer), Network.SendToType.Tavern, false);
                     Network.SendTo(WorldPlayer, GamePacket.Outgoing.World.PlayerJoin(WorldPlayer), Network.SendToType.Tavern, false);
 
                     Network.SendToArena(this, GamePacket.Outgoing.Arena.PlayerJoin(this), false);
-                }
+                //}
 
                 if (OwnerArena.ArenaPlayerHistory.FindByCharacterId(WorldPlayer.ActiveCharacter.CharacterId) == null)
                 {
@@ -586,7 +583,11 @@ namespace SpellServer
                 Network.Send(WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(WorldPlayer, String.Format("If your team wins this match, you will earn {0:0,0} experience.", (WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? OwnerArena.EventExp * 2f : OwnerArena.EventExp))));
             }
 
-			//Network.Send(WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(WorldPlayer, String.Format("This arena currently has an EXP bonus of {0}%.", ((arena.Grid.ExpBonus + (Properties.Settings.Default.ExpMultiplier - 1.0f) + (WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? 0.2f : 0.0f)) * 100))));
+            World.UpdateAllArenaPlayers(this.WorldPlayer);
+
+            Network.Send(this.WorldPlayer, GamePacket.Outgoing.Study.CabalIDUpdate(this.WorldPlayer));
+
+            //Network.Send(WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(WorldPlayer, String.Format("This arena currently has an EXP bonus of {0}%.", ((arena.Grid.ExpBonus + (Properties.Settings.Default.ExpMultiplier - 1.0f) + (WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? 0.2f : 0.0f)) * 100))));
         }
     }
 }
