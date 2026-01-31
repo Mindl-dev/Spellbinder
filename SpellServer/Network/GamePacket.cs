@@ -1510,7 +1510,7 @@ namespace SpellServer
                 public static MemoryStream PlayerJump(ArenaPlayer arenaPlayer, Int16 targetId, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerJump);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(targetId)), 0, 2);
                     outStream.WriteByte(0x00);
@@ -1520,18 +1520,20 @@ namespace SpellServer
                 public static MemoryStream PlayerYank(ArenaPlayer arenaPlayer, Byte playerId, SharpDX.Vector3 location, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerYank);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(playerId)), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.X))), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Y))), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Z))), 0, 2);
+                    outStream.WriteByte(0x00);
+                    outStream.WriteByte(0x00);
+                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.X))), 0, 2);
+                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Y))), 0, 2);
+                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Z))), 0, 2);
                     return outStream;
                 }
                 public static MemoryStream PlayerGod(ArenaPlayer arenaPlayer, Boolean godStatus, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerGod);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToByte(godStatus))), 0, 2);
                     return outStream;
@@ -1599,7 +1601,7 @@ namespace SpellServer
                 public static MemoryStream PlayerLeave(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerLeave);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     return outStream;
@@ -1629,39 +1631,13 @@ namespace SpellServer
                     outStream.WriteByte((Byte)arenaPlayer.ActiveTeam);
                     outStream.WriteByte((Byte)arenaPlayer.ActiveCharacter.Level);
                     outStream.WriteByte((Byte)arenaPlayer.RaiseCount);
-
-                    //outStream.WriteByte((Byte)arenaPlayer.ActiveCharacter.Class);
-
-                    /*outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);
-
-                    outStream.WriteByte((Byte) arenaPlayer.DeathCount);
-                    outStream.WriteByte((Byte) arenaPlayer.KillCount);
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(arenaPlayer.IsAlive ? (Byte) 0 : (Byte) 1);
-                    outStream.WriteByte((Byte) arenaPlayer.ActiveCharacter.Class);
-                    outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
-                    outStream.WriteByte((Byte) arenaPlayer.RaiseCount);
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);
-
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);
-
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);
-
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);
-                    outStream.WriteByte(0xFF);*/
+                                        
                     return outStream;
                 }
                 public static MemoryStream PlayerMoveState(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveState);
                     outStream.Write(relayBuffer, 0, 12);
                     return outStream;
@@ -1669,7 +1645,7 @@ namespace SpellServer
                 public static MemoryStream PlayerMoveStateShort(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveStateShort);
                     outStream.Write(relayBuffer, 0, 8);
                     return outStream;
@@ -1677,7 +1653,7 @@ namespace SpellServer
                 public static MemoryStream CastEffect(ArenaPlayer arenaPlayer, Int16 spellId, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastEffect);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(spellId)), 0, 2);
                     outStream.WriteByte(0x00);
@@ -1687,7 +1663,7 @@ namespace SpellServer
                 public static MemoryStream CastTargeted(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastTargeted);
                     outStream.Write(relayBuffer, 0, 28);
                     return outStream;
@@ -1695,7 +1671,7 @@ namespace SpellServer
                 public static MemoryStream CastTargetedEx(ArenaPlayer targetPlayer, ArenaPlayer sourcePlayer, Spell spell, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(targetPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastTargeted);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(spell.Id)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(spell.Range)), 0, 2);
@@ -1717,7 +1693,7 @@ namespace SpellServer
                 public static MemoryStream CastRune(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastRune);
                     outStream.Write(relayBuffer, 0, 20);
                     return outStream;
@@ -1727,7 +1703,7 @@ namespace SpellServer
                     Int16 runeDirection = (Int16)MathHelper.RadiansToDirection(rune.Direction);
 
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastRune);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(rune.Spell.Id)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(rune.ObjectId)), 0, 2);
@@ -1743,7 +1719,7 @@ namespace SpellServer
                 public static MemoryStream CastBolt(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastBolt);
                     outStream.Write(relayBuffer, 0, 34);
                     return outStream;
@@ -1751,7 +1727,7 @@ namespace SpellServer
                 public static MemoryStream CastProjectile(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastProjectile);
                     outStream.Write(relayBuffer, 0, 16);
                     return outStream;
@@ -1759,7 +1735,7 @@ namespace SpellServer
                 public static MemoryStream CastProjectile(ArenaPlayer arenaPlayer, Projectile newProj, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastProjectile);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(newProj.Spell.Id)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Location.X)), 0, 2);
@@ -2449,7 +2425,7 @@ namespace SpellServer
                 {
                     MemoryStream outStream = new MemoryStream();
 
-                    outStream.WriteByte(0);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.SendCharacterInSlot);
                     
                     String username = player.Username;
@@ -2806,7 +2782,7 @@ namespace SpellServer
                     }*/
 
                     outStream = new MemoryStream();
-                    outStream.WriteByte(arenaPlayer.ArenaPlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastProjectile);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(spellId)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)boundingBox.Origin.X)), 0, 2);
@@ -2853,7 +2829,7 @@ namespace SpellServer
                 public static MemoryStream PlayerJoin(SpellServer.Player player, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte((Byte) player.PlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(player.PlayerId)), 0, 2);
                     outStream.WriteByte(player.TableId > 0 ? player.TableId : player.ActiveArena.ArenaId);
@@ -2885,7 +2861,7 @@ namespace SpellServer
                 public static MemoryStream PlayerLeave(SpellServer.Player player, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte((Byte) player.PlayerId);
+                    outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerLeave);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(player.PlayerId)), 0, 2);
                     return outStream;
