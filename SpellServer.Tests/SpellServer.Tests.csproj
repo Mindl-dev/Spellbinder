@@ -32,6 +32,8 @@
     <Compile Include="IniCacheTests.cs" />
     <Compile Include="ArenaPlayerTests.cs" />
     <Compile Include="LoggingTests.cs" />
+    <Compile Include="IntegrationTests.cs" />
+    <Compile Include="IniCacheVsWin32Tests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Helper\Helper.csproj">

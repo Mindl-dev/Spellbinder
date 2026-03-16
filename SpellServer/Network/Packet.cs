@@ -85,14 +85,15 @@ namespace SpellServer
         /// <param name="sourceId">Player ID for the client to route this packet (0 = server/system)</param>
         public Packet(MemoryStream inStream, UInt16 sourceId = 0)
         {
-            //TODO FIX these comments to actually describe the packet structure and how it's being built.
-            // Original layout: [len_hi][len_lo][0x00][inStream: 0x00, func_id, data...]
-            // Bytes [2-3] form source_id. Byte [2] was hardcoded 0x00, byte [3] came from inStream[0].
-            // We now set both from sourceId.
+            // Outgoing packet layout: [2:length] [2:source_id] [1:func_id] [N:data] [2:trailing]
+            // inStream arrives as: [0x00(padding), func_id, data...]
+            // We replace the padding byte with source_id, keeping the total size identical.
+            // Length field = inStream.Length = source_id(1 byte used) + func_id + data
             Byte[] streamData = inStream.ToArray();
+            Int16 payloadLength = (Int16)inStream.Length;
             MemoryStream outStream = new MemoryStream(streamData.Length + 5);
-            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)inStream.Length)), 0, 2);
-            // Source ID as big-endian uint16
+            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(payloadLength)), 0, 2);
+            // Source ID as big-endian uint16 — replaces the [padding, inStream[0]] pair
             outStream.WriteByte((Byte)(sourceId >> 8));
             outStream.WriteByte((Byte)(sourceId & 0xFF));
             // Write func_id + payload (skip the leading 0x00 padding byte from inStream)
