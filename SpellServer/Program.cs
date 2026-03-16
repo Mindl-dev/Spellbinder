@@ -57,7 +57,7 @@ namespace SpellServer
 						Log("Form shown — initializing server...", Color.Blue);
 						StartServer();
 					};
-					Application.Run(ServerForm = new ServerForm());
+					Application.Run(ServerForm);
 				}
 	        }
 	        finally
@@ -145,7 +145,7 @@ namespace SpellServer
 		        Settings.Default.Locked = true;
 		        String trace = exception.GetStackTrace();
 
-		        ServerForm.MainLog.WriteMessage(String.Format("[Exception] {0}", trace), Color.Red);
+		        Log(String.Format("[Exception] {0}", trace), Color.Red);
 
 		        MailManager.QueueMail("Server Crash", trace);
 
