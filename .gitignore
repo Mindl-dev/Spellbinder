@@ -229,3 +229,4 @@ FakesAssemblies/
 *.idc
 !References/**
 !MageHook/Lib/**
+.env
