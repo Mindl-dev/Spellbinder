@@ -191,7 +191,7 @@ namespace SpellServer
 
             return (y - ((x + y) << 8) & 0xFFFF);
         }*/
-        private static Int32 GetChecksum(Byte[] data, Int32 position, Int32 length)
+        public static Int32 GetChecksum(Byte[] data, Int32 position, Int32 length)
         {
             unchecked
             {
@@ -874,7 +874,8 @@ namespace SpellServer
 
             bool senderIsHidden = arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden);
 
-            Packet packet = new Packet(inStream);
+            // Pass ArenaPlayerId as source_id so the client knows which player model to update
+            Packet packet = new Packet(inStream, arenaPlayer.ArenaPlayerId);
 
             for (Byte i = 0; i < arena.ArenaPlayers.Count; i++)
             {

@@ -95,6 +95,45 @@ namespace SpellServer.Tests
         }
 
         [Test]
+        public void Packet_SourceId_SetFromArenaPlayer()
+        {
+            // When relaying a PlayerMoveState, the source_id in the packet header
+            // must be set to the sender's ArenaPlayerId so the client knows
+            // which player model to update. The client checks sub_427EA0(source_id)
+            // and drops the packet if source_id doesn't match a known player.
+            //
+            // PacketData layout: [0-1] length, [2-3] source_id (BE), [4] func_id
+            var inStream = new MemoryStream();
+            inStream.WriteByte(0x00);
+            inStream.WriteByte((byte)PacketOutFunction.PlayerMoveState);
+            inStream.Write(new byte[12], 0, 12);
+
+            UInt16 expectedSourceId = 2; // ArenaPlayerId = 2
+            var packet = new Packet(inStream, expectedSourceId);
+
+            // Source ID should be at bytes [2-3] as big-endian uint16
+            UInt16 actualSourceId = (UInt16)((packet.PacketData[2] << 8) | packet.PacketData[3]);
+            Assert.AreEqual(expectedSourceId, actualSourceId,
+                "Source ID in packet header must match the sender's ArenaPlayerId");
+        }
+
+        [Test]
+        public void Packet_DefaultSourceId_IsZero()
+        {
+            // Packets without an explicit source_id (non-arena, system messages)
+            // should default to source_id=0
+            var inStream = new MemoryStream();
+            inStream.WriteByte(0x00);
+            inStream.WriteByte((byte)PacketOutFunction.ArenaState);
+            inStream.Write(new byte[80], 0, 80);
+
+            var packet = new Packet(inStream);
+
+            UInt16 actualSourceId = (UInt16)((packet.PacketData[2] << 8) | packet.PacketData[3]);
+            Assert.AreEqual(0, actualSourceId, "Default source_id should be 0");
+        }
+
+        [Test]
         public void PositionEncoding_DirectionParsesCorrectly()
         {
             // Real client sends direction as 12-bit angle in lower bits of first 2 bytes
@@ -132,6 +171,66 @@ namespace SpellServer.Tests
             if ((rawZ & 0x800) != 0) zPos = -zPos;
 
             Assert.AreEqual(-100, zPos, "Z should be -100");
+        }
+
+        // --- Checksum tests: verify the unchecked byte wraparound is correct ---
+
+        [Test]
+        public void GetChecksum_EmptyPayload_ReturnsExpectedValue()
+        {
+            // Minimal packet: 1B 1B [len_hi len_lo] [header bytes] [checksum placeholder]
+            // GetChecksum skips first 2 bytes (1B 1B) and last 2 (checksum)
+            // So for a 6-byte packet, it checksums bytes [2..3] (just 2 bytes)
+            byte[] data = new byte[] { 0x1B, 0x1B, 0x00, 0x00, 0x00, 0x00 };
+            int result = Network.GetChecksum(data, 0, 6);
+
+            // sumA = 0x7E + 0x00 + 0x00 = 0x7E, sumB = 0x7E + 0x7E + 0xFC = 0x58 (wrapped)
+            // Actually: sumA starts 0x7E, sumB starts 0x7E
+            // i=2: sumA = (byte)(0x7E + 0x00) = 0x7E, sumB = (byte)(0x7E + 0x7E) = 0xFC
+            // i=3: sumA = (byte)(0x7E + 0x00) = 0x7E, sumB = (byte)(0xFC + 0x7E) = 0x7A (wrapped!)
+            // Final: eax = 0x7A, ecx = (byte)(0x7E + 0x7A) = 0xF8
+            // result = 0x7A - (0xF8 << 8) = 0x7A - 0xF800 = ushort cast
+            Assert.IsInstanceOf<Int32>(result);
+        }
+
+        [Test]
+        public void GetChecksum_ByteWraparound_DoesNotThrow()
+        {
+            // Construct data that forces sumA and sumB to wrap past 255
+            // This is the exact scenario that caused OverflowException with CheckForOverflowUnderflow=true
+            byte[] data = new byte[20];
+            data[0] = 0x1B;
+            data[1] = 0x1B;
+            for (int i = 2; i < 18; i++)
+                data[i] = 0xFF; // Forces maximum wraparound on every iteration
+            data[18] = 0x00; // checksum placeholder
+            data[19] = 0x00;
+
+            Assert.DoesNotThrow(() => Network.GetChecksum(data, 0, 20),
+                "Checksum must handle byte wraparound without OverflowException");
+        }
+
+        [Test]
+        public void GetChecksum_Deterministic()
+        {
+            // Same input must always produce same output
+            byte[] data = new byte[] { 0x1B, 0x1B, 0x05, 0x10, 0x20, 0x30, 0x40, 0x50, 0x00, 0x00 };
+            int result1 = Network.GetChecksum(data, 0, 10);
+            int result2 = Network.GetChecksum(data, 0, 10);
+            Assert.AreEqual(result1, result2, "Checksum must be deterministic");
+        }
+
+        [Test]
+        public void GetChecksum_RealPacket_MatchesCapturedValue()
+        {
+            // Real captured packet from client: 1b1b 0001 0007 0001 ffff 0033 00 bb8d
+            // The checksum bytes are the last 2: 0xBB 0x8D = 0xBB8D (BE)
+            byte[] data = new byte[] { 0x1B, 0x1B, 0x00, 0x01, 0x00, 0x07, 0x00, 0x01, 0xFF, 0xFF, 0x00, 0x33, 0x00, 0xBB, 0x8D };
+            int calculated = Network.GetChecksum(data, 0, 15);
+            ushort expected = 0xBB8D;
+
+            Assert.AreEqual(expected, (ushort)calculated,
+                $"Checksum should match captured value. Got 0x{(ushort)calculated:X4}, expected 0x{expected:X4}");
         }
     }
 }

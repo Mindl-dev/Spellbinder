@@ -77,12 +77,26 @@ namespace SpellServer
         public Byte[] PacketData;
         public PacketOutFunction Function;
 
-        public Packet(MemoryStream inStream)
+        /// <summary>Build an outgoing server→client packet.
+        /// Layout: [2:length] [2:source_id] [1:func_id] [N:data] [2:trailing]
+        /// The inStream starts with [0x00, func_id, data...] — the leading 0x00
+        /// is the low byte of source_id (originally hardcoded to 0).</summary>
+        /// <param name="inStream">Stream starting with 0x00 + func_id + payload</param>
+        /// <param name="sourceId">Player ID for the client to route this packet (0 = server/system)</param>
+        public Packet(MemoryStream inStream, UInt16 sourceId = 0)
         {
-            MemoryStream outStream = new MemoryStream((Int32)inStream.Length + 5);
+            //TODO FIX these comments to actually describe the packet structure and how it's being built.
+            // Original layout: [len_hi][len_lo][0x00][inStream: 0x00, func_id, data...]
+            // Bytes [2-3] form source_id. Byte [2] was hardcoded 0x00, byte [3] came from inStream[0].
+            // We now set both from sourceId.
+            Byte[] streamData = inStream.ToArray();
+            MemoryStream outStream = new MemoryStream(streamData.Length + 5);
             outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)inStream.Length)), 0, 2);
-            outStream.WriteByte(0x00);
-            inStream.WriteTo(outStream);
+            // Source ID as big-endian uint16
+            outStream.WriteByte((Byte)(sourceId >> 8));
+            outStream.WriteByte((Byte)(sourceId & 0xFF));
+            // Write func_id + payload (skip the leading 0x00 padding byte from inStream)
+            outStream.Write(streamData, 1, streamData.Length - 1);
             outStream.WriteByte(0x00);
             outStream.WriteByte(0x00);
             PacketData = outStream.GetBuffer();
