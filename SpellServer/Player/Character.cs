@@ -994,7 +994,7 @@ namespace SpellServer
                                 
                 if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !(player.IsAdmin || player.Admin >= AdminLevel.Tester))
                 {
-                    Program.Log(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red);
+                    Program.Log(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red, "Cheat");
 
                     Program.Log("Pick", Color.Red, "Cheat");
 
