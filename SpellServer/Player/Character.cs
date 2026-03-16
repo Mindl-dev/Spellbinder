@@ -708,8 +708,8 @@ namespace SpellServer
 			}
 			catch (Exception ex)
 			{
-				Program.ServerForm.MainLog.WriteMessage("Error loading name filter.", Color.Red);
-				Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+				Program.Log("Error loading name filter.", Color.Red);
+				Program.Log(ex.Message, Color.Red);
 			}
 		}
 
@@ -950,7 +950,7 @@ namespace SpellServer
 
                     if ((clientCharacter.ListLevel1 < tCharacter.ListLevel1 || clientCharacter.ListLevel2 < tCharacter.ListLevel2 || clientCharacter.ListLevel3 < tCharacter.ListLevel3 || clientCharacter.ListLevel4 < tCharacter.ListLevel4 || clientCharacter.ListLevel5 < tCharacter.ListLevel5 || clientCharacter.ListLevel6 < tCharacter.ListLevel6 || clientCharacter.ListLevel7 < tCharacter.ListLevel7 || clientCharacter.ListLevel8 < tCharacter.ListLevel8 || clientCharacter.ListLevel9 < tCharacter.ListLevel9 || clientCharacter.ListLevel10 < tCharacter.ListLevel10) && !player.IsAdmin)
                     {
-                        Program.ServerForm.CheatLog.WriteMessage(String.Format("[List Hack] AID: {0}, {1} ({2}), {3}, {4}, {5}, {6}", player.AccountId, player.Username, tCharacter.Name, clientCharacter.ListLevel1, tCharacter.ListLevel1, clientCharacter.ListLevel2, tCharacter.ListLevel2), Color.Red);
+                        Program.Log(String.Format("[List Hack] AID: {0}, {1} ({2}), {3}, {4}, {5}, {6}", player.AccountId, player.Username, tCharacter.Name, clientCharacter.ListLevel1, tCharacter.ListLevel1, clientCharacter.ListLevel2, tCharacter.ListLevel2), Color.Red, "Cheat");
                         
                         player.DisconnectReason = Resources.Strings_Disconnect.ListHack;
                         player.Disconnect = true;
@@ -994,9 +994,9 @@ namespace SpellServer
                                 
                 if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !(player.IsAdmin || player.Admin >= AdminLevel.Tester))
                 {
-                    Program.ServerForm.CheatLog.WriteMessage(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red);
+                    Program.Log(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red);
 
-                    Program.ServerForm.CheatLog.WriteMessage("Pick", Color.Red);
+                    Program.Log("Pick", Color.Red, "Cheat");
 
                     player.DisconnectReason = Resources.Strings_Disconnect.PickHack;
                     player.Disconnect = true;

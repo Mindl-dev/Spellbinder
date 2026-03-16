@@ -127,7 +127,7 @@ namespace SpellServer
                         }
                     }
 
-                    Program.ServerForm.ChatLog.WriteMessage(String.Format("[{0}] ({1}[{2}]){3}: {4}", player.WorldLocationString, player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, message), player.ChatColor);
+                    Program.Log(String.Format("[{0}] ({1}[{2}]){3}: {4}", player.WorldLocationString, player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, message), player.ChatColor, "Chat");
 
                     break;
                 }
@@ -153,7 +153,7 @@ namespace SpellServer
                         }
                     }
                     
-                    Program.ServerForm.ChatLog.WriteMessage(String.Format("[{0}] ({1}[{2}]){3}: {4}", player.WorldLocationString, player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, message), player.ChatColor);
+                    Program.Log(String.Format("[{0}] ({1}[{2}]){3}: {4}", player.WorldLocationString, player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, message), player.ChatColor, "Chat");
                     break;
                 }
                 case ChatType.Team:
@@ -180,7 +180,7 @@ namespace SpellServer
                         }
                     }
 
-                    Program.ServerForm.ChatLog.WriteMessage(String.Format("[{0}] ({1}[{2}]){3}: {4}", player.WorldLocationString, player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, message), player.ChatColor);
+                    Program.Log(String.Format("[{0}] ({1}[{2}]){3}: {4}", player.WorldLocationString, player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, message), player.ChatColor, "Chat");
                     break;
                 }
                 case ChatType.Whisper:
@@ -211,7 +211,7 @@ namespace SpellServer
                             Network.Send(targetPlayer, GamePacket.Outgoing.Player.Chat(player, target, targetType, message, UDP));
                         }
 
-                        Program.ServerForm.WhisperLog.WriteMessage(String.Format("[Whisper] ({0}[{1}]){2} -> ({3}[{4}]){5}: {6}", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.AccountId, targetPlayer.ActiveCharacter.CharacterId, targetPlayer.ActiveCharacter.Name, message), player.ChatColor);
+                        Program.Log(String.Format("[Whisper] ({0}[{1}]){2} -> ({3}[{4}]){5}: {6}", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.AccountId, targetPlayer.ActiveCharacter.CharacterId, targetPlayer.ActiveCharacter.Name, message), player.ChatColor, "Whisper");
                     }
 
                     break;
@@ -284,7 +284,7 @@ namespace SpellServer
 
                         Network.SendTo(GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[Broadcast] {0}: {1}", player.ActiveCharacter.Name, broadcastMessage)), Network.SendToType.All);
                         
-                        Program.ServerForm.ChatLog.WriteMessage(String.Format("[Broadcast] ({0}[{1}]){2}: {3}", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, broadcastMessage), player.ChatColor);
+                        Program.Log(String.Format("[Broadcast] ({0}[{1}]){2}: {3}", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, broadcastMessage), player.ChatColor, "Chat");
                         
                         return true;
                     }
@@ -309,7 +309,7 @@ namespace SpellServer
 
 						SendSystemMessage(player, String.Format(Resources.Strings_Commands.Motd_Success, motdMessage));
 
-						Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}[{1}]){2} -> Set MOTD to \"{3}\" ", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, motdMessage), Color.Blue);
+						Program.Log(String.Format("[Admin] ({0}[{1}]){2} -> Set MOTD to \"{3}\" ", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, motdMessage), Color.Blue, "Admin");
                         
                         return true;
                     }
@@ -344,7 +344,7 @@ namespace SpellServer
                                     SendSystemMessage(targetArenaPlayer.WorldPlayer, Resources.Strings_Commands.Kill_Killed);
                                     SendSystemMessage(player, String.Format(Resources.Strings_Commands.Kill_TargetKilled, targetArenaPlayer.ActiveCharacter.Name));
 
-                                    Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}[{1}]){2} -> {3} has been killed.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Name), Color.Blue);
+                                    Program.Log(String.Format("[Admin] ({0}[{1}]){2} -> {3} has been killed.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Name), Color.Blue, "Admin");
                                 }
                             }
                             else
@@ -384,7 +384,7 @@ namespace SpellServer
                                     Network.Send(targetArenaPlayer.WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(targetArenaPlayer.WorldPlayer, "[System] You were raised by a Moderator."));
                                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] {0} has been raised.", targetArenaPlayer.ActiveCharacter.Name)));
 
-                                    Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}[{1}]){2} -> {3} has been raised.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Name), Color.Blue);
+                                    Program.Log(String.Format("[Admin] ({0}[{1}]){2} -> {3} has been raised.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Name), Color.Blue, "Admin");
                                 }
                             }
                             else
@@ -429,7 +429,7 @@ namespace SpellServer
 
                                 Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] {0} has been kicked.", playerName)));
 
-                                Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}[{1}]){2} -> Kicked {3}.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.Name), Color.Blue);
+                                Program.Log(String.Format("[Admin] ({0}[{1}]){2} -> Kicked {3}.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.Name), Color.Blue, "Admin");
                             }
                             else
                             {
@@ -489,7 +489,7 @@ namespace SpellServer
 
                                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, "[System] Player renamed successfully."));
 
-                                    Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}[{1}]){2} -> Renamed [{3}]{4} to [{3}]{5}.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.CharacterId, playerName, newName), Color.Blue);
+                                    Program.Log(String.Format("[Admin] ({0}[{1}]){2} -> Renamed [{3}]{4} to [{3}]{5}.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.CharacterId, playerName, newName), Color.Blue, "Admin");
                                 }
                                 else
                                 {
@@ -542,7 +542,7 @@ namespace SpellServer
                                         Network.Send(targetPlayer, GamePacket.Outgoing.System.DirectTextMessage(targetPlayer, String.Format("[System] You have been awarded {0} experience.", amount)));
                                         Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] You have awarded {0} {1} experience.", targetPlayer.ActiveCharacter.Name, amount)));
 
-                                        Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}[{1}]){2} -> Gave [{3}]{4} {5} experience.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.CharacterId, targetPlayer.ActiveCharacter.Name, amount), Color.Blue);
+                                        Program.Log(String.Format("[Admin] ({0}[{1}]){2} -> Gave [{3}]{4} {5} experience.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.CharacterId, targetPlayer.ActiveCharacter.Name, amount), Color.Blue, "Admin");
                                     }
                                     else
                                     {
@@ -592,7 +592,7 @@ namespace SpellServer
                                 
                                 Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("Flags: {0}", targetPlayer.Flags)));
 
-                                Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}){1} -> Retrieved information on {2}", player.AccountId, player.ActiveCharacter.Name, targetPlayer.Username), Color.Blue);
+                                Program.Log(String.Format("[Admin] ({0}){1} -> Retrieved information on {2}", player.AccountId, player.ActiveCharacter.Name, targetPlayer.Username), Color.Blue, "Admin");
                             }
                             else
                             {
@@ -605,7 +605,7 @@ namespace SpellServer
                 }
             }
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("Character: {0}, OpLevel: {1}, AdminLevel: {2}, command: {3}", player.ActiveCharacter.Name, player.ActiveCharacter.OpLevel, player.Admin.ToString(), cmd.Command), Color.Blue);
+            Program.Log(String.Format("Character: {0}, OpLevel: {1}, AdminLevel: {2}, command: {3}", player.ActiveCharacter.Name, player.ActiveCharacter.OpLevel, player.Admin.ToString(), cmd.Command), Color.Blue, "Admin");
 
             // Staff Commands and Developer Only Commands
             if (player.ActiveCharacter.OpLevel >= 3)
@@ -635,7 +635,7 @@ namespace SpellServer
                                     Network.Send(targetPlayer, GamePacket.Outgoing.System.DirectTextMessage(targetPlayer, "[System] Your spell lists have been reset. You must go to the Study for it to take effect."));
                                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] {0}'s spell lists have been reset successfully.", targetPlayer.ActiveCharacter.Name)));
 
-                                    Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}){1} -> Reset {2}'s spell lists.", player.AccountId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.Name), Color.Blue);
+                                    Program.Log(String.Format("[Admin] ({0}){1} -> Reset {2}'s spell lists.", player.AccountId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.Name), Color.Blue, "Admin");
                                 }
                                 else
                                 {
@@ -818,7 +818,7 @@ namespace SpellServer
 
                                     Network.SendTo(player.ActiveArena, GamePacket.Outgoing.Arena.BiasedPool(player.ActiveArenaPlayer, pool, 100, UDP), Network.SendToType.Arena);
 
-                                    Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] {{{0}}} {1} ({2}), Command: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, message), Color.Blue);
+                                    Program.Log(String.Format("[Admin] {{{0}}} {1} ({2}), Command: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, message), Color.Blue, "Admin");
                                 }
                             }
                         }
@@ -839,7 +839,7 @@ namespace SpellServer
 
 						Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] The server is {0} locked.", Settings.Default.Locked ? "now" : "no longer")));
 
-                        Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}){1} -> Toggled the server lock.", player.AccountId, player.ActiveCharacter.Name), Color.Blue);
+                        Program.Log(String.Format("[Admin] ({0}){1} -> Toggled the server lock.", player.AccountId, player.ActiveCharacter.Name), Color.Blue, "Admin");
                         return true;
                     }
                     case "trackprojectiles":
@@ -933,7 +933,7 @@ namespace SpellServer
 						MySQL.ServerSettings.SetExpMultiplier(Settings.Default.ExpMultiplier);
 
 						Network.SendTo(GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] All Arenas now have an EXP Bonus of {0}%.", (Settings.Default.ExpMultiplier - 1f) * 100f)), Network.SendToType.All);
-						Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}){1} -> Set the EXP multiplier to {2}", player.AccountId, player.ActiveCharacter.Name, expMulti), Color.Blue);
+						Program.Log(String.Format("[Admin] ({0}){1} -> Set the EXP multiplier to {2}", player.AccountId, player.ActiveCharacter.Name, expMulti), Color.Blue, "Admin");
                         return true;
                     }
                     case "laugh":
@@ -942,7 +942,7 @@ namespace SpellServer
                         {
 							GamePacket.Outgoing.System.PlaySoundToArena(player.ActiveArena, GameSound.Sound.EvilLaugh);
 
-                            Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] {{{0}}} {1} ({2}), Command: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, message), Color.Blue);
+                            Program.Log(String.Format("[Admin] {{{0}}} {1} ({2}), Command: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, message), Color.Blue, "Admin");
                         }
                         else
                         {
@@ -1077,7 +1077,7 @@ namespace SpellServer
 
                                 Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, "[System] Your spell lists have been reset. You must go to the Study for it to take effect."));
 
-                                Program.ServerForm.AdminLog.WriteMessage(String.Format("[Tester] ({0}){1} -> Reset their spell lists.", player.AccountId, player.ActiveCharacter.Name), Color.Blue);
+                                Program.Log(String.Format("[Tester] ({0}){1} -> Reset their spell lists.", player.AccountId, player.ActiveCharacter.Name), Color.Blue, "Admin");
                             }
                             else
                             {
@@ -1118,7 +1118,7 @@ namespace SpellServer
 
                                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] You have been awarded {0} experience.", amount)));
 
-                                    Program.ServerForm.AdminLog.WriteMessage(String.Format("[Tester] ({0}[{1}]){2} -> Gave themself {3} experience.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, amount), Color.Blue);
+                                    Program.Log(String.Format("[Tester] ({0}[{1}]){2} -> Gave themself {3} experience.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, amount), Color.Blue, "Admin");
                                 }
                                 else
                                 {
@@ -1198,7 +1198,7 @@ namespace SpellServer
                         Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[Dice] You roll {0} {1}. ({2} to {3}).", diceRoll.GetFirstAOrAnPrefix(), diceRoll, min, max)));
                         Network.SendTo(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[Dice] {0} rolls {1} {2}. ({3} to {4})", player.ActiveCharacter.Name, diceRoll.GetFirstAOrAnPrefix(), diceRoll, min, max)), player.IsInArena ? Network.SendToType.Arena : Network.SendToType.Table, false);
 
-                        Program.ServerForm.ChatLog.WriteMessage(String.Format("[{0}] ({1}){2} rolls {3} {4}. ({5} to {6})", player.WorldLocationString, player.AccountId, player.ActiveCharacter.Name, diceRoll.GetFirstAOrAnPrefix(), diceRoll, min, max), Color.MidnightBlue);
+                        Program.Log(String.Format("[{0}] ({1}){2} rolls {3} {4}. ({5} to {6})", player.WorldLocationString, player.AccountId, player.ActiveCharacter.Name, diceRoll.GetFirstAOrAnPrefix(), diceRoll, min, max), Color.MidnightBlue, "Chat");
                     }
                     catch
                     {
@@ -1216,7 +1216,7 @@ namespace SpellServer
                         String chatStatus = player.Flags.HasFlag(PlayerFlag.ChatDisabled) ? "disabled" : "enabled";
                         Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] Your chat has been {0}.", chatStatus)));
 
-                        Program.ServerForm.MiscLog.WriteMessage(String.Format("[Misc] ({0}){1} -> {2} {3} chat.", player.AccountId, player.Username, player.ActiveCharacter.Name, chatStatus), Color.Blue);
+                        Program.Log(String.Format("[Misc] ({0}){1} -> {2} {3} chat.", player.AccountId, player.Username, player.ActiveCharacter.Name, chatStatus), Color.Blue, "Misc");
 
                         return true;
                     }
@@ -1243,7 +1243,7 @@ namespace SpellServer
                                 Network.Send(targetPlayer, GamePacket.Outgoing.System.DirectTextMessage(targetPlayer, String.Format("[System] You have been {0} by a Moderator.", muteStatus)));
                                 Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] {0} has been {1}.", targetPlayer.ActiveCharacter.Name, muteStatus)));
 
-                                Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}){1} -> {2} has been {3}.", player.AccountId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.Name, muteStatus), Color.Blue);
+                                Program.Log(String.Format("[Admin] ({0}){1} -> {2} has been {3}.", player.AccountId, player.ActiveCharacter.Name, targetPlayer.ActiveCharacter.Name, muteStatus), Color.Blue, "Admin");
                             }
                             else
                             {
@@ -1390,7 +1390,7 @@ namespace SpellServer
 
                     Character.Save(player, null);
 
-                    Program.ServerForm.MiscLog.WriteMessage(String.Format("[Misc] ({0}[{1}]) {2} has been granted level {3}.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, level), Color.Teal);
+                    Program.Log(String.Format("[Misc] ({0}[{1}]) {2} has been granted level {3}.", player.AccountId, player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, level), Color.Teal, "Misc");
 
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] You have been granted level {0}.", level)));
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, "[System] You must go to your character sheet to see the changes."));
@@ -1451,7 +1451,7 @@ namespace SpellServer
                     player.ActiveArena.TimeLimit = (Int16)(duration * 60);
                     player.ActiveArena.IsDurationLocked = true;
 
-                    Program.ServerForm.MiscLog.WriteMessage(String.Format("[Arena Duration] {{{0}}} {1} ({2}), Set Arena Duration -> {3} minutes", player.AccountId, player.Username, player.ActiveCharacter.Name, player.ActiveArena.Duration.RemainingSeconds / 60), Color.Blue);
+                    Program.Log(String.Format("[Arena Duration] {{{0}}} {1} ({2}), Set Arena Duration -> {3} minutes", player.AccountId, player.Username, player.ActiveCharacter.Name, player.ActiveArena.Duration.RemainingSeconds / 60), Color.Blue, "Misc");
 
                     Network.SendTo(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] The match duration has been set to {0} minute(s).", duration)), Network.SendToType.Arena, true);
                     return true;
@@ -1575,7 +1575,7 @@ namespace SpellServer
                                 return true;
                             }
 
-                            Program.ServerForm.MiscLog.WriteMessage(String.Format("[Arena Kick] {{{0}}} {1} ({2}), Kicked Player -> {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Name), Color.Blue);
+                            Program.Log(String.Format("[Arena Kick] {{{0}}} {1} ({2}), Kicked Player -> {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Name), Color.Blue, "Misc");
 
                             Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] {0} has been removed from the arena.", targetArenaPlayer.ActiveCharacter.Name)));
 
@@ -1611,7 +1611,7 @@ namespace SpellServer
                         }
                     }
 
-                    Program.ServerForm.ReportLog.WriteMessage(String.Format("[Report] {{{0}}} {1} ({2}), Report: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, reportString), Color.DarkOrange);
+                    Program.Log(String.Format("[Report] {{{0}}} {1} ({2}), Report: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, reportString), Color.DarkOrange, "Report");
 
                     MailManager.QueueMail("Player Report", String.Format("Account Name: {0}\nCharacter Name: {1}\nSerial: {2}\nReport Message: {3}", player.Username, player.ActiveCharacter.Name, player.Serial, reportString));
 
@@ -1623,7 +1623,7 @@ namespace SpellServer
                 {
                     player.Flags ^= PlayerFlag.ExpLocked;
 
-                    Program.ServerForm.MiscLog.WriteMessage(String.Format("[Locked EXP] {{{0}}} {1} ({2}), Locked EXP -> Is Locked: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, player.Flags.HasFlag(PlayerFlag.ExpLocked)), Color.Blue);
+                    Program.Log(String.Format("[Locked EXP] {{{0}}} {1} ({2}), Locked EXP -> Is Locked: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, player.Flags.HasFlag(PlayerFlag.ExpLocked)), Color.Blue, "Misc");
 
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] Your exp is now {0}.", player.Flags.HasFlag(PlayerFlag.ExpLocked) ? "locked" : "un-locked")));
                     return true;
@@ -1632,7 +1632,7 @@ namespace SpellServer
                 {
                     player.Flags ^= PlayerFlag.MusicDisabled;
 
-                    Program.ServerForm.MiscLog.WriteMessage(String.Format("[Togglemusic] {{{0}}} {1} ({2}), Toggled Music -> Is Toggled: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, player.Flags.HasFlag(PlayerFlag.MusicDisabled)), Color.Blue);
+                    Program.Log(String.Format("[Togglemusic] {{{0}}} {1} ({2}), Toggled Music -> Is Toggled: {3}", player.AccountId, player.Username, player.ActiveCharacter.Name, player.Flags.HasFlag(PlayerFlag.MusicDisabled)), Color.Blue, "Misc");
 
                     Network.Send(player, GamePacket.Outgoing.System.PlayWebMusic("stop"));
                     Network.Send(player, GamePacket.Outgoing.System.DirectTextMessage(player, String.Format("[System] Music has been {0}.", player.Flags.HasFlag(PlayerFlag.MusicDisabled) ? "disabled" : "enabled")));

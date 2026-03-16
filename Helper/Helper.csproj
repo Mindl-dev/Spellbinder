@@ -127,6 +127,8 @@
     <Compile Include="Controls\LogBox.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="Controls\ConsoleLogBox.cs" />
+    <Compile Include="Controls\ILogWriter.cs" />
     <Compile Include="Logging\LogMessage.cs" />
     <Compile Include="Cryptography\CryptoRandom.cs" />
     <Compile Include="Magestorm\Map\Map.cs" />

@@ -440,7 +440,7 @@ namespace SpellServer
                     ArenaPlayerId = OwnerArena.ArenaPlayers.GetNextRollingId();
                 }
 
-                Program.ServerForm.MainLog.WriteMessage($"ArenaPlayerId: {ArenaPlayerId}, ArenaPlayerName: {player.ActiveCharacter.Name}", System.Drawing.Color.Red);
+                Program.Log($"ArenaPlayerId: {ArenaPlayerId}, ArenaPlayerName: {player.ActiveCharacter.Name}, Team: {WorldPlayer.ActiveTeam}", System.Drawing.Color.Red);
 
                 if (ArenaPlayerId == 0) return;
 
@@ -497,6 +497,7 @@ namespace SpellServer
                 {
                     if (ActiveShrine.IsDisabled)
                     {
+
                         Network.Send(WorldPlayer, GamePacket.Outgoing.Player.SendPlayerId(this));
 
                         Thread.Sleep(500);

@@ -38,7 +38,7 @@ namespace SpellServer
             float projPerp = -toCenterX * dirY + toCenterY * dirX;                    // perpendicular in XY plane
             float projVert = toCenterZ;                                              // vertical
 
-            Program.ServerForm.MainLog.WriteMessage($"projAlong: {projAlong.ToString()}, projPerp: {projPerp.ToString()}, projVert: {projVert.ToString()}, effectiveWidth: {effectiveWidth.ToString()}, effectiveThick: {effectiveThick.ToString()}", Color.Red);
+            Program.Log($"projAlong: {projAlong.ToString()}, projPerp: {projPerp.ToString()}, projVert: {projVert.ToString()}, effectiveWidth: {effectiveWidth.ToString()}, effectiveThick: {effectiveThick.ToString()}", Color.Red);
 
             // Check if projection falls within the rune's rectangular prism
             if (Math.Abs(projAlong) > effectiveWidth) return (false, 0);
@@ -53,7 +53,7 @@ namespace SpellServer
 
         public Rune FindByVector(Player player, SharpDX.Vector3 casterPos, Single fDirection, Spell spell)
         {
-            Program.ServerForm.MainLog.WriteMessage($"FindByVector", Color.Red);
+            Program.Log($"FindByVector", Color.Red);
 
             float directionRadians = fDirection * (2f * (float)Math.PI / 65536f);
 

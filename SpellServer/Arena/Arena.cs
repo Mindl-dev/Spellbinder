@@ -250,7 +250,7 @@ namespace SpellServer
 
                 if (ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.ExpEvent))
                 {
-                    Program.ServerForm.AdminLog.WriteMessage(String.Format("[Admin] ({0}){1} -> Created an Event Exp Game ({2} EXP)", player.AccountId, player.ActiveCharacter.Name, player.PreferredEventExp), Color.Blue);
+                    Program.Log(String.Format("[Admin] ({0}){1} -> Created an Event Exp Game ({2} EXP)", player.AccountId, player.ActiveCharacter.Name, player.PreferredEventExp), Color.Blue, "Admin");
                     
                     EventExp = player.PreferredEventExp;
                 }
@@ -452,7 +452,7 @@ namespace SpellServer
                         }
                         catch (Exception ex)
                         {
-                            Program.ServerForm.MainLog.WriteMessage(String.Format("[Arena Exception] {0}", ex.GetStackTrace()), Color.Red);
+                            Program.Log(String.Format("[Arena Exception] {0}", ex.GetStackTrace()), Color.Red);
 
                             EndState = State.Ended;
                             EndMatch(false);
@@ -507,7 +507,7 @@ namespace SpellServer
 
                                 arenaPlayer.ActiveCharacter.AwardExp += awardedExp;
 
-                                Program.ServerForm.AdminLog.WriteMessage(String.Format("[Event] ({0}){1} -> Has been awarded {2} EXP by {3}.", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.ActiveCharacter.Name, awardedExp, arenaPlayer.WorldPlayer.ActiveArena.Founder), Color.Blue);
+                                Program.Log(String.Format("[Event] ({0}){1} -> Has been awarded {2} EXP by {3}.", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.ActiveCharacter.Name, awardedExp, arenaPlayer.WorldPlayer.ActiveArena.Founder), Color.Blue, "Admin");
                             }
 
                             Int32 pointsPlace = top10Points.FindIndex(indexPlayer => indexPlayer == arenaPlayer);
@@ -898,7 +898,7 @@ namespace SpellServer
                             {
                                 DoPlayerDamage(arenaPlayer, rune.Owner, rune.Spell, null, true);
 
-                                Program.ServerForm.MainLog.WriteMessage($"Rune {rune.ObjectId} triggered by player {arenaPlayer.ActiveCharacter.Name}", Color.Red);
+                                Program.Log($"Rune {rune.ObjectId} triggered by player {arenaPlayer.ActiveCharacter.Name}", Color.Red);
 
                                 Network.SendTo(this, GamePacket.Outgoing.Arena.ObjectDeath(arenaPlayer, rune.ObjectId), Network.SendToType.Arena);
                                 Network.SendTo(this, GamePacket.Outgoing.Arena.ObjectDeath(arenaPlayer, rune.ObjectId), Network.SendToType.Arena);
@@ -1506,7 +1506,7 @@ namespace SpellServer
             {
                 if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.FriendlyFire) && (p.Owner.ActiveTeam == p.hitPlayer.ActiveTeam && p.hitPlayer.ActiveTeam != Team.Neutral))
                 {
-                    Program.ServerForm.MainLog.WriteMessage($"Friendly Fire", Color.Red);
+                    Program.Log($"Friendly Fire", Color.Red);
 
                     SpellDamage spellDamage = new SpellDamage(p.Spell);
 
@@ -1799,7 +1799,7 @@ namespace SpellServer
 
                     /*if (DebugNumber == 0)
                     {
-                        Program.ServerForm.MainLog.WriteMessage($"WorldX: {(int)projectile.Location.X}, WorldY: {(int)projectile.Location.Y}, GridX: {(int)projectile.Location.X >> 6}, GridY: {(int)projectile.Location.Y >> 6}", Color.Red);
+                        Program.Log($"WorldX: {(int)projectile.Location.X}, WorldY: {(int)projectile.Location.Y}, GridX: {(int)projectile.Location.X >> 6}, GridY: {(int)projectile.Location.Y >> 6}", Color.Red);
                     }*/
 
                     DebugNumber++;
@@ -2196,7 +2196,7 @@ namespace SpellServer
 
                 if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
                 {
-                    Program.ServerForm.MainLog.WriteMessage($"[AOE Triggered] {projectile.Spell.Name} at {impactVector}", Color.Yellow);
+                    Program.Log($"[AOE Triggered] {projectile.Spell.Name} at {impactVector}", Color.Yellow);
                 }
 
                 for (Int32 p = 0; p < ArenaPlayers.Count; p++)
@@ -2243,7 +2243,7 @@ namespace SpellServer
 
                                 if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
                                 {
-                                    Program.ServerForm.MainLog.WriteMessage($"[AOE] {projectile.Spell.Name} hit {arenaPlayer.ActiveCharacter.Name} for {baseDamage.Damage} at dist {distance}", Color.Cyan);
+                                    Program.Log($"[AOE] {projectile.Spell.Name} hit {arenaPlayer.ActiveCharacter.Name} for {baseDamage.Damage} at dist {distance}", Color.Cyan);
                                 }
 
                             }
@@ -2833,12 +2833,12 @@ namespace SpellServer
                     {
                         if (arenaPlayer.WorldPlayer.Serial == targetArenaPlayer.WorldPlayer.Serial)
                         {
-                            Program.ServerForm.CheatLog.WriteMessage(String.Format("[Serial Pump] Killer: {{{0}}}, {1} ({2}) Lv.{3}, Target: {{{4}}}, {5} ({6}) Lv.{7}, Serial: {8}", targetArenaPlayer.WorldPlayer.AccountId, targetArenaPlayer.WorldPlayer.Username, targetArenaPlayer.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Level, arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, arenaPlayer.ActiveCharacter.Level, arenaPlayer.WorldPlayer.Serial), Color.Red);
+                            Program.Log(String.Format("[Serial Pump] Killer: {{{0}}}, {1} ({2}) Lv.{3}, Target: {{{4}}}, {5} ({6}) Lv.{7}, Serial: {8}", targetArenaPlayer.WorldPlayer.AccountId, targetArenaPlayer.WorldPlayer.Username, targetArenaPlayer.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Level, arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, arenaPlayer.ActiveCharacter.Level, arenaPlayer.WorldPlayer.Serial), Color.Red, "Cheat");
                             MailManager.QueueMail("Serial Pumper Detected", String.Format("Account Name: {0}\nCharacter Name: {1}\nSerial: {2}", arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, arenaPlayer.WorldPlayer.Serial));
                         }
                         else if (arenaPlayer.WorldPlayer.IpAddress == targetArenaPlayer.WorldPlayer.IpAddress)
                         {
-                            Program.ServerForm.CheatLog.WriteMessage(String.Format("[IP Pump] Killer: {{{0}}}, {1} ({2}) Lv.{3}, Target: {{{4}}}, {5} ({6}) Lv.{7}", targetArenaPlayer.WorldPlayer.AccountId, targetArenaPlayer.WorldPlayer.Username, targetArenaPlayer.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Level, arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, arenaPlayer.ActiveCharacter.Level), Color.Red);
+                            Program.Log(String.Format("[IP Pump] Killer: {{{0}}}, {1} ({2}) Lv.{3}, Target: {{{4}}}, {5} ({6}) Lv.{7}", targetArenaPlayer.WorldPlayer.AccountId, targetArenaPlayer.WorldPlayer.Username, targetArenaPlayer.ActiveCharacter.Name, targetArenaPlayer.ActiveCharacter.Level, arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, arenaPlayer.ActiveCharacter.Level), Color.Red, "Cheat");
                         }
                     }
 
@@ -2870,7 +2870,7 @@ namespace SpellServer
 
                 if (deltaState < minDelta && !arenaPlayer.WorldPlayer.IsAdmin)
                 {
-                    Program.ServerForm.CheatLog.WriteMessage(String.Format("[Speedhack] (AID: {0}, {1}) {2} - Time: {3}ms/{4}ms", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, deltaState, minDelta), Color.Red);
+                    Program.Log(String.Format("[Speedhack] (AID: {0}, {1}) {2} - Time: {3}ms/{4}ms", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, deltaState, minDelta), Color.Red, "Cheat");
 
                     arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpeedHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3212,7 +3212,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-					Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
 					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3237,7 +3237,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-					Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
                     arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3298,7 +3298,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-					Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
 					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3386,7 +3386,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-					Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
 					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3415,7 +3415,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-					Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
 					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3440,7 +3440,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-                    Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+                    Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
 					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3473,7 +3473,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-                    Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+                    Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
                     arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;
@@ -3482,7 +3482,7 @@ namespace SpellServer
 
                 arenaPlayer.IsInCombat = true;
 
-                Program.ServerForm.MainLog.WriteMessage($"rune.objectid: {rune.ObjectId.ToString()}", Color.Red);
+                Program.Log($"rune.objectid: {rune.ObjectId.ToString()}", Color.Red);
 
                 Network.SendTo(this, GamePacket.Outgoing.Arena.ObjectDeath(rune.ObjectId), Network.SendToType.Arena);
                 Runes.Remove(rune);
@@ -3500,7 +3500,7 @@ namespace SpellServer
 
                 if (!cheatInfo.HasSpell)
                 {
-					Program.ServerForm.CheatLog.WriteMessage(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red);
+					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
 					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
                     arenaPlayer.WorldPlayer.Disconnect = true;

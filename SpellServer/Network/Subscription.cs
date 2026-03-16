@@ -41,7 +41,9 @@ namespace SpellServer
             public readonly ErrorType Error;
             public readonly AdminLevel Admin;
             public readonly String Username;
+            #pragma warning disable CS0649 // Assigned only in commented-out subscription check code
             public readonly Boolean MagestormPlus;
+            #pragma warning restore CS0649
 
             public AccountData(Player player, String ipAddress, String serial, String username, String password)
             {
@@ -177,7 +179,7 @@ namespace SpellServer
 
             if (accountData.Error != ErrorType.None)
             {
-                Program.ServerForm.MainLog.WriteMessage(String.Format("(PID: {0}, IP: {1}, S/N: {2}) Login Error: {3}, Username: {4}", player.PlayerId, player.IpAddress, serial, accountData.Error, username), Color.DarkOrange);
+                Program.Log(String.Format("(PID: {0}, IP: {1}, S/N: {2}) Login Error: {3}, Username: {4}", player.PlayerId, player.IpAddress, serial, accountData.Error, username), Color.DarkOrange);
 
                 Network.Send(player, GamePacket.Outgoing.Login.Error(accountData.Error));
 
@@ -196,7 +198,7 @@ namespace SpellServer
             {
                 if (player.IsAdmin)
                 {
-                    Program.ServerForm.MainLog.WriteMessage(String.Format("(PID: {0}, AID: {1}) {2} has a version mismatch. Allowing anyway. ({3})", player.PlayerId, player.AccountId, player.Username, player.Admin), Color.DarkOrange);
+                    Program.Log(String.Format("(PID: {0}, AID: {1}) {2} has a version mismatch. Allowing anyway. ({3})", player.PlayerId, player.AccountId, player.Username, player.Admin), Color.DarkOrange);
                 }
                 else
                 {
@@ -220,7 +222,7 @@ namespace SpellServer
 
 			MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("(PID: {0}, AID: {1}, S/N: {2}) {3} has connected.", player.PlayerId, player.AccountId, serial, player.Username), Color.MediumSlateBlue);
+            Program.Log(String.Format("(PID: {0}, AID: {1}, S/N: {2}) {3} has connected.", player.PlayerId, player.AccountId, serial, player.Username), Color.MediumSlateBlue);
         }
     }
 }

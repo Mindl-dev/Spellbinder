@@ -32,7 +32,7 @@ namespace SpellServer.Forms
                         String name = prefix.Replace(":", "").Trim();
                         String message = String.Format("{0} {1}", prefix, ChatLogTextBox.Text).Trim();
 
-                        Program.ServerForm.ChatLog.WriteMessage(message, Color.MediumVioletRed);
+                        Program.Log(message, Color.MediumVioletRed, "Chat");
                         
                         if (name != "")
                         {
@@ -72,7 +72,7 @@ namespace SpellServer.Forms
             {
                 if (MessageBox.Show(@"There are still players connected.  Are you sure you want to exit?", @"Magestorm Server", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1, MessageBoxOptions.ServiceNotification) == DialogResult.Yes)
                 {
-                    Program.ServerForm.MainLog.WriteMessage(@"Server shutting down...", Color.Red);
+                    Program.Log(@"Server shutting down...", Color.Red);
 
                     lock (PlayerManager.Players.SyncRoot)
                     {

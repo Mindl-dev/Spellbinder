@@ -238,9 +238,9 @@ namespace SpellServer
             String fileName = String.Format("{0}\\Spells.dat", Directory.GetCurrentDirectory());
             Int32 spellCount = NativeMethods.GetPrivateProfileInt32("spelldefs", "numspells", fileName);
 
-            Program.ServerForm.MainLog.WriteMessage("Spell Lists loaded.", Color.Blue);
+            Program.Log("Spell Lists loaded.", Color.Blue);
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("Loading {0} Spells...", spellCount), Color.Blue);
+            Program.Log(String.Format("Loading {0} Spells...", spellCount), Color.Blue);
 
             for (Int16 i = 1; i <= spellCount; i++)
             {
@@ -260,14 +260,14 @@ namespace SpellServer
 
                 Spells.Insert(spell.Id, spell);
 
-                Program.ServerForm.MainLog.WriteMessage(String.Format("Loaded Spell: {0}", spell.Name), Color.Green);
+                Program.Log(String.Format("Loaded Spell: {0}", spell.Name), Color.Green);
 
                 Application.DoEvents();
             }
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("{0} Spells loaded.", spellCount), Color.Blue);
+            Program.Log(String.Format("{0} Spells loaded.", spellCount), Color.Blue);
 
-            Program.ServerForm.MainLog.WriteMessage("Loading Spell Lists...", Color.Blue);
+            Program.Log("Loading Spell Lists...", Color.Blue);
 
             for (Int32 i = 0; i <= 9; i++)
             {
@@ -300,7 +300,7 @@ namespace SpellServer
                 }
             }
 
-            Program.ServerForm.MainLog.WriteMessage("Linking Spells with Lists...", Color.Blue);
+            Program.Log("Linking Spells with Lists...", Color.Blue);
 
             foreach (Spell spell in Spells)   //for (Int32 i = 1; i < Spells.Count; i++)
             {
@@ -322,7 +322,7 @@ namespace SpellServer
                 Application.DoEvents();
             }
 
-            Program.ServerForm.MainLog.WriteMessage("Finished linking Spells.", Color.Blue);
+            Program.Log("Finished linking Spells.", Color.Blue);
 
             // Set Hardcoded Spells
             //CTFOrbSpell = Spells[331];

@@ -254,7 +254,7 @@ namespace Helper
                 }
             }
         }
-        private void LoadHollowZones(int id, LogBox logBox)
+        private void LoadHollowZones(int id, ILogWriter logBox)
         {
             // 1. Point to your static data definitions
             HashSet<long> sourceData = null;
@@ -281,7 +281,7 @@ namespace Helper
             // This ensures grid.HollowZones is NEVER null.
             this.HollowZones = new HashSet<long>(sourceData);
         }
-        public static void LoadAllGrids(LogBox logBox)
+        public static void LoadAllGrids(ILogWriter logBox)
 		{
 			String fName = String.Format("{0}\\Arenas.dat", Directory.GetCurrentDirectory());
 			Int32 aCount = NativeMethods.GetPrivateProfileInt32("arenadefs", "numarenas", fName);
@@ -340,7 +340,7 @@ namespace Helper
 
         }
 
-        public Boolean Load(Int32 gridId, LogBox logBox)
+        public Boolean Load(Int32 gridId, ILogWriter logBox)
         {
             try
             {
@@ -873,7 +873,7 @@ namespace Helper
 
             return BitConverter.ToInt16(_rawTerrainData, rawByteOffset);
         }
-        private void LoadGrid(Boolean isServer, LogBox logBox)
+        private void LoadGrid(Boolean isServer, ILogWriter logBox)
         {
             const int MAIN_SIZE = 16384 * 38; // 622592 bytes
 

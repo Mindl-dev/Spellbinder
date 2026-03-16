@@ -64,7 +64,7 @@ namespace SpellServer
 
             _gameListener.BeginAcceptTcpClient(OnAcceptConnectionTCP, _gameListener);
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("Server listening on TCP port {0}.", Settings.Default.ListenPort), Color.Blue);
+            Program.Log(String.Format("Server listening on TCP port {0}.", Settings.Default.ListenPort), Color.Blue);
 
             _gameUDPListener = new UdpClient(Settings.Default.UDPPort);
             _gameUDPListener.Client.ReceiveBufferSize = 65536;
@@ -74,7 +74,7 @@ namespace SpellServer
 
             BeginUdpReceive(); // start the async receive loop
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("Server listening on UDP port {0}.", Settings.Default.UDPPort), Color.Blue);
+            Program.Log(String.Format("Server listening on UDP port {0}.", Settings.Default.UDPPort), Color.Blue);
 
         }
 
@@ -119,7 +119,7 @@ namespace SpellServer
                     player.LastKnownUdpEndpoint = remoteEP;
 
                     // Process the UDP packet exactly like TCP
-                    Program.ServerForm.MainLog.WriteMessage(String.Format("UDP received: {0},{1}",bytesReceived.ToString(), remoteEP.Address.ToString()), Color.Blue);
+                    Program.Log(String.Format("UDP received: {0},{1}",bytesReceived.ToString(), remoteEP.Address.ToString()), Color.Blue);
                     //player.BindUdp(_gameUDPListener, remoteEP, player.IpAddress);
                     Network.GameRecvUdp(player, data, bytesReceived);
 
@@ -129,12 +129,12 @@ namespace SpellServer
             }
             catch (ObjectDisposedException) // server shutting down
             {
-                Program.ServerForm.MainLog.WriteMessage($"UDP ObjectDisposedException", Color.Red);
+                Program.Log($"UDP ObjectDisposedException", Color.Red);
                 BeginUdpReceive();
             }
             catch (Exception ex)
             {
-                Program.ServerForm.MainLog.WriteMessage($"UDP receive error: {ex.Message}", Color.Red);
+                Program.Log($"UDP receive error: {ex.Message}", Color.Red);
                 BeginUdpReceive();
             }
             finally
@@ -148,7 +148,7 @@ namespace SpellServer
         {
             player.TcpClient.Client.DisconnectAsync(new SocketAsyncEventArgs());
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("{0} has disconnected. ({1})", player.IsLoggedIn ? player.Username : player.IpAddress, player.DisconnectReason), Color.BlueViolet);
+            Program.Log(String.Format("{0} has disconnected. ({1})", player.IsLoggedIn ? player.Username : player.IpAddress, player.DisconnectReason), Color.BlueViolet);
 
             //player.UDPDisconnect();
 
@@ -160,7 +160,7 @@ namespace SpellServer
                     {
                         if (player.ActiveArenaPlayer != null)
                         {
-                            Program.ServerForm.MainLog.WriteMessage($"[Network Disconnect] Player Left", Color.Red);
+                            Program.Log($"[Network Disconnect] Player Left", Color.Red);
                             player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
                         }
                     }
@@ -193,26 +193,26 @@ namespace SpellServer
         }*/
         private static Int32 GetChecksum(Byte[] data, Int32 position, Int32 length)
         {
-            // The assembly uses bl (sumA) and dl (sumB) initialized to 126 (0x7E)
-            byte sumA = 0x7E;
-            byte sumB = 0x7E;
-
-            // IMPORTANT: The assembly range 'esi' is PayloadLength + 10.
-            // Total Packet is PayloadLength + 14. 
-            // This means we skip the first 2 bytes (1B 1B) 
-            // and stop before the last 2 bytes (Checksum).
-            int start = position + 2;
-            int end = position + length - 2;
-
-            for (int i = start; i < end; i++)
-            {
-                // byte cast ensures 0-255 wrapping like the 8-bit registers bl/dl
-                sumA = (byte)(sumA + data[i]);
-                sumB = (byte)(sumB + sumA);
-            }
-
             unchecked
             {
+                // The assembly uses bl (sumA) and dl (sumB) initialized to 126 (0x7E)
+                byte sumA = 0x7E;
+                byte sumB = 0x7E;
+
+                // IMPORTANT: The assembly range 'esi' is PayloadLength + 10.
+                // Total Packet is PayloadLength + 14.
+                // This means we skip the first 2 bytes (1B 1B)
+                // and stop before the last 2 bytes (Checksum).
+                int start = position + 2;
+                int end = position + length - 2;
+
+                for (int i = start; i < end; i++)
+                {
+                    // byte cast ensures 0-255 wrapping like the 8-bit registers bl/dl
+                    sumA = (byte)(sumA + data[i]);
+                    sumB = (byte)(sumB + sumA);
+                }
+
                 // Final assembly logic: return v4 - ((v4 + a1) << 8)
                 // where v4 is sumB and a1 is sumA
                 int eax_reg = sumB;
@@ -243,7 +243,7 @@ namespace SpellServer
                     {
                         if (playerId != player.ActiveArenaPlayer.ArenaPlayerId)
                         {
-                            Program.ServerForm.MainLog.WriteMessage($"Wrong arena player ID received from {player.Username}. Received {playerId}, but the assigned arena playerId is {player.ActiveArenaPlayer.ArenaPlayerId}", Color.Red);
+                            Program.Log($"Wrong arena player ID received from {player.Username}. Received {playerId}, but the assigned arena playerId is {player.ActiveArenaPlayer.ArenaPlayerId}", Color.Red);
                             break;
                         }
                     }
@@ -251,7 +251,7 @@ namespace SpellServer
                     {
                         if (playerId != player.PlayerId)
                         {
-                            Program.ServerForm.MainLog.WriteMessage($"Wrong player ID received from {player.Username}. Received {playerId}, but the assigned playerId is {player.PlayerId}", Color.Red);
+                            Program.Log($"Wrong player ID received from {player.Username}. Received {playerId}, but the assigned playerId is {player.PlayerId}", Color.Red);
                             break;
                         }
                     }
@@ -279,7 +279,7 @@ namespace SpellServer
                     // Checksum failed. Likely a false positive 1B 1B. 
                     //position++;
                     //continue;
-                    Program.ServerForm.MainLog.WriteMessage($"[CRC] Op: 0x{data[position + 11]:X2} Client:{receivedChecksum:X4} Server:{calculatedChecksum:X4}", Color.Orange);
+                    Program.Log($"[CRC] Op: 0x{data[position + 11]:X2} Client:{receivedChecksum:X4} Server:{calculatedChecksum:X4}", Color.Orange);
                 }
 
                 Int32 packetNumber = NetHelper.FlipBytes(BitConverter.ToUInt16(data, position + 4));
@@ -631,7 +631,7 @@ namespace SpellServer
 
                 //if (receivedChecksum != calculatedChecksum)
                 //{
-                //    Program.ServerForm.MainLog.WriteMessage(
+                //    Program.Log(
                 //        $"[UDP] Bad checksum from {player.IpAddress}", Color.Orange);
                 //    break;
                 //}
@@ -650,7 +650,7 @@ namespace SpellServer
                     
                     // ... all other UDP commands ...
                     default:
-                        Program.ServerForm.MainLog.WriteMessage(
+                        Program.Log(
                             $"[UDP] Unknown CMD 0x{cmd:X2} from {player.Username}", Color.Yellow);
                         break;
                 }
@@ -689,7 +689,7 @@ namespace SpellServer
             {
                 Packet packet = new Packet(inStream);
 
-                Program.ServerForm.MainLog.WriteMessage(String.Format("[UDP] Sent CMD 0x87: {0}, {1}", player.UdpIpAddress, BitConverter.ToString(player.UdpportBE)), Color.Blue);
+                Program.Log(String.Format("[UDP] Sent CMD 0x87: {0}, {1}", player.UdpIpAddress, BitConverter.ToString(player.UdpportBE)), Color.Blue);
 
                 _gameUDPListener.BeginSend(packet.PacketData, packet.PacketData.Length, player.UdpIpAddress, BitConverter.ToInt16(player.UdpportBE, 0), SendCallbackUDP, new SendCallbackSyncResult(player));
                 //_gameUDPListener.BeginSend(packet.PacketData, packet.PacketData.Length, player.IpAddress, player.Udpport, SendCallbackUDP, new SendCallbackSyncResult(player));
@@ -726,7 +726,7 @@ namespace SpellServer
         {
             try
             {
-                Program.ServerForm.MainLog.WriteMessage(String.Format("[UDP] Sent CMD 0x87: {0}, {1}", player.IpAddress, BitConverter.ToString(player.UdpportBE)), Color.Blue);
+                Program.Log(String.Format("[UDP] Sent CMD 0x87: {0}, {1}", player.IpAddress, BitConverter.ToString(player.UdpportBE)), Color.Blue);
 
                 _gameUDPListener.BeginSend(packet.PacketData, packet.PacketData.Length, player.UdpIpAddress, BitConverter.ToInt16(player.UdpportBE,0), SendCallbackUDP, new SendCallbackSyncResult(player));
                 //_gameUDPListener.BeginSend(packet.PacketData, packet.PacketData.Length, player.IpAddress, player.Udpport, SendCallbackUDP, new SendCallbackSyncResult(player));

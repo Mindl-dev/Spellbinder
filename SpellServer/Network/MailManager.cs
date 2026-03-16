@@ -46,7 +46,7 @@ namespace SpellServer
                     }
                     catch (Exception ex)
                     {
-                        Program.ServerForm.MainLog.WriteMessage(String.Format("[Mail Error] {0}", ex.InnerException.Message), Color.Red);
+                        Program.Log(String.Format("[Mail Error] {0}", ex.InnerException.Message), Color.Red);
                     }
 
                     Messages.RemoveAt(0);
