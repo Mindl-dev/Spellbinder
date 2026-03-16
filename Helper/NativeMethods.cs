@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -304,100 +306,125 @@ namespace Helper
             return WritePrivateProfileString(section, key, value, path);
         }
 
+        // --- Cached INI parser: reads file once, serves all lookups from memory ---
+        private static readonly ConcurrentDictionary<String, Dictionary<String, Dictionary<String, String>>> _iniCache
+            = new ConcurrentDictionary<String, Dictionary<String, Dictionary<String, String>>>(StringComparer.OrdinalIgnoreCase);
+
+        private static Dictionary<String, Dictionary<String, String>> LoadIniFile(String path)
+        {
+            return _iniCache.GetOrAdd(path, p =>
+            {
+                var sections = new Dictionary<String, Dictionary<String, String>>(StringComparer.OrdinalIgnoreCase);
+                if (!File.Exists(p)) return sections;
+
+                Dictionary<String, String> currentSection = null;
+                foreach (var rawLine in File.ReadAllLines(p))
+                {
+                    var line = rawLine.Trim();
+                    if (line.Length == 0 || line[0] == ';') continue;
+
+                    if (line[0] == '[')
+                    {
+                        var end = line.IndexOf(']');
+                        if (end > 1)
+                        {
+                            var name = line.Substring(1, end - 1).Trim();
+                            if (!sections.TryGetValue(name, out currentSection))
+                            {
+                                currentSection = new Dictionary<String, String>(StringComparer.OrdinalIgnoreCase);
+                                sections[name] = currentSection;
+                            }
+                        }
+                        continue;
+                    }
+
+                    if (currentSection != null)
+                    {
+                        var eq = line.IndexOf('=');
+                        if (eq > 0)
+                        {
+                            var k = line.Substring(0, eq).Trim();
+                            var v = line.Substring(eq + 1).Trim();
+                            // Strip inline comments (;)
+                            var semi = v.IndexOf(';');
+                            if (semi >= 0) v = v.Substring(0, semi).Trim();
+                            currentSection[k] = v;
+                        }
+                    }
+                }
+                return sections;
+            });
+        }
+
+        private static String GetCachedIniValue(String section, String key, String path)
+        {
+            var ini = LoadIniFile(path);
+            if (ini.TryGetValue(section, out var sec) && sec.TryGetValue(key, out var val))
+                return val;
+            return "";
+        }
+
         public static Boolean GetPrivateProfileBoolean(String section, String key, String path)
         {
             try
             {
-                StringBuilder sBuffer = new StringBuilder(8);
-                GetPrivateProfileString(section, key, "", sBuffer, 8, path);
-                String keyString = sBuffer.ToString().Split(";"[0])[0];
-
+                String keyString = GetCachedIniValue(section, key, path);
+                if (keyString.Equals("")) return false;
                 if (keyString.ToLower() == "true" || keyString.ToLower() == "false")
-                {
-                    return Convert.ToBoolean(keyString); 
-                }
-
+                    return Convert.ToBoolean(keyString);
                 return Convert.ToBoolean(Convert.ToInt32(keyString));
             }
-            catch (Exception)
-            {
-                return false;
-            }
+            catch (Exception) { return false; }
         }
 
         public static Byte GetPrivateProfileByte(String section, String key, String path)
         {
             try
             {
-                StringBuilder sBuffer = new StringBuilder(8);
-                GetPrivateProfileString(section, key, "", sBuffer, 8, path);
-                String keyString = sBuffer.ToString().Split(";"[0])[0];
+                String keyString = GetCachedIniValue(section, key, path);
                 return keyString.Equals("") ? (Byte)0 : Convert.ToByte(keyString);
             }
-            catch (Exception)
-            {
-                return 0;
-            }
+            catch (Exception) { return 0; }
         }
 
         public static Int16 GetPrivateProfileInt16(String section, String key, String path)
         {
             try
             {
-                StringBuilder sBuffer = new StringBuilder(16);
-                GetPrivateProfileString(section, key, "", sBuffer, 16, path);
-                String keyString = sBuffer.ToString().Split(";"[0])[0];
+                String keyString = GetCachedIniValue(section, key, path);
                 return keyString.Equals("") ? (Int16)0 : Convert.ToInt16(keyString);
             }
-            catch (Exception)
-            {
-                return -1;
-            }
+            catch (Exception) { return -1; }
         }
 
         public static Int32 GetPrivateProfileInt32(String section, String key, String path)
         {
             try
             {
-                StringBuilder sBuffer = new StringBuilder(32);
-                GetPrivateProfileString(section, key, "", sBuffer, 32, path);
-                String keyString = sBuffer.ToString().Split(";"[0])[0];
+                String keyString = GetCachedIniValue(section, key, path);
                 return keyString.Equals("") ? -1 : Convert.ToInt32(keyString);
             }
-            catch (Exception)
-            {
-                return -1;
-            }
+            catch (Exception) { return -1; }
         }
 
         public static Single GetPrivateProfileSingle(String section, String key, String path)
         {
             try
             {
-                StringBuilder sBuffer = new StringBuilder(32);
-                GetPrivateProfileString(section, key, "", sBuffer, 32, path);
-                String keyString = sBuffer.ToString().Split(";"[0])[0];
+                String keyString = GetCachedIniValue(section, key, path);
                 return keyString.Equals("") ? 0.0f : Convert.ToSingle(keyString);
             }
-            catch (Exception)
-            {
-                return 0.0f;
-            }
+            catch (Exception) { return 0.0f; }
         }
 
         public static String GetPrivateProfileString(String section, String key, String path)
         {
             try
             {
-                StringBuilder sBuffer = new StringBuilder(255);
-                GetPrivateProfileString(section, key, "", sBuffer, 255, path);
-                String keyString = sBuffer.ToString().Split(";"[0])[0];
-                return keyString;
+                String val = GetCachedIniValue(section, key, path);
+                return val;
             }
-            catch (Exception)
-            {
-                return null;
-            }
+            catch (Exception) { return null; }
         }
 
         public static String GetBaseDirectory()

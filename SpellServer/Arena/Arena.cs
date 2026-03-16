@@ -2635,7 +2635,7 @@ namespace SpellServer
 
         public void PlayerLeft(ArenaPlayer arenaPlayer, bool UDP = false)
         {
-            lock (SyncRoot)
+                        lock (SyncRoot)
             {
                 Network.SendToArena(arenaPlayer, GamePacket.Outgoing.Arena.PlayerLeave(arenaPlayer, UDP), false);
 
