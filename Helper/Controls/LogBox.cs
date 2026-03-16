@@ -54,8 +54,10 @@ namespace Helper
 
         void PrintTimerTick(object sender, EventArgs e)
         {
-            // Drain all pending messages in FIFO order (always from index 0)
-            while (Messages.Count > 0)
+            // Drain all pending messages in FIFO order (always from index 0).
+            // Cap iterations to prevent infinite loop if ProcessMessage fails to remove.
+            int maxDrain = Messages.Count;
+            for (int drain = 0; drain < maxDrain && Messages.Count > 0; drain++)
             {
                 ProcessMessage(0);
             }
