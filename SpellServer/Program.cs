@@ -27,10 +27,11 @@ namespace SpellServer
 		        Arguments = arguments;
 				Headless = Array.Exists(arguments, a => a == "--headless" || a == "-h");
 
-				NativeMethods.BeginTimePeriod(1);
+				// High-resolution timer — Windows only (winmm.dll), safe to skip on Linux
+				try { NativeMethods.BeginTimePeriod(1); } catch (DllNotFoundException) { }
 
 				AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-				AppDomain.CurrentDomain.ProcessExit += (s, e) => NativeMethods.EndTimePeriod(1);
+				AppDomain.CurrentDomain.ProcessExit += (s, e) => { try { NativeMethods.EndTimePeriod(1); } catch (DllNotFoundException) { } };
 
 				if (Headless)
 				{
