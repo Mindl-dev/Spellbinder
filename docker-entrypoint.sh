@@ -19,9 +19,33 @@ if [ -d /app/Content ]; then
     cp -f Content/Spells.dat Content/Arenas.dat . 2>/dev/null || true
     if [ -d Content/Grids ] && [ ! -d Grids ]; then
         cp -r Content/Grids/ Grids/
-        # Fix case: server expects Geometry.dat, installer has GEOMETRY.DAT
-        find Grids/ -iname "geometry.dat" ! -name "Geometry.dat" \
-            -exec sh -c 'mv "$1" "$(dirname "$1")/Geometry.dat"' _ {} \; 2>/dev/null || true
+        # Fix case: C# server expects Grid00/Misc.dat etc, installer has grid00/MISC.DAT
+        for dir in Grids/grid[0-9][0-9]; do
+            [ -d "$dir" ] || continue
+            target="Grids/Grid$(basename "$dir" | sed 's/grid//')"
+            [ "$dir" != "$target" ] && mv "$dir" "$target"
+        done
+        # Fix file case: installer has WORLD.DAT, server expects World.dat
+        # Map uppercase filenames to the exact casing the C# code uses
+        for dir in Grids/Grid*/; do
+            [ -d "$dir" ] || continue
+            cd "$dir"
+            for f in *.DAT *.dat; do
+                [ -f "$f" ] || continue
+                case "$(echo "$f" | tr '[:upper:]' '[:lower:]')" in
+                    world.dat)       target="World.dat" ;;
+                    grid.dat)        target="Grid.dat" ;;
+                    misc.dat)        target="Misc.dat" ;;
+                    geometry.dat)    target="Geometry.dat" ;;
+                    trigger.dat)     target="Trigger.dat" ;;
+                    objects.dat)     target="Objects.dat" ;;
+                    subpixel.dat)    target="SubPixel.dat" ;;
+                    *)               target="$f" ;;
+                esac
+                [ "$f" != "$target" ] && mv "$f" "$target" 2>/dev/null || true
+            done
+            cd /app
+        done
     fi
 else
     echo "WARNING: No /app/Content mount found. Mount game content via docker-compose volume."
@@ -44,24 +68,35 @@ if command -v mysqld &>/dev/null; then
         done
     fi
 
+    # Allow root login via TCP (needed for pymysql in hash_passwords.py)
+    mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED BY ''; FLUSH PRIVILEGES;" 2>/dev/null || true
+    mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;" 2>/dev/null || true
+
     # Import schema if database doesn't exist
     if ! mysql -u root -e "USE spellbinder" 2>/dev/null; then
         echo "Initializing database..."
         mysql -u root -e "CREATE DATABASE spellbinder;"
         if [ -f Content/spellbinder-server.sql ]; then
-            mysql -u root spellbinder < Content/spellbinder-server.sql
+            # Fix MySQL 8.0 collation for MariaDB compatibility
+            sed 's/utf8mb4_0900_ai_ci/utf8mb4_general_ci/g' Content/spellbinder-server.sql \
+                | mysql -u root spellbinder
         fi
-        mysql -u root -e "CREATE USER IF NOT EXISTS 'localweb'@'localhost' IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL PRIVILEGES ON spellbinder.* TO 'localweb'@'localhost'; FLUSH PRIVILEGES;"
+        # C# server compiled default is "magestorm" (user-scoped setting ignores app.config on mono)
+        mysql -u root -e "CREATE DATABASE IF NOT EXISTS magestorm;"
+        sed 's/utf8mb4_0900_ai_ci/utf8mb4_general_ci/g' Content/spellbinder-server.sql \
+            | mysql -u root magestorm 2>/dev/null || true
+        mysql -u root -e "CREATE USER IF NOT EXISTS 'localweb'@'localhost' IDENTIFIED BY ''; GRANT ALL PRIVILEGES ON *.* TO 'localweb'@'localhost'; FLUSH PRIVILEGES;"
 
-        # Create player accounts
+        # Create player accounts in both databases
         if [ -f hash_passwords.py ]; then
             if [ "$DEV_MODE" = true ]; then
-                echo "Dev mode: creating accounts with simple passwords (test1/test1, test2/test2, ...)"
-                python3 hash_passwords.py --create-defaults --dev --mysql-user root
-                echo "Dev accounts created (password = username)" | tee "$CREDENTIALS_FILE"
+                echo "Dev mode: creating accounts with simple passwords (password = username)"
+                python3 hash_passwords.py --create-defaults --dev --mysql-user root --database magestorm | tee "$CREDENTIALS_FILE"
+                python3 hash_passwords.py --create-defaults --dev --mysql-user root --database spellbinder >/dev/null 2>&1
             else
                 echo "Creating accounts with generated passwords..."
-                python3 hash_passwords.py --create-defaults --mysql-user root | tee "$CREDENTIALS_FILE"
+                python3 hash_passwords.py --create-defaults --mysql-user root --database magestorm | tee "$CREDENTIALS_FILE"
+                python3 hash_passwords.py --create-defaults --mysql-user root --database spellbinder >/dev/null 2>&1
                 echo ""
                 echo "Credentials saved to $CREDENTIALS_FILE"
                 echo "Back this up — passwords are hashed in the database and cannot be recovered."
@@ -73,4 +108,5 @@ if command -v mysqld &>/dev/null; then
 fi
 
 echo "Starting SpellBinder server..."
+export MONO_IOMAP=all
 exec mono SpellServer.exe --headless "$@"
