@@ -1,4 +1,4 @@
-﻿using Helper;
+using Helper;
 using Helper.Math;
 using Helper.Timing;
 using Mysqlx.Crud;
@@ -244,7 +244,7 @@ namespace SpellServer
                 MaxPlayers = Grid.MaxPlayers;
                 EndState = State.Normal;
                 IsDurationLocked = false;
-                DebugFlags = ArenaSpecialFlag.ProjectileTracking;
+                DebugFlags = Program.DefaultDebugFlags;
 
                 StartTime = DateTime.UtcNow;
 
@@ -2635,7 +2635,7 @@ namespace SpellServer
 
         public void PlayerLeft(ArenaPlayer arenaPlayer, bool UDP = false)
         {
-                        lock (SyncRoot)
+            lock (SyncRoot)
             {
                 Network.SendToArena(arenaPlayer, GamePacket.Outgoing.Arena.PlayerLeave(arenaPlayer, UDP), false);
 

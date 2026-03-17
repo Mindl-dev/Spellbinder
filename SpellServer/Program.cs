@@ -16,6 +16,7 @@ namespace SpellServer
 		public static String[] Arguments;
 		public static ServerForm ServerForm;
 		public static Boolean Headless;
+		public static ArenaSpecialFlag DefaultDebugFlags;
 		public static ConsoleLogBox HeadlessMainLog;
 		public static ConsoleLogBox HeadlessChatLog;
 
@@ -27,7 +28,20 @@ namespace SpellServer
 		        Arguments = arguments;
 				Headless = Array.Exists(arguments, a => a == "--headless" || a == "-h");
 
-				if (Array.Exists(arguments, a => a == "--no-sanitize"))
+				var debugArg = Array.Find(arguments, a => a.StartsWith("--debug="));
+			if (debugArg != null)
+			{
+				foreach (var flag in debugArg.Substring("--debug=".Length).Split(','))
+				{
+					if (Enum.TryParse<ArenaSpecialFlag>(flag.Trim(), true, out var parsed))
+						DefaultDebugFlags |= parsed;
+					else
+						Console.WriteLine($"WARNING: Unknown debug flag '{flag.Trim()}'. Valid: {String.Join(", ", Enum.GetNames(typeof(ArenaSpecialFlag)))}");
+				}
+				Console.WriteLine($"Arena debug flags: {DefaultDebugFlags}");
+			}
+
+			if (Array.Exists(arguments, a => a == "--no-sanitize"))
 				{
 					InputSanitizer.Enabled = false;
 					Console.WriteLine("WARNING: Input sanitization DISABLED (--no-sanitize). For protocol debugging only!");

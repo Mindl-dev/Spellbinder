@@ -60,6 +60,7 @@ namespace Helper
             for (int drain = 0; drain < maxDrain && Messages.Count > 0; drain++)
             {
                 ProcessMessage(0);
+                if (maxDrain >= Messages.Count) break; //breaks the loop if no messages are removed
             }
 
             if (HasChanged && IsScrollToCaret)
