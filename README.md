@@ -122,13 +122,3 @@ address=127.0.0.1
 ```
 
 Use the **unpatched** client binary. The discord-patched DLL has UDP changes that are incompatible.
-
-## Changes from Upstream
-
-- **INI cache**: Spell loading from 15s to instant (cached `GetPrivateProfileString`)
-- **Headless mode**: `--headless` flag for VPS deployment, console + file logging
-- **Log routing**: `Program.Log()` with category routing (Main, Chat, Cheat, Admin, Whisper, Report, Misc)
-- **Packet source_id**: Fixed `Packet` constructor to pass `ArenaPlayerId` so clients can see other players
-- **Overflow fix**: `unchecked` block in `GetChecksum` instead of global `CheckForOverflowUnderflow=false`
-- **LogBox FIFO**: Fixed reverse-order message drain in GUI log
-- **Unit tests**: 35 tests covering packets, INI cache, checksums, data casting, logging
