@@ -102,7 +102,7 @@ namespace SpellServer
 
                     DataRow accountdata = query.Rows[0];
 
-                    if (accountdata["password"].ToString() == password)
+                    if (PasswordHasher.Verify(password, accountdata["password"].ToString()))
                     {
                         if ((int)accountdata["AccountID"] > 0)
                         {

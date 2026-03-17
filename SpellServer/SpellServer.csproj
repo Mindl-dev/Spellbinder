@@ -194,6 +194,7 @@
     <Compile Include="Network\MailManager.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Network\PasswordHasher.cs" />
     <Compile Include="Network\MySQL.cs">
       <SubType>Code</SubType>
     </Compile>
