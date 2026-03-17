@@ -262,7 +262,7 @@ namespace SpellServer
 
                 Program.Log(String.Format("Loaded Spell: {0}", spell.Name), Color.Green);
 
-                Application.DoEvents();
+                if (!Program.Headless) Application.DoEvents();
             }
 
             Program.Log(String.Format("{0} Spells loaded.", spellCount), Color.Blue);
@@ -319,7 +319,7 @@ namespace SpellServer
                     }
                 }
 
-                Application.DoEvents();
+                if (!Program.Headless) Application.DoEvents();
             }
 
             Program.Log("Finished linking Spells.", Color.Blue);

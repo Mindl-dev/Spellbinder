@@ -17,8 +17,11 @@ namespace SpellServer.Tests
             string section, string key, string def,
             StringBuilder retVal, int size, string filePath);
 
+        private static bool _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
         private static string Win32Read(string section, string key, string path)
         {
+            if (!_isWindows) return null;
             StringBuilder sb = new StringBuilder(512);
             GetPrivateProfileString(section, key, "", sb, 512, path);
             string raw = sb.ToString();
@@ -34,12 +37,12 @@ namespace SpellServer.Tests
         [OneTimeSetUp]
         public void Setup()
         {
-            // Find Spells.dat — check Build/Debug first, then current dir
             string[] searchPaths = new[]
             {
                 Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "Build", "Debug", "Spells.dat"),
                 Path.Combine(Directory.GetCurrentDirectory(), "Spells.dat"),
                 Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "Build", "Debug", "Spells.dat"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Content", "Spells.dat"),
             };
 
             foreach (var p in searchPaths)
@@ -57,6 +60,7 @@ namespace SpellServer.Tests
                 Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "Build", "Debug", "Arenas.dat"),
                 Path.Combine(Directory.GetCurrentDirectory(), "Arenas.dat"),
                 Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "Build", "Debug", "Arenas.dat"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Content", "Arenas.dat"),
             };
 
             foreach (var p in arenaSearchPaths)
@@ -73,6 +77,8 @@ namespace SpellServer.Tests
         [Test]
         public void SpellsDat_AllSpells_MatchWin32()
         {
+            if (!_isWindows)
+                Assert.Ignore("Win32 API not available on this platform");
             if (_spellsPath == null)
                 Assert.Ignore("Spells.dat not found — skipping Win32 comparison");
 
@@ -127,6 +133,8 @@ namespace SpellServer.Tests
         [Test]
         public void ArenasDat_AllArenas_MatchWin32()
         {
+            if (!_isWindows)
+                Assert.Ignore("Win32 API not available on this platform");
             if (_arenasPath == null)
                 Assert.Ignore("Arenas.dat not found — skipping Win32 comparison");
 

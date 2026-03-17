@@ -31,7 +31,6 @@ namespace SpellServer
         static Subscription()
         {
             SubscriptionPage = String.Format("https://{0}/subscription.php", Settings.Default.SubscriptionHost);
-            //GameVersion = new[] { Convert.ToByte(Settings.Default.ServerVersion.Split('.')[0]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[1]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[2]) };
             GameVersion = new[] { Convert.ToByte(49), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[0]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[1]), Convert.ToByte(Settings.Default.ServerVersion.Split('.')[2]) };
         }
 
@@ -196,18 +195,9 @@ namespace SpellServer
                         
             if (BitConverter.ToInt32(version, 0) != BitConverter.ToInt32(GameVersion, 0))
             {
-                if (player.IsAdmin)
-                {
-                    Program.Log(String.Format("(PID: {0}, AID: {1}) {2} has a version mismatch. Allowing anyway. ({3})", player.PlayerId, player.AccountId, player.Username, player.Admin), Color.DarkOrange);
-                }
-                else
-                {
-                    Network.Send(player, GamePacket.Outgoing.Login.Error(ErrorType.InvalidVersion));
-
-	                player.DisconnectReason = Resources.Strings_Disconnect.InvalidVersion;
-                    player.Disconnect = true;
-                    return;
-                }
+                Program.Log(String.Format("(PID: {0}, AID: {1}) {2} version mismatch: client={3} server={4}, allowing.",
+                    player.PlayerId, player.AccountId, player.Username,
+                    BitConverter.ToString(version), BitConverter.ToString(GameVersion)), Color.DarkOrange);
             }
 
             //player.AccountId = 1; // accountData.AccountId;
