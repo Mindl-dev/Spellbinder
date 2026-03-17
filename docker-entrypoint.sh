@@ -73,37 +73,32 @@ if command -v mysqld &>/dev/null; then
     mysql -u root -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;" 2>/dev/null || true
 
     # Import schema if database doesn't exist
-    if ! mysql -u root -e "USE spellbinder" 2>/dev/null; then
+    if ! mysql -u root -e "USE magestorm" 2>/dev/null; then
         echo "Initializing database..."
-        mysql -u root -e "CREATE DATABASE spellbinder;"
+        mysql -u root -e "CREATE DATABASE magestorm;"
         if [ -f Content/spellbinder-server.sql ]; then
             # Fix MySQL 8.0 collation for MariaDB compatibility
             sed 's/utf8mb4_0900_ai_ci/utf8mb4_general_ci/g' Content/spellbinder-server.sql \
-                | mysql -u root spellbinder
+                | mysql -u root magestorm
         fi
-        # C# server compiled default is "magestorm" (user-scoped setting ignores app.config on mono)
-        mysql -u root -e "CREATE DATABASE IF NOT EXISTS magestorm;"
-        sed 's/utf8mb4_0900_ai_ci/utf8mb4_general_ci/g' Content/spellbinder-server.sql \
-            | mysql -u root magestorm 2>/dev/null || true
-        mysql -u root -e "CREATE USER IF NOT EXISTS 'localweb'@'localhost' IDENTIFIED BY ''; GRANT ALL PRIVILEGES ON *.* TO 'localweb'@'localhost'; FLUSH PRIVILEGES;"
+        mysql -u root -e "CREATE USER IF NOT EXISTS 'localweb'@'localhost' IDENTIFIED BY ''; GRANT ALL PRIVILEGES ON magestorm.* TO 'localweb'@'localhost'; FLUSH PRIVILEGES;"
 
-        # Create player accounts in both databases
+        # Create player accounts
         if [ -f hash_passwords.py ]; then
+            printf "# SpellBinder Server — Generated Credentials\n# DELETE THIS FILE after noting the passwords!\n" > "$CREDENTIALS_FILE"
             if [ "$DEV_MODE" = true ]; then
                 echo "Dev mode: creating accounts with simple passwords (password = username)"
-                python3 hash_passwords.py --create-defaults --dev --mysql-user root --database magestorm | tee "$CREDENTIALS_FILE"
-                python3 hash_passwords.py --create-defaults --dev --mysql-user root --database spellbinder >/dev/null 2>&1
+                python3 hash_passwords.py --create-defaults --dev --mysql-user root --database magestorm | tee -a "$CREDENTIALS_FILE"
             else
                 echo "Creating accounts with generated passwords..."
-                python3 hash_passwords.py --create-defaults --mysql-user root --database magestorm | tee "$CREDENTIALS_FILE"
-                python3 hash_passwords.py --create-defaults --mysql-user root --database spellbinder >/dev/null 2>&1
+                python3 hash_passwords.py --create-defaults --mysql-user root --database magestorm | tee -a "$CREDENTIALS_FILE"
                 echo ""
                 echo "Credentials saved to $CREDENTIALS_FILE"
                 echo "Back this up — passwords are hashed in the database and cannot be recovered."
             fi
         fi
     else
-        echo "Database 'spellbinder' already exists"
+        echo "Database 'magestorm' already exists"
     fi
 fi
 

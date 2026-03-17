@@ -199,9 +199,9 @@ print(generate_password(5))
 
         SQL_FILE="$ROOT/Content/spellbinder-server.sql"
         if [ -f "$SQL_FILE" ]; then
-            mysql -u "$MYSQL_USER" $PASS_ARG -e "CREATE DATABASE IF NOT EXISTS spellbinder;"
-            mysql -u "$MYSQL_USER" $PASS_ARG spellbinder < "$SQL_FILE"
-            mysql -u "$MYSQL_USER" $PASS_ARG -e "CREATE USER IF NOT EXISTS 'localweb'@'localhost' IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL PRIVILEGES ON spellbinder.* TO 'localweb'@'localhost'; FLUSH PRIVILEGES;"
+            mysql -u "$MYSQL_USER" $PASS_ARG -e "CREATE DATABASE IF NOT EXISTS magestorm;"
+            mysql -u "$MYSQL_USER" $PASS_ARG magestorm < "$SQL_FILE"
+            mysql -u "$MYSQL_USER" $PASS_ARG -e "CREATE USER IF NOT EXISTS 'localweb'@'localhost' IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL PRIVILEGES ON magestorm.* TO 'localweb'@'localhost'; FLUSH PRIVILEGES;"
             # Widen password column and hash existing plaintext passwords
             if command -v python3 &>/dev/null && [ -f "$ROOT/hash_passwords.py" ]; then
                 pip3 install -q pymysql 2>/dev/null || true

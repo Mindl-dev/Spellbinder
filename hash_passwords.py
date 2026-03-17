@@ -63,7 +63,7 @@ def main():
     parser.add_argument("--create-defaults", action="store_true", help="Create default test accounts")
     parser.add_argument("--mysql-user", default="root", help="MySQL username")
     parser.add_argument("--mysql-password", default="", help="MySQL password")
-    parser.add_argument("--database", default="spellbinder", help="Database name")
+    parser.add_argument("--database", default="magestorm", help="Database name")
     parser.add_argument("--dry-run", action="store_true", help="Print changes without applying")
     parser.add_argument("--dev", action="store_true", help="Use username as password (dev/testing only)")
     args = parser.parse_args()
@@ -91,6 +91,8 @@ def main():
     cursor.execute("ALTER TABLE accounts MODIFY password VARCHAR(128) NOT NULL")
     conn.commit()
     print("Ensured password column is VARCHAR(128)")
+
+    creds_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "credentials.txt")
 
     # Create default accounts if requested
     if args.create_defaults:
@@ -130,7 +132,6 @@ def main():
             ("Gryphonheart", 0),
             ("Phoenixborn", 0),
         ]
-        creds_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "credentials.txt")
         created = []
         for username, admin_level in accounts:
             # Check if account already exists
@@ -155,9 +156,8 @@ def main():
             print(f"  Credentials saved to: {creds_file}")
             print(f"  {'Username':<12} {'Password':<22} {'Role'}")
             print(f"  {'-'*12} {'-'*22} {'-'*8}")
-            with open(creds_file, "w") as f:
-                f.write("# SpellBinder Server — Generated Credentials\n")
-                f.write("# DELETE THIS FILE after noting the passwords!\n\n")
+            with open(creds_file, "a") as f:
+                f.write(f"\n# Default accounts ({args.database})\n")
                 for username, password, admin_level in created:
                     role = "admin" if admin_level > 0 else "player"
                     print(f"  {username:<12} {password:<22} {role}")
@@ -166,18 +166,21 @@ def main():
         else:
             print("  All default accounts already exist")
 
-    # Migrate existing plaintext passwords
-    cursor.execute("SELECT AccountID, username, password FROM accounts")
+    # Migrate existing plaintext passwords — replace with generated passwords
+    cursor.execute("SELECT AccountID, username, password, Admin FROM accounts")
     rows = cursor.fetchall()
 
     migrated = 0
     skipped = 0
-    for account_id, username, stored_pw in rows:
+    migrated_creds = []
+    for account_id, username, stored_pw, admin_level in rows:
         if stored_pw.startswith(PREFIX):
             skipped += 1
             continue
 
-        hashed = pbkdf2_hash(stored_pw)
+        # Replace weak plaintext password with a new generated one
+        password = username.lower() if args.dev else generate_password()
+        hashed = pbkdf2_hash(password)
         if args.dry_run:
             print(f"  Would migrate: {username} (ID={account_id})")
         else:
@@ -185,12 +188,27 @@ def main():
                 "UPDATE accounts SET password = %s WHERE AccountID = %s",
                 (hashed, account_id)
             )
+            role = "admin" if admin_level and admin_level > 0 else "player"
+            migrated_creds.append((username, password, role))
         migrated += 1
 
     conn.commit()
     conn.close()
 
-    print(f"Done. Migrated: {migrated}, Already hashed: {skipped}")
+    if migrated_creds:
+        print(f"\n  === Migrated Accounts (passwords replaced) ===")
+        print(f"  {'Username':<12} {'Password':<22} {'Role'}")
+        print(f"  {'-'*12} {'-'*22} {'-'*8}")
+        for username, password, role in migrated_creds:
+            print(f"  {username:<12} {password:<22} {role}")
+        # Append to credentials file if it exists
+        if os.path.exists(creds_file):
+            with open(creds_file, "a") as f:
+                f.write("\n# Migrated accounts (plaintext passwords replaced)\n")
+                for username, password, role in migrated_creds:
+                    f.write(f"{username} / {password} ({role})\n")
+
+    print(f"\nDone. Migrated: {migrated}, Already hashed: {skipped}")
     if args.dry_run:
         print("(Dry run — no changes applied)")
 
