@@ -35,6 +35,7 @@
     <Compile Include="IntegrationTests.cs" />
     <Compile Include="IniCacheVsWin32Tests.cs" />
     <Compile Include="PasswordHasherTests.cs" />
+    <Compile Include="InputSanitizationTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Helper\Helper.csproj">

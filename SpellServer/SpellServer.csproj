@@ -195,6 +195,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Network\PasswordHasher.cs" />
+    <Compile Include="Network\InputSanitizer.cs" />
     <Compile Include="Network\MySQL.cs">
       <SubType>Code</SubType>
     </Compile>

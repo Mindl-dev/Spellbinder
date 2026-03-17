@@ -234,3 +234,4 @@ FakesAssemblies/
 !References/**
 !MageHook/Lib/**
 .env
+__pycache__/
