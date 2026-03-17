@@ -26,22 +26,50 @@ echo "=== SpellBinder Server Setup ==="
 # 1. Check prerequisites
 echo -e "\n[1/7] Checking prerequisites..."
 
+MONO_MIN_MAJOR=6
+MONO_MIN_MINOR=12
+
+if ! command -v mono &>/dev/null; then
+    echo "ERROR: mono not found."
+    echo ""
+    echo "The system mono package is too old. Install from the Mono project repo:"
+    echo ""
+    echo "  sudo apt install -y ca-certificates gnupg"
+    echo "  sudo gpg --homedir /tmp --no-default-keyring --keyring /usr/share/keyrings/mono-official-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF"
+    echo "  echo \"deb [signed-by=/usr/share/keyrings/mono-official-archive-keyring.gpg] https://download.mono-project.com/repo/ubuntu stable-focal main\" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list"
+    echo "  sudo apt update && sudo apt install -y mono-devel msbuild"
+    exit 1
+fi
+
+# Check mono version (need >= 6.12 for C# 7.1+ and .NET 4.8 target)
+MONO_VER=$(mono --version | head -1 | grep -oP '\d+\.\d+' | head -1)
+MONO_MAJOR=$(echo "$MONO_VER" | cut -d. -f1)
+MONO_MINOR=$(echo "$MONO_VER" | cut -d. -f2)
+
+if [ "$MONO_MAJOR" -lt "$MONO_MIN_MAJOR" ] || { [ "$MONO_MAJOR" -eq "$MONO_MIN_MAJOR" ] && [ "$MONO_MINOR" -lt "$MONO_MIN_MINOR" ]; }; then
+    echo "ERROR: Mono $MONO_VER is too old (need >= $MONO_MIN_MAJOR.$MONO_MIN_MINOR)."
+    echo "  Your version: $MONO_VER"
+    echo ""
+    echo "The system mono package on Ubuntu is outdated. Install from the Mono project repo:"
+    echo ""
+    echo "  sudo gpg --homedir /tmp --no-default-keyring --keyring /usr/share/keyrings/mono-official-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF"
+    echo "  echo \"deb [signed-by=/usr/share/keyrings/mono-official-archive-keyring.gpg] https://download.mono-project.com/repo/ubuntu stable-focal main\" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list"
+    echo "  sudo apt update && sudo apt install -y mono-devel msbuild"
+    exit 1
+fi
+echo "  Mono: $MONO_VER (>= $MONO_MIN_MAJOR.$MONO_MIN_MINOR required)"
+
 if command -v msbuild &>/dev/null; then
     BUILD_CMD="msbuild"
 elif command -v xbuild &>/dev/null; then
+    echo "WARNING: xbuild is deprecated. Install msbuild from the Mono project repo."
     BUILD_CMD="xbuild"
 else
-    echo "ERROR: Neither msbuild nor xbuild found."
-    echo "Install mono-devel: sudo apt install mono-devel"
-    echo "Or on Windows: use setup.ps1 instead"
+    echo "ERROR: msbuild not found."
+    echo "Install: sudo apt install -y msbuild"
     exit 1
 fi
 echo "  Build tool: $BUILD_CMD"
-
-if ! command -v mono &>/dev/null; then
-    echo "ERROR: mono not found. Install: sudo apt install mono-runtime"
-    exit 1
-fi
 echo "  Mono: $(mono --version | head -1)"
 
 # 2. Download NuGet if needed
