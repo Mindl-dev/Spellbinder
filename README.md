@@ -14,8 +14,8 @@ The setup script handles NuGet restore, build, content copy, MySQL database crea
 ### Docker
 ```bash
 docker build -t spellbinder .
-docker run -d -p 10601:10601/udp -p 10602:10602/tcp \
-  -v ./Content:/app/Content spellbinder
+docker run -d --name spellbinder -p 10601:10601/udp -p 10602:10602/tcp \
+  -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql spellbinder
 ```
 
 The `Content/` volume mount is required — game data files (Spells.dat, Arenas.dat, Grids/) are copyrighted and not baked into the image. The entrypoint handles MariaDB setup, schema import, file case normalization, and account creation automatically.
@@ -26,6 +26,14 @@ docker exec spellbinder cat /app/credentials.txt
 ```
 
 > **`--dev` flag**: `docker run ... spellbinder --dev` creates accounts with simple passwords (password = lowercase username). **Do not use in production** — these credentials are trivially guessable.
+
+### Updates
+```bash
+podman stop spellbinder && podman rm spellbinder
+podman build -t spellbinder .
+podman run -d --name spellbinder -p 10601:10601/udp -p 10602:10602/tcp \
+  -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql spellbinder
+```
 
 ### Options
 | Flag | PowerShell | Bash | Description |
@@ -61,12 +69,12 @@ msbuild SpellServer/SpellServer.csproj /p:Configuration=Debug /p:Platform=x86
 
 ### 3. MySQL Setup
 ```sql
-CREATE DATABASE spellbinder;
-USE spellbinder;
+CREATE DATABASE magestorm;
+USE magestorm;
 SOURCE Content/spellbinder-server.sql;
 
 CREATE USER 'localweb'@'localhost' IDENTIFIED WITH mysql_native_password BY '';
-GRANT ALL PRIVILEGES ON spellbinder.* TO 'localweb'@'localhost';
+GRANT ALL PRIVILEGES ON magestorm.* TO 'localweb'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
@@ -78,7 +86,7 @@ Update `SpellServer/app.config`:
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| DatabaseName | spellbinder | Must match SQL database name |
+| DatabaseName | magestorm | Must match SQL database name |
 | ServerVersion | 2.0.2 | Must match client version |
 | ListenPort | 10602 | TCP game port |
 | UDPPort | 10601 | UDP game port |
