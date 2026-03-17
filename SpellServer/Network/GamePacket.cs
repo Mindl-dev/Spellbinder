@@ -795,7 +795,7 @@ namespace SpellServer
 
                     if (message.Length > MaxChatMessage)
                     {
-                        Program.Log(String.Format("[Cheat] {0} oversized chat: {1} bytes (max {2}), dropped",
+                        Program.Log(String.Format("{0} oversized chat: {1} bytes (max {2}), dropped",
                             player.Username, message.Length, MaxChatMessage), Color.Red, "Cheat");
                         return;
                     }

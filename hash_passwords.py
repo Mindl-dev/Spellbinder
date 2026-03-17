@@ -65,6 +65,7 @@ def main():
     parser.add_argument("--mysql-password", default="", help="MySQL password")
     parser.add_argument("--database", default="spellbinder", help="Database name")
     parser.add_argument("--dry-run", action="store_true", help="Print changes without applying")
+    parser.add_argument("--dev", action="store_true", help="Use username as password (dev/testing only)")
     args = parser.parse_args()
 
     try:
@@ -137,7 +138,7 @@ def main():
             if cursor.fetchone()[0] > 0:
                 print(f"  Account '{username}' already exists — skipping")
                 continue
-            password = generate_password()
+            password = username.lower() if args.dev else generate_password()
             hashed = pbkdf2_hash(password)
             if args.dry_run:
                 print(f"  Would create: {username} / {password} (admin={admin_level})")

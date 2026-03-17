@@ -7,12 +7,12 @@ services:
       - "10601:10601/udp"
       - "10602:10602/tcp"
     volumes:
-      # Mount game content from host (Spells.dat, Arenas.dat, Grids/, etc.)
-      # Download from the Internet Archive SpellBinder installer
+      # Game content (copyrighted — not baked into image)
+      # Needs: Spells.dat, Arenas.dat, Grids/{grid00..03}/, spellbinder-server.sql
+      # Source from the full game installer (spelinst.exe) or the Content/ dir in this repo
       - ./Content:/app/Content
-      # Persist database and credentials across restarts
+      # Persist MySQL data across restarts
       - spellbinder-data:/var/lib/mysql
-      - ./credentials.txt:/app/credentials.txt
     restart: unless-stopped
 
 volumes:
