@@ -131,9 +131,7 @@ namespace Helper
         {
             get
             {
-                Int64 result;
-                QueryPerformanceCounter(out result);
-                return result;
+                return Stopwatch.GetTimestamp();
             }
         }
 
@@ -141,14 +139,7 @@ namespace Helper
         {
             get
             {
-                Int64 result;
-
-                if (!QueryPerformanceFrequency(out result))
-                {
-                    throw new NotSupportedException("This computer does not support HPET.");
-                }
-
-                return result;
+                return Stopwatch.Frequency;
             }
         }
 
