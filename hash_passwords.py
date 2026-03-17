@@ -93,10 +93,41 @@ def main():
 
     # Create default accounts if requested
     if args.create_defaults:
+        # 30 SpellBinder-flavored player accounts + 1 admin
+        # Names are thematic — mages, classes, and lore from the game
         accounts = [
-            ("admin", 5),   # Admin/sysop
-            ("test1", 0),
-            ("test2", 0),
+            ("admin", 5),        # Server admin/sysop
+            ("Ashenveil", 0),
+            ("Brimstone", 0),
+            ("Cinderspell", 0),
+            ("Doomweaver", 0),
+            ("Emberclaw", 0),
+            ("Frostbane", 0),
+            ("Grimthorn", 0),
+            ("Hexblade", 0),
+            ("Ironshroud", 0),
+            ("Jadestorm", 0),
+            ("Khaelrune", 0),
+            ("Lichward", 0),
+            ("Moonshard", 0),
+            ("Nexusworn", 0),
+            ("Obsidianmaw", 0),
+            ("Pyrelight", 0),
+            ("Quartzfang", 0),
+            ("Runekeeper", 0),
+            ("Shadowpact", 0),
+            ("Thornweald", 0),
+            ("Umbralcast", 0),
+            ("Voidtender", 0),
+            ("Wyrmscribe", 0),
+            ("Xenolith", 0),
+            ("Yewshade", 0),
+            ("Zephyrkin", 0),
+            ("Spellslinger", 0),
+            ("Arcanist", 0),
+            ("Dragonsworn", 0),
+            ("Gryphonheart", 0),
+            ("Phoenixborn", 0),
         ]
         creds_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "credentials.txt")
         created = []

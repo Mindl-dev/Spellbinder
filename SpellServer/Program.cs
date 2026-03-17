@@ -27,6 +27,12 @@ namespace SpellServer
 		        Arguments = arguments;
 				Headless = Array.Exists(arguments, a => a == "--headless" || a == "-h");
 
+				if (Array.Exists(arguments, a => a == "--no-sanitize"))
+				{
+					InputSanitizer.Enabled = false;
+					Console.WriteLine("WARNING: Input sanitization DISABLED (--no-sanitize). For protocol debugging only!");
+				}
+
 				// High-resolution timer — Windows only (winmm.dll), safe to skip on Linux
 				try { NativeMethods.BeginTimePeriod(1); } catch (DllNotFoundException) { }
 
