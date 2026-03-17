@@ -175,7 +175,7 @@ if [ "$SKIP_MYSQL" = false ]; then
                 MYSQL_ROOT_PW=$(python3 -c "
 import sys; sys.path.insert(0, '$ROOT')
 from hash_passwords import generate_password
-print(generate_password(4))
+print(generate_password(5))
 ")
             else
                 MYSQL_ROOT_PW=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 20)
