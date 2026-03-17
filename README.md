@@ -9,12 +9,23 @@ Fork of [Magestorm/Magestorm](https://github.com/Magestorm/Magestorm), adapted f
 .\setup.ps1
 ```
 
-### Linux / WSL
+The setup script handles NuGet restore, build, content copy, MySQL database creation, and config.
+
+### Docker
 ```bash
-./setup.sh
+docker build -t spellbinder .
+docker run -d -p 10601:10601/udp -p 10602:10602/tcp \
+  -v ./Content:/app/Content spellbinder
 ```
 
-The setup script handles NuGet restore, build, content copy, MySQL database creation, and config.
+The `Content/` volume mount is required — game data files (Spells.dat, Arenas.dat, Grids/) are copyrighted and not baked into the image. The entrypoint handles MariaDB setup, schema import, file case normalization, and account creation automatically.
+
+On first run, diceware passwords are generated and saved to `/app/credentials.txt`:
+```bash
+docker exec spellbinder cat /app/credentials.txt
+```
+
+> **`--dev` flag**: `docker run ... spellbinder --dev` creates accounts with simple passwords (password = lowercase username). **Do not use in production** — these credentials are trivially guessable.
 
 ### Options
 | Flag | PowerShell | Bash | Description |
