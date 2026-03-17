@@ -777,6 +777,8 @@ namespace SpellServer
                         Network.Send(player, Outgoing.Arena.PlayerState(arena.ArenaPlayers[i], UDP));
                     }
                 }
+                private const Int32 MaxChatMessage = 128; // chat buffer overflow mitigation — client strcpy at sub_435BC0
+
                 public static void Chat(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
                     Int32 tLen = Convert.ToInt32(inStream.Length) - 10;
@@ -790,6 +792,13 @@ namespace SpellServer
                     inStream.Read(cBuffer, 0, tLen);
 
                     String message = Encoding.ASCII.GetString(cBuffer).Split((Char) 0)[0];
+
+                    if (message.Length > MaxChatMessage)
+                    {
+                        Program.Log(String.Format("[Cheat] {0} oversized chat: {1} bytes (max {2}), dropped",
+                            player.Username, message.Length, MaxChatMessage), Color.Red, "Cheat");
+                        return;
+                    }
 
                     SpellServer.World.ProcessChatMessage(player, target, targetType, message);
                 }
