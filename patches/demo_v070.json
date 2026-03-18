@@ -1,0 +1,38 @@
+{
+  "target": "demo v0.70 (spell70.exe extract)",
+  "target_file": "game.dll",
+  "clean_md5": "21396bfb268739d03b3c3ae98e602a6c",
+  "patched_md5": "c29d7123bc550293ad8cf3f703e4ca49",
+  "pe_base": "0x400000",
+  "text_section_va": "0x1000",
+  "text_section_raw": "0x400",
+  "patches": [
+    {
+      "name": "debug_flag_startup",
+      "description": "Redirect first call in WinMain to code cave that sets verbose_debug_flag=2. Enables the game's built-in debug logging from startup.",
+      "file_offset": "0x53564",
+      "virtual_address": "0x454164",
+      "original": "E817F8FFFF",
+      "patched": "E8882CFBFF",
+      "note": "call sub_453980 -> call 0x406DF1 (code cave)"
+    },
+    {
+      "name": "debug_flag_cave",
+      "description": "Code cave in NOP sled: sets verbose_debug_flag=2 then jumps to original function.",
+      "file_offset": "0x061F1",
+      "virtual_address": "0x406DF1",
+      "original": "909090909090909090909090909090",
+      "patched": "C705CCAF680002000000E980CB0400",
+      "note": "mov dword ptr [0x68AFCC], 2; jmp sub_453980"
+    },
+    {
+      "name": "debug_off_keeps_debug",
+      "description": "The /debug off chat command sets flag to 2 instead of 0, preventing accidental disable.",
+      "file_offset": "0x2DFC1",
+      "virtual_address": "0x42EBC1",
+      "original": "00",
+      "patched": "02",
+      "note": "Immediate operand in 'mov dword_68AFCC, 0' changed to 2"
+    }
+  ]
+}
