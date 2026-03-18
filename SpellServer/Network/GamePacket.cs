@@ -777,8 +777,6 @@ namespace SpellServer
 
                     player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
 
-                    Thread.Sleep(2000);
-
                     for (Int32 i = 0; i < arena.ArenaPlayers.Count; i++)
                     {
                         Network.Send(player, Outgoing.Arena.PlayerState(arena.ArenaPlayers[i], UDP));
