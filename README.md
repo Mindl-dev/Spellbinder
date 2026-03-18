@@ -44,9 +44,14 @@ Extract the zip, double-click the launcher, pick a server, done.
 ### Docker
 ```bash
 docker build -t spellbinder .
-docker run -d --name spellbinder -p 10601:10601/udp -p 10602:10602/tcp \
-  -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql spellbinder
+docker run -d --name spellbinder --network host \
+  -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql \
+  -v ./Logs:/app/Logs spellbinder
 ```
+
+Host networking is required so the server sees real client IPs (NAT'd container networking makes all clients appear as the same IP, breaking anti-cheat and IP bans). Ports 10601/udp and 10602/tcp bind directly on the host.
+
+The `Content/` volume mount is required — game data files (Spells.dat, Arenas.dat, Grids/) are copyrighted and not baked into the image. The entrypoint handles MariaDB setup, schema import, file case normalization, and account creation automatically.
 
 On first run, credentials are generated and saved to `/app/credentials.txt`:
 ```bash
@@ -84,6 +89,11 @@ Content/                    # Extracted game data (not committed)
 Build/Debug/                # Compiled server output
 build_content.py            # Extract + patch game content
 server.ps1                  # Kill/build/test/start server
+```
+
+### Updates
+```bash
+./rebuild.sh
 ```
 
 ## Dev Workflow

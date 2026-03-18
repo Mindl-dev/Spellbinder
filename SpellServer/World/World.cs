@@ -1815,14 +1815,7 @@ namespace SpellServer
 
                     player.Flags |= player.ActiveCharacter.PlayerFlags;
 
-                    if (player.ActiveCharacter.OpLevel >= 3)
-                    {
-                        player.Flags |= PlayerFlag.Hidden;
-                    }
-                    else
-                    {
-                        player.Flags &= ~PlayerFlag.Hidden;
-                    }
+                    player.Flags &= ~PlayerFlag.Hidden;
 
                     player.TableId = worldId;   
                                         

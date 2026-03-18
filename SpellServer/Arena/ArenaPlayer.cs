@@ -499,13 +499,7 @@ namespace SpellServer
                     {
 
                         Network.Send(WorldPlayer, GamePacket.Outgoing.Player.SendPlayerId(this));
-
-                        Thread.Sleep(500);
-
                         Network.Send(WorldPlayer, GamePacket.Outgoing.Arena.SuccessfulArenaEntry());
-
-                        Thread.Sleep(100);
-
                         OwnerArena.ArenaKickPlayer(this);
 
                         return;
@@ -535,16 +529,20 @@ namespace SpellServer
                 OwnerArena.AveragePlayerLevel = OwnerArena.ArenaPlayers.GetAveragePlayerLevel();
             }
 
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+
             lock (OwnerArena.SyncRoot)
             {
                 Network.Send(WorldPlayer, GamePacket.Outgoing.Arena.UpdateShrinePoolState(arena, this, true));
             }
 
-            Thread.Sleep(500);
+            Program.Log($"[ArenaJoin] ShrinePoolState: {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
+
 
             Network.Send(WorldPlayer, GamePacket.Outgoing.Arena.SuccessfulArenaEntry());
 
-            Thread.Sleep(100);
+            Program.Log($"[ArenaJoin] SuccessfulEntry: {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
+
 
             lock (OwnerArena.SyncRoot)
             {
@@ -554,7 +552,8 @@ namespace SpellServer
                 }
             }
 
-            Thread.Sleep(100);
+            Program.Log($"[ArenaJoin] Runes ({OwnerArena.Runes.Count}): {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
+
 
             lock (OwnerArena.SyncRoot)
             {
@@ -564,7 +563,8 @@ namespace SpellServer
                 }
             }
 
-            Thread.Sleep(100);
+            Program.Log($"[ArenaJoin] Walls ({OwnerArena.Walls.Count}): {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
+
 
             lock (OwnerArena.SyncRoot)
             {
@@ -573,6 +573,8 @@ namespace SpellServer
                     Network.Send(WorldPlayer, GamePacket.Outgoing.Arena.ActivatedTrigger(OwnerArena.Grid.Triggers[i]));
                 }
             }
+
+            Program.Log($"[ArenaJoin] Triggers ({arena.Grid.Triggers.Count}): {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
 
             if (OwnerArena.Ruleset.Mode == ArenaRuleset.ArenaMode.Custom)
             {
@@ -586,7 +588,12 @@ namespace SpellServer
 
             World.UpdateAllArenaPlayers(this.WorldPlayer);
 
+            Program.Log($"[ArenaJoin] UpdateAllPlayers: {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
+
             Network.Send(this.WorldPlayer, GamePacket.Outgoing.Study.CabalIDUpdate(this.WorldPlayer));
+
+            Program.Log($"[ArenaJoin] Total: {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
+            sw.Stop();
 
             //Network.Send(WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(WorldPlayer, String.Format("This arena currently has an EXP bonus of {0}%.", ((arena.Grid.ExpBonus + (Properties.Settings.Default.ExpMultiplier - 1.0f) + (WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? 0.2f : 0.0f)) * 100))));
         }

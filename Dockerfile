@@ -53,6 +53,7 @@ RUN apt-get update && \
         libmono-system-data-datasetextensions4.0-cil \
         libmono-system-windows-forms4.0-cil \
         mariadb-server \
+        cron \
         python3 \
         python3-pip \
     && rm -rf /var/lib/apt/lists/*
@@ -67,9 +68,10 @@ COPY --from=build /src/Build/Debug/ ./
 COPY --from=build /src/hash_passwords.py /src/eff_short_wordlist.txt ./
 COPY --from=build /src/SpellServer/app.config ./SpellServer.exe.config
 
-# Expose game ports
+# Expose game ports + API
 EXPOSE 10601/udp
 EXPOSE 10602/tcp
+EXPOSE 10603/tcp
 
 # Entrypoint script handles MySQL init + server start
 COPY docker-entrypoint.sh /docker-entrypoint.sh

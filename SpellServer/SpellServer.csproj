@@ -211,6 +211,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Network\WebChat.cs" />
+    <Compile Include="Network\ApiServer.cs" />
     <Compile Include="Resources\Strings_Arena.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
