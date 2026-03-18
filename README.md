@@ -7,7 +7,7 @@ Includes a private server (C#/.NET 4.8), binary patcher, and portable game clien
 ## Quick Start — Play the Game
 
 ### 1. Get the game installer
-Download `spelinst.exe` from the [Internet Archive](https://archive.org/details/SpellbinderTheNexusConflict) and place it in the repo root.
+Download `spelinst.exe` from the [Internet Archive](https://archive.org/details/spelinst) and place it in the repo root.
 
 ### 2. Extract and patch
 ```bash
