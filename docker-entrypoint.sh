@@ -104,6 +104,10 @@ fi
 
 mkdir -p Logs/Main Logs/Cheat
 
+# Compress old logs daily at midnight
+echo '0 0 * * * find /app/Logs -name "*.txt" ! -newermt "today" -exec gzip -q {} \;' | crontab -
+cron
+
 echo "Starting SpellBinder server..."
 export MONO_IOMAP=all
 exec mono SpellServer.exe --headless "$@"

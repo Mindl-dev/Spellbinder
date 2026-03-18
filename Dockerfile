@@ -53,6 +53,7 @@ RUN apt-get update && \
         libmono-system-data-datasetextensions4.0-cil \
         libmono-system-windows-forms4.0-cil \
         mariadb-server \
+        cron \
         python3 \
         python3-pip \
     && rm -rf /var/lib/apt/lists/*
