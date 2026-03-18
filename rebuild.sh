@@ -11,7 +11,7 @@ echo "Building..."
 podman build -t spellbinder .
 
 echo "Starting..."
-podman run -d --name spellbinder -p 10601:10601/udp -p 10602:10602/tcp \
+podman run -d --name spellbinder --network host \
   -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql spellbinder "$@"
 
 echo "Up. Waiting for server..."

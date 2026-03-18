@@ -14,9 +14,11 @@ The setup script handles NuGet restore, build, content copy, MySQL database crea
 ### Docker
 ```bash
 docker build -t spellbinder .
-docker run -d --name spellbinder -p 10601:10601/udp -p 10602:10602/tcp \
+docker run -d --name spellbinder --network host \
   -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql spellbinder
 ```
+
+Host networking is required so the server sees real client IPs (NAT'd container networking makes all clients appear as the same IP, breaking anti-cheat and IP bans). Ports 10601/udp and 10602/tcp bind directly on the host.
 
 The `Content/` volume mount is required — game data files (Spells.dat, Arenas.dat, Grids/) are copyrighted and not baked into the image. The entrypoint handles MariaDB setup, schema import, file case normalization, and account creation automatically.
 
@@ -29,10 +31,7 @@ docker exec spellbinder cat /app/credentials.txt
 
 ### Updates
 ```bash
-podman stop spellbinder && podman rm spellbinder
-podman build -t spellbinder .
-podman run -d --name spellbinder -p 10601:10601/udp -p 10602:10602/tcp \
-  -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql spellbinder
+./rebuild.sh
 ```
 
 ### Options
