@@ -235,5 +235,17 @@ FakesAssemblies/
 *.idc
 !References/**
 !MageHook/Lib/**
+!client/dgvoodoo/**
 .env
 __pycache__/
+
+# Extracted game files (from spelinst.exe, not committed)
+GameFiles/
+spelinst.exe
+
+# Client build output
+SpellBinder-win/
+SpellBinder-win.zip
+SpellBinder-mac.zip
+SpellBinder.app/
+client/Play.exe
