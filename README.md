@@ -15,7 +15,8 @@ The setup script handles NuGet restore, build, content copy, MySQL database crea
 ```bash
 docker build -t spellbinder .
 docker run -d --name spellbinder --network host \
-  -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql spellbinder
+  -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql \
+  -v ./Logs:/app/Logs spellbinder
 ```
 
 Host networking is required so the server sees real client IPs (NAT'd container networking makes all clients appear as the same IP, breaking anti-cheat and IP bans). Ports 10601/udp and 10602/tcp bind directly on the host.

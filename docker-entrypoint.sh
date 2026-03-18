@@ -102,6 +102,8 @@ if command -v mysqld &>/dev/null; then
     fi
 fi
 
+mkdir -p Logs/Main Logs/Cheat
+
 echo "Starting SpellBinder server..."
 export MONO_IOMAP=all
 exec mono SpellServer.exe --headless "$@"

@@ -146,6 +146,7 @@ namespace SpellServer
 			CabalManager.LoadCabals();
 
 			Network.Listen();
+			ApiServer.Start();
 	    }
 
 	    private static void OnThreadException(Object sender, ThreadExceptionEventArgs e)
