@@ -81,18 +81,8 @@ def main():
         else:
             print(f"  Patch file not found: {patch_def}, skipping")
 
-    # Patch spell.bin with discord community balance changes
-    spell_bin = os.path.join(CONTENT_DIR, "spell.bin")
-    if os.path.exists(spell_bin):
-        spell_patch = os.path.join(PATCHES_DIR, "spellbin_discord.json")
-        if os.path.exists(spell_patch):
-            print(f"\n=== Patching spell.bin ===")
-            subprocess.check_call([
-                sys.executable, patch_script, spell_bin, spell_patch,
-                "--output", spell_bin
-            ])
-        else:
-            print(f"  spell.bin patch not found, skipping")
+    # NOTE: spell.bin is shipped unmodified from the installer.
+    # patches/spellbin_discord.json exists for reference (debug spell) but is not applied.
 
     # Create game.exe copy (Wine on Mac needs .exe extension)
     if os.path.exists(game_dll):
