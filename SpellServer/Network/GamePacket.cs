@@ -621,9 +621,16 @@ namespace SpellServer
                 {
                     SpellServer.Character tempChar = new SpellServer.Character(inStream);
 
-                    SaveError save = SpellServer.Character.Save(player, tempChar);                  
+                    SaveError save = SpellServer.Character.Save(player, tempChar);
 
-                    if (save == SaveError.Success) Network.Send(player, Outgoing.Player.SaveSuccess(player, tempChar.Slot));
+                    if (save == SaveError.Success)
+                    {
+                        Network.Send(player, Outgoing.Player.SaveSuccess(player, tempChar.Slot));
+                    }
+                    else
+                    {
+                        Program.Log(String.Format("Character save failed for {0} (char: {1}, slot: {2}): {3}", player.Username, tempChar.Name, tempChar.Slot, save), Color.Red);
+                    }
                 }
                 public static void Delete(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {

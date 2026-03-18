@@ -716,8 +716,8 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-                    Program.Log("MySQL Save", Color.Red);
-                    Program.Log(ex.Message, Color.Red);
+                    Program.Log(String.Format("MySQL Save failed for char {0} (account {1}): {2}", character.Name, character.AccountId, ex.Message), Color.Red);
+                    Program.Log(ex.StackTrace, Color.Red);
 				}
 
 				return false;
