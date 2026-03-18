@@ -35,18 +35,17 @@ Extract the zip, double-click the launcher, pick a server, done.
 
 ## Quick Start — Run a Server
 
-### Windows
-```powershell
-.\setup.ps1
-.\server.ps1          # kill/build/test/start
-```
-
 ### Docker
 ```bash
 docker build -t spellbinder .
 docker run -d --name spellbinder --network host \
   -v ./Content:/app/Content -v spellbinder-data:/var/lib/mysql \
   -v ./Logs:/app/Logs spellbinder
+```
+### Windows
+```powershell
+.\setup.ps1
+.\server.ps1          # kill/build/test/start
 ```
 
 Host networking is required so the server sees real client IPs (NAT'd container networking makes all clients appear as the same IP, breaking anti-cheat and IP bans). Ports 10601/udp and 10602/tcp bind directly on the host.
