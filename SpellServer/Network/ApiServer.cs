@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -9,11 +10,42 @@ using System.Threading;
 namespace SpellServer
 {
     /// <summary>Lightweight HTTP API for launcher and dev tools.
-    /// Listens on port 8080. No auth — read-only public data only.</summary>
+    /// Listens on port 10603. Registration is rate-limited per IP.</summary>
     public static class ApiServer
     {
         private static HttpListener _listener;
         private static Thread _thread;
+
+        // Rate limiter: IP → list of request timestamps
+        private static readonly Dictionary<string, List<DateTime>> _rateLimits = new Dictionary<string, List<DateTime>>();
+        private static readonly object _rateLock = new object();
+        private const int RateLimit = 15;            // max requests per window
+        private const int RateWindowSeconds = 60;    // window size
+
+        private static bool IsRateLimited(string ip)
+        {
+            var now = DateTime.UtcNow;
+            var cutoff = now.AddSeconds(-RateWindowSeconds);
+
+            lock (_rateLock)
+            {
+                List<DateTime> timestamps;
+                if (!_rateLimits.TryGetValue(ip, out timestamps))
+                {
+                    timestamps = new List<DateTime>();
+                    _rateLimits[ip] = timestamps;
+                }
+
+                // Prune old entries
+                timestamps.RemoveAll(t => t < cutoff);
+
+                if (timestamps.Count >= RateLimit)
+                    return true;
+
+                timestamps.Add(now);
+                return false;
+            }
+        }
 
         public static void Start(int port = 10603)
         {
@@ -165,6 +197,14 @@ namespace SpellServer
             if (context.Request.HttpMethod != "POST")
             {
                 Respond(context, 405, "{\"error\":\"POST required\"}");
+                return;
+            }
+
+            string ip = context.Request.RemoteEndPoint.Address.ToString();
+            if (IsRateLimited(ip))
+            {
+                Program.Log($"[API] Rate limited: {ip}", Color.DarkOrange);
+                Respond(context, 429, "{\"error\":\"too many requests, try again later\"}");
                 return;
             }
 
