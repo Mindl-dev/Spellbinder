@@ -23,8 +23,51 @@ for name in "${SERVER_NAMES[@]}"; do
     AS_LIST="$AS_LIST\"$name\""
 done
 
-CHOICE=$(osascript -e "choose from list {${AS_LIST}} with title \"SpellBinder\" with prompt \"Select a server:\" default items {\"${SERVER_NAMES[0]}\"}" 2>/dev/null)
+CHOICE=$(osascript -e "choose from list {${AS_LIST}, \"--- Create Account ---\"} with title \"SpellBinder\" with prompt \"Select a server or create an account:\" default items {\"${SERVER_NAMES[0]}\"}" 2>/dev/null)
 [ "$CHOICE" = "false" ] || [ -z "$CHOICE" ] && exit 0
+
+# Handle account creation
+if [ "$CHOICE" = "--- Create Account ---" ]; then
+    # Pick server first
+    SERVER_CHOICE=$(osascript -e "choose from list {${AS_LIST}} with title \"SpellBinder\" with prompt \"Which server to register on?\" default items {\"${SERVER_NAMES[0]}\"}" 2>/dev/null)
+    [ "$SERVER_CHOICE" = "false" ] || [ -z "$SERVER_CHOICE" ] && exit 0
+
+    REG_ADDR=""
+    for i in "${!SERVER_NAMES[@]}"; do
+        [ "${SERVER_NAMES[$i]}" = "$SERVER_CHOICE" ] && REG_ADDR="${SERVER_ADDRS[$i]}" && break
+    done
+
+    USERNAME=$(osascript -e 'text returned of (display dialog "Username (3-20 characters):" default answer "" with title "Create Account")' 2>/dev/null)
+    [ -z "$USERNAME" ] && exit 0
+
+    PASSWORD=$(osascript -e 'text returned of (display dialog "Password:" default answer "" with title "Create Account" with hidden answer)' 2>/dev/null)
+    [ -z "$PASSWORD" ] && exit 0
+
+    CONFIRM=$(osascript -e 'text returned of (display dialog "Confirm password:" default answer "" with title "Create Account" with hidden answer)' 2>/dev/null)
+    [ -z "$CONFIRM" ] && exit 0
+
+    if [ "$PASSWORD" != "$CONFIRM" ]; then
+        osascript -e 'display alert "Error" message "Passwords don'\''t match."'
+        exec "$0"
+        exit 0
+    fi
+
+    RESULT=$(curl -s -w "\n%{http_code}" -X POST "http://${REG_ADDR}:10603/api/register" \
+        -d "username=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$USERNAME'))")&password=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$PASSWORD'))")" 2>&1)
+    HTTP_CODE=$(echo "$RESULT" | tail -1)
+    BODY=$(echo "$RESULT" | head -1)
+
+    if [ "$HTTP_CODE" = "201" ]; then
+        osascript -e 'display alert "Account Created" message "You can now log in as '"$USERNAME"'." buttons {"Play Now"} default button "Play Now"'
+        # Continue to server selection
+        CHOICE="$SERVER_CHOICE"
+    else
+        ERROR=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error','Unknown error'))" 2>/dev/null || echo "$BODY")
+        osascript -e "display alert \"Registration Failed\" message \"$ERROR\""
+        exec "$0"
+        exit 0
+    fi
+fi
 
 ADDRESS=""
 for i in "${!SERVER_NAMES[@]}"; do
