@@ -394,6 +394,54 @@ namespace SpellServer.Tests
             Assert.AreEqual(0x00, data[4], "padding");
             Assert.AreEqual(3, data[5], "attackerId");
         }
+        // --- Login.Connected (45 bytes) ---
+
+        [Test]
+        public void Login_Connected_CorrectSize()
+        {
+            var p = MakePlayer(username: "Moonshard");
+            byte[] data = GamePacket.Outgoing.Login.Connected(p).ToArray();
+            // 2 header + 1 padding + 3 version + 1 padding + 12 name + 14 zeros
+            // + 4 encryption + 4 unknown + 4 unknown = 45
+            Assert.AreEqual(45, data.Length, "LoginConnected should be exactly 45 bytes");
+        }
+
+        [Test]
+        public void Login_Connected_CorrectLayout()
+        {
+            var p = MakePlayer(username: "Moonshard");
+            byte[] data = GamePacket.Outgoing.Login.Connected(p).ToArray();
+            AssertPacketHeader(data, PacketOutFunction.LoginConnected);
+
+            // Byte 2: padding
+            Assert.AreEqual(0x00, data[2], "padding");
+
+            // Bytes 3-5: GameVersion[0..2] from Subscription static
+            Assert.AreEqual(Subscription.GameVersion[0], data[3], "version[0]");
+            Assert.AreEqual(Subscription.GameVersion[1], data[4], "version[1]");
+            Assert.AreEqual(Subscription.GameVersion[2], data[5], "version[2]");
+
+            // Byte 6: padding
+            Assert.AreEqual(0x00, data[6], "padding after version");
+
+            // Bytes 7-18: username (12 bytes, null-padded)
+            Assert.AreEqual((byte)'M', data[7], "username[0]");
+            Assert.AreEqual((byte)'o', data[8], "username[1]");
+            Assert.AreEqual(0x00, data[16], "username null padding");
+
+            // Bytes 19-32: 14 zeros
+            for (int i = 19; i < 33; i++)
+                Assert.AreEqual(0x00, data[i], $"zero padding byte {i}");
+
+            // Bytes 33-36: encryption flag (all zeros = no encryption)
+            for (int i = 33; i < 37; i++)
+                Assert.AreEqual(0x00, data[i], $"encryption flag byte {i}");
+
+            // Bytes 37-44: unknown (all zeros)
+            for (int i = 37; i < 45; i++)
+                Assert.AreEqual(0x00, data[i], $"trailing unknown byte {i}");
+        }
+
         // --- PlayerJoin arena (25 bytes) ---
 
         [Test]
@@ -729,5 +777,99 @@ namespace SpellServer.Tests
             AssertPacketHeader(data, PacketOutFunction.ArenaDeleted);
             Assert.AreEqual(3, data[2], "arenaId");
         }
+        // ================================================================
+        // Batch 4: Easy remaining builders
+        // ================================================================
+
+        // --- Arena.SpawnPlayer (1 byte, no header!) ---
+
+        [Test]
+        public void Arena_SpawnPlayer_CorrectLayout()
+        {
+            var ap = MakeArenaPlayer(id: 7);
+            byte[] data = GamePacket.Outgoing.Arena.SpawnPlayer(ap).ToArray();
+            // NOTE: this one has NO standard header — just the raw ArenaPlayerId byte
+            Assert.AreEqual(1, data.Length);
+            Assert.AreEqual(7, data[0], "arenaPlayerId");
+        }
+
+        // --- Arena.PlaySound (10 bytes) ---
+
+        [Test]
+        public void Arena_PlaySound_CorrectLayout()
+        {
+            byte[] data = GamePacket.Outgoing.Arena.PlaySound(
+                SpellServer.Sound.GameSound.Sound.FireballHit, 500, 1000, 2000).ToArray();
+            Assert.AreEqual(10, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.PlaySound);
+            Assert.AreEqual((short)SpellServer.Sound.GameSound.Sound.FireballHit, ReadBE16(data, 2), "soundId");
+            Assert.AreEqual(500, ReadBE16(data, 4), "range");
+            Assert.AreEqual(1000, ReadBE16(data, 6), "x");
+            Assert.AreEqual(2000, ReadBE16(data, 8), "y");
+        }
+
+        // --- World.SpawnPlayer (16 bytes, all placeholder zeros) ---
+
+        [Test]
+        public void World_SpawnPlayer_CorrectLayout()
+        {
+            var p = MakePlayer();
+            byte[] data = GamePacket.Outgoing.World.SpawnPlayer(p).ToArray();
+            Assert.AreEqual(17, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.SpawnPlayer);
+            // All data bytes are placeholder zeros except model=0xC9 at byte 10
+            Assert.AreEqual(0xC9, data[10], "model byte");
+        }
+
+        // --- System.DirectTextMessage (null player) ---
+
+        [Test]
+        public void System_DirectTextMessage_NullPlayer()
+        {
+            byte[] data = GamePacket.Outgoing.System.DirectTextMessage(null, "Hello world").ToArray();
+            AssertPacketHeader(data, PacketOutFunction.Chat);
+            // Bytes 2-3: padding
+            Assert.AreEqual(0x00, data[2]);
+            Assert.AreEqual(0x00, data[3]);
+            // Bytes 4-5: playerId (null player → 0x00 0x00)
+            Assert.AreEqual(0x00, data[4], "null player hi");
+            Assert.AreEqual(0x00, data[5], "null player lo");
+            // Byte 6: chatType = Whisper
+            // Bytes 7-9: padding
+            // Bytes 10+: message
+            byte[] msgBytes = System.Text.Encoding.ASCII.GetBytes("Hello world");
+            for (int i = 0; i < msgBytes.Length; i++)
+                Assert.AreEqual(msgBytes[i], data[10 + i], $"message byte {i}");
+        }
+
+        [Test]
+        public void System_DirectTextMessage_WithPlayer()
+        {
+            var p = MakePlayer(playerId: 5);
+            byte[] data = GamePacket.Outgoing.System.DirectTextMessage(p, "Test").ToArray();
+            AssertPacketHeader(data, PacketOutFunction.Chat);
+            // No ActiveArena → uses PlayerId (FlipBytes)
+            Assert.AreEqual(5, ReadBE16(data, 4), "playerId BE");
+        }
+
+        // --- World.ArenaCreated ---
+
+        [Test]
+        public void World_ArenaCreated_CorrectLayout()
+        {
+            var arena = MakeArena(id: 2, gameName: "My Arena", founder: "TestGuy", gridName: "Grid01");
+            byte[] data = GamePacket.Outgoing.World.ArenaCreated(arena).ToArray();
+            AssertPacketHeader(data, PacketOutFunction.ArenaCreated);
+            Assert.AreEqual(2, data[2], "arenaId");
+            Assert.AreEqual(0x00, data[3], "padding");
+            // Bytes 4-23: gameName (20 bytes)
+            Assert.AreEqual((byte)'M', data[4]);
+            Assert.AreEqual((byte)'y', data[5]);
+            // Bytes 24-33: gridName (10 bytes)
+            Assert.AreEqual((byte)'G', data[24]);
+            // Bytes 34-43: founder (10 bytes)
+            Assert.AreEqual((byte)'T', data[34]);
+        }
     }
 }
+
