@@ -30,7 +30,7 @@ if (-not (Test-Path $csc)) {
 }
 
 Push-Location $ScriptDir
-& $csc /target:winexe /out:Play.exe `
+& $csc /target:winexe /out:Play.exe /win32icon:spellbinder.ico `
     /reference:System.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Net.Http.dll `
     Play.cs
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "Compile failed"; exit 1 }
