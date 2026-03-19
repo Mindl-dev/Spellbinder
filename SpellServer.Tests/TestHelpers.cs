@@ -66,6 +66,61 @@ namespace SpellServer.Tests
             return c;
         }
 
+        internal static Shrine MakeShrine(byte id = 1, Team team = Team.Dragon, short currentBias = 50, short power = 100)
+        {
+            var s = (Shrine)FormatterServices.GetUninitializedObject(typeof(Shrine));
+            s.ShrineId = id;
+            s.Team = team;
+            s.Power = power;
+            s.MaxBias = 100;
+            // CurrentBias is a property with private backing field
+            var biasField = typeof(Shrine).GetField("_currentBias", BindingFlags.NonPublic | BindingFlags.Instance);
+            biasField.SetValue(s, currentBias);
+            return s;
+        }
+
+        internal static Pool MakePool(byte id = 1, Team team = Team.Neutral, short currentBias = 0, short power = 50)
+        {
+            return new Pool(id, power, 100) { Team = team, CurrentBias = currentBias };
+        }
+
+        internal static Trigger MakeTrigger(short id = 1, TriggerState state = TriggerState.Inactive)
+        {
+            return new Trigger { TriggerId = id, CurrentState = state };
+        }
+
+        internal static Table MakeTable(short id = 1, string name = "Test Table", string founder = "TestPlayer")
+        {
+            var t = (Table)FormatterServices.GetUninitializedObject(typeof(Table));
+            // Table has readonly fields — use reflection
+            SetReadonly(t, "TableId", id);
+            SetReadonly(t, "Name", name);
+            SetReadonly(t, "Founder", founder);
+            SetReadonly(t, "Type", TableType.Public);
+            return t;
+        }
+
+        internal static Arena MakeArena(byte id = 1, string gameName = "Test Arena", string founder = "TestPlayer",
+            string gridName = "Grid00", string shortName = "Test")
+        {
+            var a = (Arena)FormatterServices.GetUninitializedObject(typeof(Arena));
+            a.ArenaId = id;
+            a.GameName = gameName;
+            a.Founder = founder;
+            a.ShortGameName = shortName;
+            // Grid needs to exist for Grid.Name
+            var g = (Grid)FormatterServices.GetUninitializedObject(typeof(Grid));
+            g.Name = gridName;
+            a.Grid = g;
+            return a;
+        }
+
+        private static void SetReadonly(object obj, string fieldName, object value)
+        {
+            var field = obj.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            field.SetValue(obj, value);
+        }
+
         /// <summary>Assert packet starts with 0x00 + expected function ID.</summary>
         internal static void AssertPacketHeader(byte[] data, PacketOutFunction func)
         {

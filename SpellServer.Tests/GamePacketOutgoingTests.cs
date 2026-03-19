@@ -391,5 +391,248 @@ namespace SpellServer.Tests
             Assert.AreEqual(0x00, data[4], "padding");
             Assert.AreEqual(3, data[5], "attackerId");
         }
+        // --- PlayerJoin arena (25 bytes) ---
+
+        [Test]
+        public void Arena_PlayerJoin_CorrectLayout()
+        {
+            var ap = MakeArenaPlayer(id: 3, name: "Frostbane", level: 12,
+                playerClass: Character.PlayerClass.Mystic, team: Team.Gryphon, opLevel: 0, cabalId: 0);
+            byte[] data = GamePacket.Outgoing.Arena.PlayerJoin(ap).ToArray();
+            // 2 header + 2 playerId + 1 padding + 1 team + 12 name + 1 class + 1 level
+            // + 1 opLevel + 1 cabalId + 4 cabalTag + 1 footer = 27
+            // (CabalTag returns "" not null when cabalId=0, taking the <4 branch + padding)
+            Assert.AreEqual(27, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.PlayerJoin);
+            // Bytes 2-3: playerId BE
+            Assert.AreEqual(3, ReadBE16(data, 2), "playerId");
+            // Byte 4: padding
+            Assert.AreEqual(0x00, data[4], "padding");
+            // Byte 5: team
+            Assert.AreEqual((byte)Team.Gryphon, data[5], "team");
+            // Bytes 6-17: name (12 bytes, null padded)
+            Assert.AreEqual((byte)'F', data[6]);
+            Assert.AreEqual((byte)'r', data[7]);
+            Assert.AreEqual((byte)'o', data[8]);
+            Assert.AreEqual(0x00, data[15], "name null padding");
+            // Byte 18: class
+            Assert.AreEqual((byte)Character.PlayerClass.Mystic, data[18], "class");
+            // Byte 19: level
+            Assert.AreEqual(12, data[19], "level");
+            // Byte 20: opLevel
+            Assert.AreEqual(0, data[20], "opLevel");
+            // Byte 21: cabalId
+            Assert.AreEqual(0, data[21], "cabalId");
+            // Bytes 22-25: cabalTag (4 bytes zero when cabalId=0)
+            // Byte 26: footer padding
+            Assert.AreEqual(0x00, data[26], "footer");
+        }
+
+        // --- CalledGhost relay (12 bytes) ---
+
+        [Test]
+        public void Arena_CalledGhost_RelayPreserved()
+        {
+            byte[] relay = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A };
+            var caster = MakeArenaPlayer(id: 1);
+            var target = MakeArenaPlayer(id: 2);
+            byte[] data = GamePacket.Outgoing.Arena.CalledGhost(caster, target, relay).ToArray();
+            Assert.AreEqual(12, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.CalledGhost);
+            for (int i = 0; i < 10; i++)
+                Assert.AreEqual(relay[i], data[i + 2], $"Relay byte {i} mismatch");
+        }
+
+        // --- TappedAtShrine (6 bytes) ---
+
+        [Test]
+        public void Arena_TappedAtShrine_CanRes()
+        {
+            var ap = MakeArenaPlayer(id: 5);
+            byte[] data = GamePacket.Outgoing.Arena.TappedAtShrine(ap, true).ToArray();
+            Assert.AreEqual(6, data.Length);
+            // NOTE: uses PlayerResurrect opcode, not a dedicated TappedAtShrine opcode
+            AssertPacketHeader(data, PacketOutFunction.PlayerResurrect);
+            Assert.AreEqual(0x00, data[2], "padding");
+            Assert.AreEqual(5, data[3], "playerId");
+            Assert.AreEqual(0xFF, data[4]);
+            Assert.AreEqual(0xFE, data[5], "canRes=true -> 0xFE");
+        }
+
+        [Test]
+        public void Arena_TappedAtShrine_CannotRes()
+        {
+            var ap = MakeArenaPlayer(id: 5);
+            byte[] data = GamePacket.Outgoing.Arena.TappedAtShrine(ap, false).ToArray();
+            Assert.AreEqual(0xFF, data[5], "canRes=false -> 0xFF");
+        }
+
+        // --- SendPlayerId (Player overload, 4 bytes) ---
+
+        [Test]
+        public void Player_SendPlayerId_Player()
+        {
+            var p = MakePlayer(playerId: 42);
+            byte[] data = GamePacket.Outgoing.Player.SendPlayerId(p).ToArray();
+            Assert.AreEqual(4, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.SendPlayerId);
+            // NOTE: PlayerId written in LITTLE-ENDIAN (no FlipBytes!)
+            Assert.AreEqual(42, BitConverter.ToInt16(data, 2), "playerId (LE)");
+        }
+
+        // --- SendPlayerId (ArenaPlayer overload, 4 bytes) ---
+
+        [Test]
+        public void Player_SendPlayerId_ArenaPlayer()
+        {
+            var ap = MakeArenaPlayer(id: 7);
+            byte[] data = GamePacket.Outgoing.Player.SendPlayerId(ap).ToArray();
+            Assert.AreEqual(4, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.SendPlayerId);
+            Assert.AreEqual(7, data[2], "arenaPlayerId");
+            Assert.AreEqual(0x00, data[3], "padding");
+        }
+
+        // --- HeartbeatReply (6 bytes) ---
+
+        [Test]
+        public void Player_HeartbeatReply_CorrectLayout()
+        {
+            var p = MakePlayer();
+            // LastHeartbeat setter is private + calls Network.Send — set backing field directly
+            typeof(Player).GetField("_lastHeartbeat", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .SetValue(p, (uint)123456789);
+            byte[] data = GamePacket.Outgoing.Player.HeartbeatReply(p).ToArray();
+            Assert.AreEqual(6, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.HeartbeatReply);
+            Assert.AreEqual(123456789, (uint)ReadBE32(data, 2), "heartbeat BE");
+        }
+
+        // --- SaveSuccess (23 bytes) ---
+
+        [Test]
+        public void Player_SaveSuccess_CorrectLayout()
+        {
+            var p = MakePlayer(username: "Frostbane");
+            byte[] data = GamePacket.Outgoing.Player.SaveSuccess(p, 2).ToArray();
+            Assert.AreEqual(23, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.SaveSuccess);
+            // Bytes 2-21: username (20 bytes null padded)
+            Assert.AreEqual((byte)'F', data[2]);
+            Assert.AreEqual((byte)'r', data[3]);
+            Assert.AreEqual(0x00, data[11], "name null padding");
+            // Byte 22: slot
+            Assert.AreEqual(2, data[22], "slot");
+        }
+
+        // --- SwitchedToTable (6 bytes) ---
+
+        [Test]
+        public void Player_SwitchedToTable_CorrectLayout()
+        {
+            var p = MakePlayer(playerId: 10);
+            typeof(Player).GetField("_tableId", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .SetValue(p, (byte)3);
+            byte[] data = GamePacket.Outgoing.Player.SwitchedToTable(p).ToArray();
+            Assert.AreEqual(6, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.SwitchedToTable);
+            Assert.AreEqual(10, ReadBE16(data, 2), "playerId BE");
+            Assert.AreEqual(0x00, data[4], "padding");
+            Assert.AreEqual(3, data[5], "tableId");
+        }
+
+        // ================================================================
+        // Batch 3: Shrine/Pool/Trigger/Table/Arena stubs
+        // ================================================================
+
+        // --- BiasedShrine (10 bytes) ---
+
+        [Test]
+        public void Arena_BiasedShrine_CorrectLayout()
+        {
+            var ap = MakeArenaPlayer(id: 2);
+            var shrine = MakeShrine(id: 1, team: Team.Dragon, currentBias: 75, power: 100);
+            byte biasAmount = 25;
+            byte[] data = GamePacket.Outgoing.Arena.BiasedShrine(ap, shrine, biasAmount).ToArray();
+            Assert.AreEqual(10, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.BiasedShrine);
+            Assert.AreEqual(1, data[2], "shrineId");
+            Assert.AreEqual((byte)Team.Dragon, data[3], "team");
+            Assert.AreEqual(75, data[4], "currentBias");
+            Assert.AreEqual(0x00, data[5], "padding");
+            Assert.AreEqual(25, data[6], "biasAmount");
+            Assert.AreEqual(0x00, data[7], "padding");
+            // Bytes 8-9: ArenaPlayerId BE
+            Assert.AreEqual(2, ReadBE16(data, 8), "playerId");
+        }
+
+        // --- BiasedPool (10 bytes) ---
+
+        [Test]
+        public void Arena_BiasedPool_CorrectLayout()
+        {
+            var ap = MakeArenaPlayer(id: 4);
+            var pool = MakePool(id: 3, team: Team.Gryphon, currentBias: 40, power: 50);
+            byte biasAmount = 10;
+            byte[] data = GamePacket.Outgoing.Arena.BiasedPool(ap, pool, biasAmount).ToArray();
+            Assert.AreEqual(10, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.BiasedPool);
+            Assert.AreEqual(3, data[2], "poolId");
+            Assert.AreEqual((byte)Team.Gryphon, data[3], "team");
+            Assert.AreEqual(40, data[4], "currentBias");
+            Assert.AreEqual(0x00, data[5], "padding");
+            Assert.AreEqual(10, data[6], "biasAmount");
+            Assert.AreEqual(0x00, data[7], "padding");
+            Assert.AreEqual(4, ReadBE16(data, 8), "playerId");
+        }
+
+        // --- ActivatedTrigger (7 bytes) ---
+
+        [Test]
+        public void Arena_ActivatedTrigger_Inactive()
+        {
+            var trigger = MakeTrigger(id: 5, state: TriggerState.Inactive);
+            byte[] data = GamePacket.Outgoing.Arena.ActivatedTrigger(trigger).ToArray();
+            Assert.AreEqual(7, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.ActivatedTrigger);
+            Assert.AreEqual(0x00, data[2], "padding");
+            Assert.AreEqual(0x00, data[3], "padding");
+            Assert.AreEqual(0x00, data[4], "padding");
+            Assert.AreEqual(5, data[5], "triggerId");
+            Assert.AreEqual((byte)TriggerState.Inactive, data[6], "state");
+        }
+
+        [Test]
+        public void Arena_ActivatedTrigger_Active()
+        {
+            var trigger = MakeTrigger(id: 12, state: TriggerState.Active);
+            byte[] data = GamePacket.Outgoing.Arena.ActivatedTrigger(trigger).ToArray();
+            Assert.AreEqual(12, data[5], "triggerId");
+            Assert.AreEqual((byte)TriggerState.Active, data[6], "state");
+        }
+
+        // --- TableDeleted (3 bytes) ---
+
+        [Test]
+        public void World_TableDeleted_CorrectLayout()
+        {
+            var table = MakeTable(id: 7);
+            byte[] data = GamePacket.Outgoing.World.TableDeleted(table).ToArray();
+            Assert.AreEqual(3, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.TableDeleted);
+            Assert.AreEqual(7, data[2], "tableId");
+        }
+
+        // --- ArenaDeleted (3 bytes) ---
+
+        [Test]
+        public void World_ArenaDeleted_CorrectLayout()
+        {
+            var arena = MakeArena(id: 3);
+            byte[] data = GamePacket.Outgoing.World.ArenaDeleted(arena).ToArray();
+            Assert.AreEqual(3, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.ArenaDeleted);
+            Assert.AreEqual(3, data[2], "arenaId");
+        }
     }
 }
