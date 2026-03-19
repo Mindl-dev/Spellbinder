@@ -72,6 +72,9 @@ namespace SpellServer
                     case "/api/status":
                         HandleStatus(context);
                         break;
+                    case "/api/register":
+                        HandleRegister(context);
+                        break;
                     default:
                         Respond(context, 404, "{\"error\":\"not found\"}");
                         break;
@@ -155,6 +158,71 @@ namespace SpellServer
             sb.AppendFormat(",\"motd\":\"{0}\"", EscapeJson(Properties.Settings.Default.MessageOfTheDay));
             sb.Append("}");
             return sb.ToString();
+        }
+
+        private static void HandleRegister(HttpListenerContext context)
+        {
+            if (context.Request.HttpMethod != "POST")
+            {
+                Respond(context, 405, "{\"error\":\"POST required\"}");
+                return;
+            }
+
+            string body;
+            using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
+                body = reader.ReadToEnd();
+
+            // Parse username=X&password=Y (form-encoded)
+            string username = null, password = null;
+            foreach (var pair in body.Split('&'))
+            {
+                var kv = pair.Split(new[] { '=' }, 2);
+                if (kv.Length != 2) continue;
+                var key = Uri.UnescapeDataString(kv[0]).Trim();
+                var val = Uri.UnescapeDataString(kv[1]).Trim();
+                if (key == "username") username = val;
+                else if (key == "password") password = val;
+            }
+
+            if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
+            {
+                Respond(context, 400, "{\"error\":\"username and password required\"}");
+                return;
+            }
+
+            if (username.Length > 20 || password.Length > 20)
+            {
+                Respond(context, 400, "{\"error\":\"username and password must be 20 characters or less\"}");
+                return;
+            }
+
+            if (username.Length < 3)
+            {
+                Respond(context, 400, "{\"error\":\"username must be at least 3 characters\"}");
+                return;
+            }
+
+            // Check if account exists
+            var existing = MySQL.Accounts.GetAccountData(username);
+            if (existing != null && existing.Rows.Count > 0)
+            {
+                Respond(context, 409, "{\"error\":\"account already exists\"}");
+                return;
+            }
+
+            // Create account with hashed password
+            string hashedPassword = PasswordHasher.Hash(password);
+            bool created = MySQL.Accounts.CreateAccount(username, hashedPassword);
+
+            if (created)
+            {
+                Program.Log($"[API] Account created: {username}", Color.Green);
+                Respond(context, 201, "{\"ok\":true,\"message\":\"account created\"}");
+            }
+            else
+            {
+                Respond(context, 500, "{\"error\":\"failed to create account\"}");
+            }
         }
 
         private static void Respond(HttpListenerContext context, int statusCode, string json)

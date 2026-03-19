@@ -69,7 +69,7 @@ namespace SpellBinder
             gameDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "game");
 
             Text = "SpellBinder: The Nexus Conflict";
-            ClientSize = new Size(400, 440);
+            ClientSize = new Size(400, 480);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -132,11 +132,27 @@ namespace SpellBinder
                 serverBox.Items.Add(s[0] + "  (" + s[1] + ")");
             serverBox.SelectedIndex = 0;
 
+            // Create Account button
+            var registerButton = new Button
+            {
+                Text = "Create Account",
+                Location = new Point(30, 155),
+                Size = new Size(340, 28),
+                Font = new Font("Segoe UI", 9),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(35, 30, 50),
+                ForeColor = Color.FromArgb(180, 170, 210),
+                Cursor = Cursors.Hand
+            };
+            registerButton.FlatAppearance.BorderColor = Color.FromArgb(70, 60, 100);
+            registerButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(50, 42, 72);
+            registerButton.Click += OnRegister;
+
             // Play button
             playButton = new Button
             {
                 Text = "PLAY",
-                Location = new Point(30, 160),
+                Location = new Point(30, 192),
                 Size = new Size(340, 45),
                 Font = new Font("Segoe UI", 14, FontStyle.Bold),
                 FlatStyle = FlatStyle.Flat,
@@ -156,7 +172,7 @@ namespace SpellBinder
                 Font = new Font("Segoe UI", 8),
                 ForeColor = Color.FromArgb(120, 110, 140),
                 BackColor = Color.Transparent,
-                Location = new Point(30, 215),
+                Location = new Point(30, 247),
                 Size = new Size(340, 20),
                 TextAlign = ContentAlignment.MiddleCenter
             };
@@ -165,7 +181,7 @@ namespace SpellBinder
             var sep2 = new Label
             {
                 BorderStyle = BorderStyle.Fixed3D,
-                Location = new Point(30, 242),
+                Location = new Point(30, 274),
                 Size = new Size(340, 2),
                 BackColor = Color.FromArgb(60, 50, 80)
             };
@@ -176,13 +192,13 @@ namespace SpellBinder
                 Font = new Font("Segoe UI", 9, FontStyle.Bold),
                 ForeColor = Color.FromArgb(180, 160, 220),
                 BackColor = Color.Transparent,
-                Location = new Point(30, 250),
+                Location = new Point(30, 282),
                 AutoSize = true
             };
 
             playerList = new ListBox
             {
-                Location = new Point(30, 272),
+                Location = new Point(30, 304),
                 Size = new Size(340, 150),
                 Font = new Font("Segoe UI", 10),
                 BackColor = Color.FromArgb(25, 20, 38),
@@ -193,7 +209,7 @@ namespace SpellBinder
             };
             playerList.DrawItem += OnDrawPlayerItem;
 
-            Controls.AddRange(new Control[] { title, subtitle, sep, serverLabel, serverBox, playButton, statusLabel, sep2, playerLabel, playerList });
+            Controls.AddRange(new Control[] { title, subtitle, sep, serverLabel, serverBox, registerButton, playButton, statusLabel, sep2, playerLabel, playerList });
 
             watchdog = new System.Windows.Forms.Timer { Interval = 3000 };
             watchdog.Tick += OnWatchdog;
@@ -543,6 +559,131 @@ namespace SpellBinder
             while (vEnd < json.Length && json[vEnd] != ',' && json[vEnd] != '}' && json[vEnd] != ']')
                 vEnd++;
             return json.Substring(vStart, vEnd - vStart).Trim();
+        }
+
+        private async void OnRegister(object sender, EventArgs e)
+        {
+            string address = GetServerAddress();
+            if (string.IsNullOrEmpty(address))
+            {
+                SetStatus("Select a server first.", true);
+                return;
+            }
+
+            using (var dlg = new Form())
+            {
+                dlg.Text = "Create Account";
+                dlg.ClientSize = new Size(320, 240);
+                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dlg.MaximizeBox = false;
+                dlg.MinimizeBox = false;
+                dlg.StartPosition = FormStartPosition.CenterParent;
+                dlg.BackColor = Color.FromArgb(25, 20, 38);
+
+                var lblUser = new Label { Text = "Username", Location = new Point(20, 15), AutoSize = true, ForeColor = Color.FromArgb(180, 170, 210), Font = new Font("Segoe UI", 9) };
+                var txtUser = new TextBox { Location = new Point(20, 35), Size = new Size(280, 25), Font = new Font("Segoe UI", 10), BackColor = Color.FromArgb(35, 30, 50), ForeColor = Color.FromArgb(220, 210, 240), MaxLength = 20 };
+
+                var lblPass = new Label { Text = "Password", Location = new Point(20, 68), AutoSize = true, ForeColor = Color.FromArgb(180, 170, 210), Font = new Font("Segoe UI", 9) };
+                var txtPass = new TextBox { Location = new Point(20, 88), Size = new Size(245, 25), Font = new Font("Segoe UI", 10), BackColor = Color.FromArgb(35, 30, 50), ForeColor = Color.FromArgb(220, 210, 240), MaxLength = 20, UseSystemPasswordChar = true };
+
+                var lblConfirm = new Label { Text = "Confirm Password", Location = new Point(20, 118), AutoSize = true, ForeColor = Color.FromArgb(180, 170, 210), Font = new Font("Segoe UI", 9) };
+                var txtConfirm = new TextBox { Location = new Point(20, 138), Size = new Size(280, 25), Font = new Font("Segoe UI", 10), BackColor = Color.FromArgb(35, 30, 50), ForeColor = Color.FromArgb(220, 210, 240), MaxLength = 20, UseSystemPasswordChar = true };
+
+                var btnReveal = new Button
+                {
+                    Text = "\u25C9",
+                    Location = new Point(270, 88),
+                    Size = new Size(30, 25),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(35, 30, 50),
+                    ForeColor = Color.FromArgb(140, 130, 170),
+                    Font = new Font("Segoe UI", 9),
+                    Cursor = Cursors.Hand
+                };
+                btnReveal.FlatAppearance.BorderColor = Color.FromArgb(70, 60, 100);
+                btnReveal.Click += (s3, e3) =>
+                {
+                    txtPass.UseSystemPasswordChar = !txtPass.UseSystemPasswordChar;
+                    txtConfirm.UseSystemPasswordChar = txtPass.UseSystemPasswordChar;
+                };
+
+                var lblResult = new Label { Text = "", Location = new Point(20, 210), Size = new Size(280, 20), ForeColor = Color.FromArgb(120, 110, 140), Font = new Font("Segoe UI", 8) };
+
+                var btnCreate = new Button
+                {
+                    Text = "Create",
+                    Location = new Point(20, 172),
+                    Size = new Size(280, 30),
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(60, 100, 60),
+                    ForeColor = Color.White,
+                    Cursor = Cursors.Hand
+                };
+                btnCreate.FlatAppearance.BorderColor = Color.FromArgb(80, 140, 80);
+
+                btnCreate.Click += async (s2, e2) =>
+                {
+                    string username = txtUser.Text.Trim();
+                    string password = txtPass.Text;
+
+                    if (username.Length < 3)
+                    {
+                        lblResult.Text = "Username must be at least 3 characters.";
+                        lblResult.ForeColor = Color.FromArgb(255, 100, 100);
+                        return;
+                    }
+                    if (string.IsNullOrEmpty(password))
+                    {
+                        lblResult.Text = "Password required.";
+                        lblResult.ForeColor = Color.FromArgb(255, 100, 100);
+                        return;
+                    }
+                    if (password != txtConfirm.Text)
+                    {
+                        lblResult.Text = "Passwords don't match.";
+                        lblResult.ForeColor = Color.FromArgb(255, 100, 100);
+                        return;
+                    }
+
+                    btnCreate.Enabled = false;
+                    lblResult.Text = "Creating account...";
+                    lblResult.ForeColor = Color.FromArgb(120, 110, 140);
+
+                    try
+                    {
+                        string url = "http://" + address + ":10603/api/register";
+                        var content = new StringContent(
+                            "username=" + Uri.EscapeDataString(username) + "&password=" + Uri.EscapeDataString(password),
+                            Encoding.UTF8, "application/x-www-form-urlencoded");
+                        var response = await http.PostAsync(url, content);
+                        string body = await response.Content.ReadAsStringAsync();
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            lblResult.Text = "Account created! You can now log in.";
+                            lblResult.ForeColor = Color.FromArgb(100, 255, 100);
+                        }
+                        else
+                        {
+                            string error = ExtractJsonField(body, "error") ?? body;
+                            lblResult.Text = error;
+                            lblResult.ForeColor = Color.FromArgb(255, 100, 100);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        lblResult.Text = "Connection failed: " + ex.Message;
+                        lblResult.ForeColor = Color.FromArgb(255, 100, 100);
+                    }
+
+                    btnCreate.Enabled = true;
+                };
+
+                dlg.Controls.AddRange(new Control[] { lblUser, txtUser, lblPass, txtPass, btnReveal, lblConfirm, txtConfirm, btnCreate, lblResult });
+                dlg.AcceptButton = btnCreate;
+                dlg.ShowDialog(this);
+            }
         }
 
         private void OnFormClosing(object sender, FormClosingEventArgs e)

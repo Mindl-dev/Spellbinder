@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading;
 using NUnit.Framework;
 
@@ -101,10 +102,7 @@ namespace SpellServer.Tests
         [Test]
         public void ApiServer_StatusEndpoint_Returns200()
         {
-            int port = 10699; // unlikely to collide
-            ApiServer.Start(port);
-            Thread.Sleep(500); // let listener start
-
+            int port = _testPort;
             try
             {
                 var request = WebRequest.Create($"http://localhost:{port}/api/status");
@@ -131,7 +129,7 @@ namespace SpellServer.Tests
         [Test]
         public void ApiServer_PlayersEndpoint_Returns200()
         {
-            int port = 10699;
+            int port = _testPort;
             // Reuses listener from previous test if still running, or starts new
 
             try
@@ -167,7 +165,7 @@ namespace SpellServer.Tests
         [Test]
         public void ApiServer_UnknownRoute_Returns404()
         {
-            int port = 10699;
+            int port = _testPort;
 
             try
             {
@@ -190,7 +188,7 @@ namespace SpellServer.Tests
         [Test]
         public void ApiServer_StatusEndpoint_HasCorsHeader()
         {
-            int port = 10699;
+            int port = _testPort;
 
             try
             {
@@ -205,6 +203,168 @@ namespace SpellServer.Tests
             {
                 Assert.Ignore("API server not reachable on port 10699");
             }
+        }
+        // --- Register endpoint tests ---
+
+        // Tests run against the live server on localhost:10603
+        // The server must be running for integration tests to pass
+        private static int _testPort = 10603;
+
+        private HttpWebResponse PostRegister(string body, int port)
+        {
+            var request = (HttpWebRequest)WebRequest.Create($"http://localhost:{port}/api/register");
+            request.Method = "POST";
+            request.ContentType = "application/x-www-form-urlencoded";
+            request.Timeout = 3000;
+            var data = Encoding.UTF8.GetBytes(body);
+            request.ContentLength = data.Length;
+            using (var stream = request.GetRequestStream())
+                stream.Write(data, 0, data.Length);
+            return (HttpWebResponse)request.GetResponse();
+        }
+
+        private HttpWebResponse TryPostRegister(string body, int port)
+        {
+            try
+            {
+                return PostRegister(body, port);
+            }
+            catch (WebException ex)
+            {
+                return (HttpWebResponse)ex.Response;
+            }
+        }
+
+        [Test]
+        public void Register_GET_Returns405()
+        {
+            try
+            {
+                var request = WebRequest.Create($"http://localhost:{_testPort}/api/register");
+                request.Timeout = 3000;
+                request.GetResponse();
+                Assert.Fail("Should have thrown WebException");
+            }
+            catch (WebException ex)
+            {
+                var response = (HttpWebResponse)ex.Response;
+                if (response == null)
+                {
+                    Assert.Ignore("API server not reachable");
+                    return;
+                }
+                Assert.AreEqual(405, (int)response.StatusCode);
+            }
+        }
+
+        [Test]
+        public void Register_MissingUsername_Returns400()
+        {
+            var response = TryPostRegister("password=test123", _testPort);
+            if (response == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.AreEqual(400, (int)response.StatusCode);
+            using (var reader = new StreamReader(response.GetResponseStream()))
+                StringAssert.Contains("username", reader.ReadToEnd());
+        }
+
+        [Test]
+        public void Register_MissingPassword_Returns400()
+        {
+            var response = TryPostRegister("username=testuser", _testPort);
+            if (response == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.AreEqual(400, (int)response.StatusCode);
+            using (var reader = new StreamReader(response.GetResponseStream()))
+                StringAssert.Contains("password", reader.ReadToEnd());
+        }
+
+        [Test]
+        public void Register_EmptyBody_Returns400()
+        {
+            var response = TryPostRegister("", _testPort);
+            if (response == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.AreEqual(400, (int)response.StatusCode);
+        }
+
+        [Test]
+        public void Register_UsernameTooShort_Returns400()
+        {
+            var response = TryPostRegister("username=ab&password=test123", _testPort);
+            if (response == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.AreEqual(400, (int)response.StatusCode);
+            using (var reader = new StreamReader(response.GetResponseStream()))
+                StringAssert.Contains("3 characters", reader.ReadToEnd());
+        }
+
+        [Test]
+        public void Register_UsernameTooLong_Returns400()
+        {
+            var longName = new string('a', 21);
+            var response = TryPostRegister($"username={longName}&password=test123", _testPort);
+            if (response == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.AreEqual(400, (int)response.StatusCode);
+            using (var reader = new StreamReader(response.GetResponseStream()))
+                StringAssert.Contains("20 characters", reader.ReadToEnd());
+        }
+
+        [Test]
+        public void Register_PasswordTooLong_Returns400()
+        {
+            var longPass = new string('a', 21);
+            var response = TryPostRegister($"username=validuser&password={longPass}", _testPort);
+            if (response == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.AreEqual(400, (int)response.StatusCode);
+            using (var reader = new StreamReader(response.GetResponseStream()))
+                StringAssert.Contains("20 characters", reader.ReadToEnd());
+        }
+
+        [Test]
+        public void Register_DuplicateUsername_Returns409()
+        {
+            // First registration should succeed (or 409 if already exists from prior run)
+            string unique = "testdup_" + DateTime.Now.Ticks.ToString().Substring(10);
+            var response1 = TryPostRegister($"username={unique}&password=test123", _testPort);
+            if (response1 == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.That((int)response1.StatusCode, Is.EqualTo(201).Or.EqualTo(409));
+
+            // Second registration with same name must be 409
+            var response2 = TryPostRegister($"username={unique}&password=different456", _testPort);
+            Assert.AreEqual(409, (int)response2.StatusCode);
+            using (var reader = new StreamReader(response2.GetResponseStream()))
+                StringAssert.Contains("already exists", reader.ReadToEnd());
+        }
+
+        [Test]
+        public void Register_DuplicateUsername_DoesNotChangePassword()
+        {
+            // Create account
+            string unique = "tnow" + (DateTime.Now.Ticks % 100000000);
+            var response1 = TryPostRegister($"username={unique}&password=original123", _testPort);
+            if (response1 == null) { Assert.Ignore("API server not reachable"); return; }
+            Assert.AreEqual(201, (int)response1.StatusCode);
+
+            // Try to overwrite with different password
+            var response2 = TryPostRegister($"username={unique}&password=hacked456", _testPort);
+            Assert.AreEqual(409, (int)response2.StatusCode);
+
+            // Verify original password still works by checking the hash
+            var accountData = MySQL.Accounts.GetAccountData(unique);
+            Assert.IsNotNull(accountData);
+            Assert.IsTrue(accountData.Rows.Count > 0);
+            string storedHash = accountData.Rows[0]["password"].ToString();
+            Assert.IsTrue(PasswordHasher.Verify("original123", storedHash),
+                "Original password should still work after failed overwrite attempt");
+            Assert.IsFalse(PasswordHasher.Verify("hacked456", storedHash),
+                "Attacker's password should NOT work");
+        }
+
+        [Test]
+        public void Register_SpecialCharsInUsername_Encoded()
+        {
+            // URL-encoded special chars shouldn't break the endpoint
+            var response = TryPostRegister("username=test%26user&password=test123", _testPort);
+            if (response == null) { Assert.Ignore("API server not reachable"); return; }
+            // Should either create or reject gracefully, not 500
+            Assert.That((int)response.StatusCode, Is.Not.EqualTo(500));
         }
     }
 }

@@ -63,6 +63,30 @@ namespace SpellServer
 
             return null;
         }
+
+        public static bool CreateAccount(string username, string hashedPassword)
+        {
+            try
+            {
+                using (var conn = new MySqlConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new MySqlCommand(
+                        "INSERT INTO accounts (username, password, Admin) VALUES (@username, @password, 0)",
+                        conn))
+                    {
+                        cmd.Parameters.AddWithValue("@username", username);
+                        cmd.Parameters.AddWithValue("@password", hashedPassword);
+                        return cmd.ExecuteNonQuery() > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"CreateAccount error: {ex.Message}", Color.Red);
+                return false;
+            }
+        }
     }
     public static class ServerSettings
 		{
