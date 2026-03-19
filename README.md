@@ -1,3 +1,5 @@
+# Spellbinder: The Nexus Conflict Server and Client
+
 This is a fork of the Magestorm repo @ https://github.com/Magestorm/Magestorm.
 
 If you just want to play, you can find the releases here: https://github.com/Mindl-dev/Spellbinder/releases/
