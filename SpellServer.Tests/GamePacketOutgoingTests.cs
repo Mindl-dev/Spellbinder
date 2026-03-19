@@ -317,8 +317,11 @@ namespace SpellServer.Tests
             Assert.AreEqual(8, data.Length);
             AssertPacketHeader(data, PacketOutFunction.UpdateHealth);
             // Bytes 2-5: padding
-            // Bytes 6-7: hp in LITTLE-ENDIAN (no FlipBytes in source!)
-            Assert.AreEqual(500, BitConverter.ToInt16(data, 6), "hp (LE)");
+            // HP is LE intentionally — same pattern as SendPlayerId.
+            // Original devs were inconsistent: game state packets use BE,
+            // but certain health/id fields use native x86 LE.
+            // Client and server agree, confirmed working in-game.
+            Assert.AreEqual(500, BitConverter.ToInt16(data, 6), "hp (LE, intentional)");
         }
 
         // --- UpdateExperience (8 bytes) ---
@@ -476,8 +479,11 @@ namespace SpellServer.Tests
             byte[] data = GamePacket.Outgoing.Player.SendPlayerId(p).ToArray();
             Assert.AreEqual(4, data.Length);
             AssertPacketHeader(data, PacketOutFunction.SendPlayerId);
-            // NOTE: PlayerId written in LITTLE-ENDIAN (no FlipBytes!)
-            Assert.AreEqual(42, BitConverter.ToInt16(data, 2), "playerId (LE)");
+            // PlayerId is LE intentionally — opcode 0x80 is overloaded:
+            // login path sends 2-byte LE PlayerId, arena path sends 1-byte ArenaPlayerId.
+            // Both client and server are x86 so no swap needed for this handshake field.
+            // Confirmed via packet capture: PlayerId=1 → bytes 01 00 (LE).
+            Assert.AreEqual(42, BitConverter.ToInt16(data, 2), "playerId (LE, intentional)");
         }
 
         // --- SendPlayerId (ArenaPlayer overload, 4 bytes) ---
@@ -557,8 +563,8 @@ namespace SpellServer.Tests
             Assert.AreEqual(7, data[3], "attackerId");
             Assert.AreEqual(30, data[4], "damage");
             Assert.AreEqual(5, data[5], "power");
-            // HP in LE (same quirk as UpdateHealth)
-            Assert.AreEqual(250, BitConverter.ToInt16(data, 6), "hp (LE)");
+            // HP is LE — same as UpdateHealth, intentional (native x86 byte order)
+            Assert.AreEqual(250, BitConverter.ToInt16(data, 6), "hp (LE, intentional)");
         }
 
         [Test]
