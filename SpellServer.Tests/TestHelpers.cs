@@ -121,6 +121,24 @@ namespace SpellServer.Tests
             field.SetValue(obj, value);
         }
 
+        internal static Spell MakeSpell(short id = 1, short range = 500)
+        {
+            var s = (Spell)FormatterServices.GetUninitializedObject(typeof(Spell));
+            s.Id = id;
+            s.Range = range;
+            return s;
+        }
+
+        internal static SpellDamage MakeSpellDamage(short damage = 50, short power = 10)
+        {
+            var sd = (SpellDamage)FormatterServices.GetUninitializedObject(typeof(SpellDamage));
+            var dmgField = typeof(SpellDamage).GetField("_damage", BindingFlags.NonPublic | BindingFlags.Instance);
+            var pwrField = typeof(SpellDamage).GetField("_power", BindingFlags.NonPublic | BindingFlags.Instance);
+            dmgField.SetValue(sd, damage);
+            pwrField.SetValue(sd, power);
+            return sd;
+        }
+
         /// <summary>Assert packet starts with 0x00 + expected function ID.</summary>
         internal static void AssertPacketHeader(byte[] data, PacketOutFunction func)
         {

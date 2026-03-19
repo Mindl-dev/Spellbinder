@@ -541,6 +541,95 @@ namespace SpellServer.Tests
             Assert.AreEqual(3, data[5], "tableId");
         }
 
+        // --- PlayerDamage (8 bytes, reuses UpdateHealth opcode) ---
+
+        [Test]
+        public void Arena_PlayerDamage_CorrectLayout()
+        {
+            var victim = MakeArenaPlayer(id: 4, hp: 250);
+            var attacker = MakeArenaPlayer(id: 7);
+            var dmg = MakeSpellDamage(damage: 30, power: 5);
+            byte[] data = GamePacket.Outgoing.Arena.PlayerDamage(victim, attacker, dmg).ToArray();
+            Assert.AreEqual(8, data.Length);
+            // NOTE: reuses UpdateHealth opcode, not a dedicated PlayerDamage opcode
+            AssertPacketHeader(data, PacketOutFunction.UpdateHealth);
+            Assert.AreEqual(0x00, data[2], "padding");
+            Assert.AreEqual(7, data[3], "attackerId");
+            Assert.AreEqual(30, data[4], "damage");
+            Assert.AreEqual(5, data[5], "power");
+            // HP in LE (same quirk as UpdateHealth)
+            Assert.AreEqual(250, BitConverter.ToInt16(data, 6), "hp (LE)");
+        }
+
+        [Test]
+        public void Arena_PlayerDamage_NullAttacker()
+        {
+            var victim = MakeArenaPlayer(id: 4, hp: 100);
+            var dmg = MakeSpellDamage(damage: 10, power: 2);
+            byte[] data = GamePacket.Outgoing.Arena.PlayerDamage(victim, null, dmg).ToArray();
+            Assert.AreEqual(0, data[3], "null attacker -> 0");
+        }
+
+        // --- CastTargetedEx (30 bytes) ---
+
+        [Test]
+        public void Arena_CastTargetedEx_CorrectLayout()
+        {
+            var target = MakeArenaPlayer(id: 5);
+            var source = MakeArenaPlayer(id: 2);
+            var spell = MakeSpell(id: 42, range: 800);
+            byte[] data = GamePacket.Outgoing.Arena.CastTargetedEx(target, source, spell).ToArray();
+            Assert.AreEqual(30, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.CastTargeted);
+            Assert.AreEqual(42, ReadBE16(data, 2), "spellId");
+            Assert.AreEqual(800, ReadBE16(data, 4), "range");
+            Assert.AreEqual(2, ReadBE16(data, 6), "sourceId");
+            Assert.AreEqual(5, ReadBE16(data, 8), "targetId");
+            // Bytes 10-29: 20 bytes padding
+            for (int i = 10; i < 30; i++)
+                Assert.AreEqual(0x00, data[i], $"padding byte {i}");
+        }
+
+        [Test]
+        public void Arena_CastTargetedEx_NullSource()
+        {
+            var target = MakeArenaPlayer(id: 5);
+            var spell = MakeSpell(id: 10, range: 300);
+            byte[] data = GamePacket.Outgoing.Arena.CastTargetedEx(target, null, spell).ToArray();
+            Assert.AreEqual(0, data[6], "null source hi");
+            Assert.AreEqual(0, data[7], "null source lo");
+        }
+
+        // --- SaveError (44 bytes) ---
+
+        [Test]
+        public void Player_SaveError_CorrectLayout()
+        {
+            var p = MakePlayer(username: "TestPlayer");
+            p.ActiveCharacter = MakeCharacter(name: "Frostbane");
+            byte[] data = GamePacket.Outgoing.Player.SaveError(p, 1).ToArray();
+            AssertPacketHeader(data, PacketOutFunction.SaveError);
+            // Bytes 2-21: username (20 bytes)
+            Assert.AreEqual((byte)'T', data[2]);
+            // Byte 22: slot
+            Assert.AreEqual(1, data[22], "slot");
+            // Bytes 23-25: padding
+            // Bytes 26-45: charName (20 bytes)
+            Assert.AreEqual((byte)'F', data[26]);
+        }
+
+        // --- World.PlayerLeave (4 bytes) ---
+
+        [Test]
+        public void World_PlayerLeave_CorrectLayout()
+        {
+            var p = MakePlayer(playerId: 15);
+            byte[] data = GamePacket.Outgoing.World.PlayerLeave(p).ToArray();
+            Assert.AreEqual(4, data.Length);
+            AssertPacketHeader(data, PacketOutFunction.PlayerLeave);
+            Assert.AreEqual(15, ReadBE16(data, 2), "playerId BE");
+        }
+
         // ================================================================
         // Batch 3: Shrine/Pool/Trigger/Table/Arena stubs
         // ================================================================
