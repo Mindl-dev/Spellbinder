@@ -112,6 +112,10 @@ namespace SpellServer.Tests
             var g = (Grid)FormatterServices.GetUninitializedObject(typeof(Grid));
             g.Name = gridName;
             a.Grid = g;
+            // SyncRoot is readonly and null on uninitialized object — set via reflection
+            // SyncRoot is Mysqlx.Expr.Object but Monitor.Enter just needs non-null
+            var syncType = typeof(Arena).GetField("SyncRoot").FieldType;
+            SetReadonly(a, "SyncRoot", FormatterServices.GetUninitializedObject(syncType));
             return a;
         }
 
