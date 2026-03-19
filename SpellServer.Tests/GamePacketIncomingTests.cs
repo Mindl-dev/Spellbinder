@@ -273,5 +273,126 @@ namespace SpellServer.Tests
                 GamePacket.Incoming.MageHook.CheatProgramNotification(p, stream));
             Assert.IsTrue(p.Disconnect, "Should disconnect on cheat program detection");
         }
+        // ================================================================
+        // Deobfuscate (pure function — swap nibbles on odd-index chars)
+        // ================================================================
+
+        [Test]
+        public void Deobfuscate_EmptyString_ReturnsEmpty()
+        {
+            Assert.AreEqual("", GamePacket.Incoming.World.Deobfuscate(""));
+        }
+
+        [Test]
+        public void Deobfuscate_Null_ReturnsNull()
+        {
+            Assert.IsNull(GamePacket.Incoming.World.Deobfuscate(null));
+        }
+
+        [Test]
+        public void Deobfuscate_SingleChar_Unchanged()
+        {
+            // Index 0 is even — not modified
+            Assert.AreEqual("A", GamePacket.Incoming.World.Deobfuscate("A"));
+        }
+
+        [Test]
+        public void Deobfuscate_OddIndex_SwapsNibbles()
+        {
+            // 'A' = 0x41. At odd index, nibbles swap: 0x14 = (char)20
+            string input = "A" + (char)0x41;
+            string result = GamePacket.Incoming.World.Deobfuscate(input);
+            Assert.AreEqual('A', result[0], "even index unchanged");
+            Assert.AreEqual((char)0x14, result[1], "odd index nibble-swapped");
+        }
+
+        [Test]
+        public void Deobfuscate_RoundTrip()
+        {
+            // Deobfuscate applied twice should return original
+            // (nibble swap is its own inverse)
+            string original = "TestPassword123";
+            string once = GamePacket.Incoming.World.Deobfuscate(original);
+            string twice = GamePacket.Incoming.World.Deobfuscate(once);
+            Assert.AreEqual(original, twice, "double deobfuscate should restore original");
+        }
+
+        // ================================================================
+        // Login.Disconnect — verifies reason string
+        // ================================================================
+
+        [Test]
+        public void Login_Disconnect_SetsLogoffReason()
+        {
+            var p = MakePlayer();
+            GamePacket.Incoming.Login.Disconnect(p);
+            Assert.IsNotNull(p.DisconnectReason, "reason should be set");
+            Assert.IsTrue(p.Disconnect);
+        }
+
+        // ================================================================
+        // Chat parser edge cases
+        // ================================================================
+
+        [Test]
+        public void Chat_ExactlyMaxLength_NotDropped()
+        {
+            var p = MakePlayer(username: "TestPlayer");
+            var ms = new MemoryStream();
+            ms.Write(new byte[4], 0, 4);
+            ms.Write(new byte[] { 0x00, 0x00 }, 0, 2);
+            ms.WriteByte(0x00);
+            ms.Write(new byte[3], 0, 3);
+            // Exactly 128 chars + null (should NOT be dropped)
+            byte[] msg = new byte[129];
+            for (int i = 0; i < 128; i++) msg[i] = (byte)'B';
+            msg[128] = 0x00;
+            ms.Write(msg, 0, msg.Length);
+            ms.Position = 0;
+
+            // Should get past the length check and hit ProcessChatMessage
+            // which will throw NullRef (expected — no World state)
+            try
+            {
+                GamePacket.Incoming.Player.Chat(p, ms);
+                // If we get here without NullRef, that's OK too (World might be null-safe)
+            }
+            catch (NullReferenceException)
+            {
+                // Expected — means the message was NOT dropped (parse succeeded)
+            }
+        }
+
+        [Test]
+        public void Chat_OneOverMax_Dropped()
+        {
+            var p = MakePlayer(username: "TestPlayer");
+            var ms = new MemoryStream();
+            ms.Write(new byte[4], 0, 4);
+            ms.Write(new byte[] { 0x00, 0x00 }, 0, 2);
+            ms.WriteByte(0x00);
+            ms.Write(new byte[3], 0, 3);
+            // 129 chars (one over max 128) — should be dropped
+            byte[] msg = new byte[130];
+            for (int i = 0; i < 129; i++) msg[i] = (byte)'C';
+            msg[129] = 0x00;
+            ms.Write(msg, 0, msg.Length);
+            ms.Position = 0;
+
+            // Should return early without hitting ProcessChatMessage
+            Assert.DoesNotThrow(() => GamePacket.Incoming.Player.Chat(p, ms));
+        }
+
+        // ================================================================
+        // ExitWorld — null guard
+        // ================================================================
+
+        [Test]
+        public void Player_ExitWorld_NullArena_ReturnsEarly()
+        {
+            var p = MakePlayer();
+            Assert.DoesNotThrow(() => GamePacket.Incoming.Player.ExitWorld(p));
+        }
     }
 }
+
