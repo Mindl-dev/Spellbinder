@@ -348,6 +348,11 @@ namespace SpellServer
                             GamePacket.Incoming.Player.HasEnteredWorld(player);
                             break;
                         }
+                        case 0x18:
+                        {
+                            GamePacket.Incoming.Player.ClientPlayerState(player, inStream);
+                            break;
+                        }
                         case 0x22:
                         {
                             GamePacket.Incoming.World.CreateArena(player, inStream);

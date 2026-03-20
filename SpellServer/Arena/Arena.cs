@@ -1294,11 +1294,26 @@ namespace SpellServer
                         if (arenaPlayer == null || arenaPlayer.StatusFlags == ArenaPlayer.StatusFlag.Dead) continue;
 
                         OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(newPos, projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
-                                                
+
+                        // Lag compensation: check collision against where the target was
+                        // when the shooter fired, based on shooter's ping
+                        OrientedBoundingBox targetBox;
+                        if (projectile.Owner != null && projectile.Owner.WorldPlayer.Ping > 0)
+                        {
+                            Int64 rewindTime = NativeMethods.PerformanceCount -
+                                (Int64)(projectile.Owner.WorldPlayer.Ping * NativeMethods.PerformanceFrequency / 2000);
+                            Vector3 pastPos = arenaPlayer.GetPositionAtTime(rewindTime);
+                            targetBox = new OrientedBoundingBox(pastPos, arenaPlayer.BoundingBox.Size, arenaPlayer.BoundingBox.Rotation);
+                        }
+                        else
+                        {
+                            targetBox = arenaPlayer.BoundingBox;
+                        }
+
                         if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) ||
                             (!arenaPlayer.IsAlive && projectile.Spell.Friendly != SpellFriendlyType.FriendlyDead) ||
                             projectile.Owner.WorldPlayer.PlayerId == arenaPlayer.WorldPlayer.PlayerId ||
-                            !arenaPlayer.BoundingBox.Collides(testProjectileBox))
+                            !targetBox.Collides(testProjectileBox))
                             continue;
 
                         if (projectile.Owner.WorldPlayer.PlayerId != arenaPlayer.WorldPlayer.PlayerId)
@@ -2871,6 +2886,7 @@ namespace SpellServer
                 arenaPlayer.Location = location;
                 arenaPlayer.PreviousLocation = location;
                 arenaPlayer.Direction = direction;
+                arenaPlayer.RecordPosition(NativeMethods.PerformanceCount);
 
                 arenaPlayer.BoundingBox.MoveAndResize(arenaPlayer.Location, statusFlags.HasFlag(ArenaPlayer.StatusFlag.Crouching) ? ArenaPlayer.PlayerCrouchingSize : ArenaPlayer.PlayerStandingSize);
 

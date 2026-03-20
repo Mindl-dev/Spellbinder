@@ -2,6 +2,7 @@
 using Helper;
 using Helper.Math;
 using Helper.Network;
+using Helper.Timing;
 using MySqlX.XDevAPI.Relational;
 using Org.BouncyCastle.Security.Certificates;
 using Org.BouncyCastle.Tls;
@@ -722,6 +723,15 @@ namespace SpellServer
                 public static void HasEnteredWorld(SpellServer.Player player, bool UDP = false)
                 {
                     Network.Send(player, Outgoing.Player.HasEnteredWorld());
+                }
+                public static void ClientPlayerState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
+                {
+                    // Client sends 0x18 with 8 bytes, byte 6 = ping
+                    var reader = new PacketReader(inStream);
+                    if (reader.Length < 10) return;
+                    reader.Skip(6);  // skip to byte 6 of payload
+                    int clientPing = reader.ReadByte() * 10;
+                    player.Ping = clientPing;
                 }
                 public static void EnterWorld(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
