@@ -516,7 +516,7 @@ namespace SpellBinder
         }
 
         // Minimal JSON helpers — avoids dependency on System.Text.Json / Newtonsoft
-        private static System.Collections.Generic.List<string> SplitJsonArray(string json)
+        internal static System.Collections.Generic.List<string> SplitJsonArray(string json)
         {
             var items = new System.Collections.Generic.List<string>();
             json = json.Trim();
@@ -543,7 +543,7 @@ namespace SpellBinder
             return items;
         }
 
-        private static string StripQuotes(string s)
+        internal static string StripQuotes(string s)
         {
             s = s.Trim();
             if (s.Length >= 2 && s[0] == '"' && s[s.Length - 1] == '"')
@@ -551,7 +551,7 @@ namespace SpellBinder
             return s;
         }
 
-        private static string ExtractJsonField(string json, string field)
+        internal static string ExtractJsonField(string json, string field)
         {
             string key = "\"" + field + "\"";
             int idx = json.IndexOf(key);
