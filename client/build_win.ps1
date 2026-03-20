@@ -78,7 +78,8 @@ if ($Server) {
 }
 
 # Write version.txt from git tag
-$gitTag = (git describe --tags --abbrev=0 2>$null) ?? "v0.0.0"
+$gitTag = git describe --tags --abbrev=0 2>$null
+if (-not $gitTag) { $gitTag = "v0.0.0" }
 Set-Content "$OutDir\version.txt" $gitTag.Trim()
 Write-Host "Version: $gitTag"
 

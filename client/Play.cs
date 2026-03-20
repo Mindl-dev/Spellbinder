@@ -77,6 +77,7 @@ namespace SpellBinder
             gameDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "game");
 
             Text = "SpellBinder: The Nexus Conflict";
+            try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             ClientSize = new Size(400, 480);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -744,13 +745,16 @@ namespace SpellBinder
 
             try
             {
-                // GitHub API requires User-Agent header
-                var request = new HttpRequestMessage(HttpMethod.Get, GITHUB_RELEASE_API);
-                request.Headers.Add("User-Agent", "SpellBinder-Launcher");
-                var response = http.SendAsync(request).Result;
-                if (!response.IsSuccessStatusCode) return;
+                // Enable TLS 1.2 — GitHub requires it, .NET 4.8 doesn't default to it
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 
-                string json = response.Content.ReadAsStringAsync().Result;
+                var webReq = (HttpWebRequest)WebRequest.Create(GITHUB_RELEASE_API);
+                webReq.UserAgent = "SpellBinder-Launcher";
+                webReq.Timeout = 5000;
+                string json;
+                using (var response = (HttpWebResponse)webReq.GetResponse())
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                    json = reader.ReadToEnd();
                 string remoteTag = ExtractJsonField(json, "tag_name");
                 if (remoteTag == null) return;
 
@@ -824,8 +828,8 @@ namespace SpellBinder
                 }
 
                 // Download
-                var data = http.GetByteArrayAsync(downloadUrl).Result;
-                File.WriteAllBytes(tempZip, data);
+                using (var wc = new System.Net.WebClient())
+                    wc.DownloadFile(downloadUrl, tempZip);
 
                 // Extract to temp
                 if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
