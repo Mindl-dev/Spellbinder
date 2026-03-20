@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -13,6 +14,10 @@ namespace SpellBinder
 {
     public class PlayForm : Form
     {
+        private const string VERSION = "0.3.0";
+        private const string GITHUB_RELEASE_API = "https://api.github.com/repos/Mindl-dev/Spellbinder/releases/latest";
+        private const string GITHUB_ASSET_WIN = "SpellBinder-win.zip";
+
         private ComboBox serverBox;
         private Button playButton;
         private Label statusLabel;
@@ -21,7 +26,7 @@ namespace SpellBinder
         private Process gameProcess;
         private System.Windows.Forms.Timer watchdog;
         private System.Windows.Forms.Timer playerRefresh;
-        private static readonly HttpClient http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        private static readonly HttpClient http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         private string gameDir;
 
         // Parsed player data — parallel to playerList.Items
@@ -717,11 +722,191 @@ namespace SpellBinder
             playerRefresh.Stop();
         }
 
+        // ================================================================
+        // Auto-update
+        // ================================================================
+
+        private static string GetLocalVersion()
+        {
+            string versionFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "version.txt");
+            if (File.Exists(versionFile))
+                return File.ReadAllText(versionFile).Trim();
+            return VERSION;
+        }
+
+        private static void CheckForUpdate()
+        {
+            // Cleanup from previous update
+            string oldExe = Application.ExecutablePath + ".old";
+            try { if (File.Exists(oldExe)) File.Delete(oldExe); } catch { }
+
+            string localVersion = GetLocalVersion();
+
+            try
+            {
+                // GitHub API requires User-Agent header
+                var request = new HttpRequestMessage(HttpMethod.Get, GITHUB_RELEASE_API);
+                request.Headers.Add("User-Agent", "SpellBinder-Launcher");
+                var response = http.SendAsync(request).Result;
+                if (!response.IsSuccessStatusCode) return;
+
+                string json = response.Content.ReadAsStringAsync().Result;
+                string remoteTag = ExtractJsonField(json, "tag_name");
+                if (remoteTag == null) return;
+
+                // Strip leading 'v' for comparison
+                string remoteVersion = remoteTag.TrimStart('v');
+                string localClean = localVersion.TrimStart('v');
+
+                if (remoteVersion == localClean) return;
+
+                // Find download URL for Windows zip
+                string assetsJson = ExtractJsonField(json, "assets");
+                if (assetsJson == null) return;
+
+                string downloadUrl = null;
+                foreach (string asset in SplitJsonArray(assetsJson))
+                {
+                    string name = ExtractJsonField(asset, "name");
+                    if (name != null && name.Contains("win"))
+                    {
+                        downloadUrl = ExtractJsonField(asset, "browser_download_url");
+                        break;
+                    }
+                }
+                if (downloadUrl == null) return;
+
+                var result = MessageBox.Show(
+                    "Update available: " + localClean + " \u2192 " + remoteVersion + "\n\nDownload and install?",
+                    "SpellBinder Update",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (result != DialogResult.Yes) return;
+
+                ApplyUpdate(downloadUrl, remoteTag);
+            }
+            catch
+            {
+                // Silently continue if update check fails — don't block gameplay
+            }
+        }
+
+        private static void ApplyUpdate(string downloadUrl, string newVersion)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string gameDir = Path.Combine(baseDir, "game");
+            string tempZip = Path.Combine(Path.GetTempPath(), "SpellBinder-update.zip");
+            string tempDir = Path.Combine(Path.GetTempPath(), "SpellBinder-update");
+
+            try
+            {
+                // Backup user files
+                string mainDatBackup = null, userDatBackup = null, keyboardDatBackup = null;
+                string mainDat = Path.Combine(gameDir, "main.dat");
+                string userDat = Path.Combine(gameDir, "user.dat");
+                string keyboardDat = Path.Combine(gameDir, "keyboard.dat");
+
+                if (File.Exists(mainDat))
+                {
+                    mainDatBackup = mainDat + ".bak";
+                    File.Copy(mainDat, mainDatBackup, true);
+                }
+                if (File.Exists(userDat))
+                {
+                    userDatBackup = userDat + ".bak";
+                    File.Copy(userDat, userDatBackup, true);
+                }
+                if (File.Exists(keyboardDat))
+                {
+                    keyboardDatBackup = keyboardDat + ".bak";
+                    File.Copy(keyboardDat, keyboardDatBackup, true);
+                }
+
+                // Download
+                var data = http.GetByteArrayAsync(downloadUrl).Result;
+                File.WriteAllBytes(tempZip, data);
+
+                // Extract to temp
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+                ZipFile.ExtractToDirectory(tempZip, tempDir);
+
+                // Find the extracted root (might be SpellBinder-win/ inside the zip)
+                string extractedRoot = tempDir;
+                string[] subdirs = Directory.GetDirectories(tempDir);
+                if (subdirs.Length == 1 && Directory.Exists(Path.Combine(subdirs[0], "game")))
+                    extractedRoot = subdirs[0];
+
+                // Self-update: rename current Play.exe so we can overwrite it
+                string currentExe = Application.ExecutablePath;
+                string oldExe = currentExe + ".old";
+                try { if (File.Exists(oldExe)) File.Delete(oldExe); } catch { }
+                File.Move(currentExe, oldExe);
+
+                // Copy new files over
+                CopyDirectory(extractedRoot, baseDir);
+
+                // Restore user files
+                if (mainDatBackup != null && File.Exists(mainDatBackup))
+                {
+                    File.Copy(mainDatBackup, mainDat, true);
+                    File.Delete(mainDatBackup);
+                }
+                if (userDatBackup != null && File.Exists(userDatBackup))
+                {
+                    File.Copy(userDatBackup, userDat, true);
+                    File.Delete(userDatBackup);
+                }
+                if (keyboardDatBackup != null && File.Exists(keyboardDatBackup))
+                {
+                    File.Copy(keyboardDatBackup, keyboardDat, true);
+                    File.Delete(keyboardDatBackup);
+                }
+
+                // Write version file
+                File.WriteAllText(Path.Combine(baseDir, "version.txt"), newVersion);
+
+                // Cleanup temp
+                try { File.Delete(tempZip); } catch { }
+                try { Directory.Delete(tempDir, true); } catch { }
+
+                // Restart
+                MessageBox.Show("Update complete! Restarting.", "SpellBinder", MessageBoxButtons.OK);
+                Process.Start(Application.ExecutablePath);
+                Environment.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Update failed: " + ex.Message + "\n\nYou can continue with the current version.",
+                    "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                // Try to restore Play.exe if it was renamed
+                string oldExe = Application.ExecutablePath + ".old";
+                if (!File.Exists(Application.ExecutablePath) && File.Exists(oldExe))
+                    File.Move(oldExe, Application.ExecutablePath);
+            }
+        }
+
+        private static void CopyDirectory(string source, string dest)
+        {
+            Directory.CreateDirectory(dest);
+            foreach (string file in Directory.GetFiles(source))
+            {
+                string destFile = Path.Combine(dest, Path.GetFileName(file));
+                try { File.Copy(file, destFile, true); } catch { }
+            }
+            foreach (string dir in Directory.GetDirectories(source))
+            {
+                CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
+            }
+        }
+
         [STAThread]
         public static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            CheckForUpdate();
             Application.Run(new PlayForm());
         }
     }
