@@ -2863,23 +2863,6 @@ namespace SpellServer
 
         public void PlayerMove(ArenaPlayer arenaPlayer, ArenaPlayer.StatusFlag statusFlags, Byte mSpeed, Vector3 location, Single direction)
         {
-            if (arenaPlayer.StateReceivedCount++ >= 500)
-            {
-                Int64 deltaState = TimeHelper.DeltaMilliseconds(arenaPlayer.LastStateReceived, NativeMethods.PerformanceCount);
-                Int32 minDelta = arenaPlayer.HasFliedSinceHackDetect ? 20000 : 30000;
-
-                if (deltaState < minDelta && !arenaPlayer.WorldPlayer.IsAdmin)
-                {
-                    Program.Log(String.Format("[Speedhack] (AID: {0}, {1}) {2} - Time: {3}ms/{4}ms", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.Username, arenaPlayer.ActiveCharacter.Name, deltaState, minDelta), Color.Red, "Cheat");
-
-                    arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpeedHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
-                }
-
-                arenaPlayer.StateReceivedCount = 0;
-                arenaPlayer.HasFliedSinceHackDetect = false;
-                arenaPlayer.LastStateReceived = NativeMethods.PerformanceCount;
-            }
 
             lock (SyncRoot)
             {

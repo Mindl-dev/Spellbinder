@@ -1,0 +1,46 @@
+{
+  "target": "game.dll interpolation window — 300 to 1000 (30ms to 100ms)",
+  "target_file": "game.dll",
+  "patches": [
+    {
+      "name": "interp_initial_timer",
+      "description": "Initial interpolation timer: 300 → 1000.",
+      "file_offset": "0x287BB",
+      "virtual_address": "0x4287BB",
+      "original": "2c01",
+      "patched": "e803"
+    },
+    {
+      "name": "interp_float_duration",
+      "description": "Float constant 300.0 → 1000.0 for lerp normalization.",
+      "file_offset": "0x17D334",
+      "virtual_address": "0x57D334",
+      "original": "00009643",
+      "patched": "00007a44"
+    },
+    {
+      "name": "interp_float_reciprocal",
+      "description": "Float constant 1/300 → 1/1000 for lerp normalization.",
+      "file_offset": "0x17D330",
+      "virtual_address": "0x57D330",
+      "original": "0e745a3b",
+      "patched": "6f12833a"
+    },
+    {
+      "name": "interp_angle_duration",
+      "description": "Integer constant 300 → 1000 for angle interpolation.",
+      "file_offset": "0x38DAD",
+      "virtual_address": "0x438DAD",
+      "original": "2c010000",
+      "patched": "e8030000"
+    },
+    {
+      "name": "interp_angle_magic_div",
+      "description": "Magic number for compiler division by 300 → 1000.",
+      "file_offset": "0x38DB7",
+      "virtual_address": "0x438DB7",
+      "original": "b5814e1b",
+      "patched": "ea263108"
+    }
+  ]
+}

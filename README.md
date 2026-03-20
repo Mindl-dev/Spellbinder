@@ -13,9 +13,21 @@ Download `spelinst.exe` from the [Internet Archive](https://archive.org/details/
 ```bash
 python build_content.py spelinst.exe
 ```
-This extracts the game, patches `game.dll` for community server compatibility, and patches `spell.bin` with balance fixes. Everything goes into `Content/`.
+This extracts the game and patches `game.dll` for community server compatibility. Everything goes into `GameFiles/`.
 
-### 3. Build the client
+### 3. Apply optional patches
+```bash
+# 60hz tick rate (smooth multiplayer movement, up from 2hz)
+python patches/apply_patches.py GameFiles/game.dll patches/tickrate_60hz.json --output GameFiles/game.dll
+```
+Available patches in `patches/`:
+| Patch | Description |
+|-------|-------------|
+| `full_v202_discord.json` | UDP fix for C# server (applied automatically by build_content.py) |
+| `tickrate_60hz.json` | Position update rate 500ms → 16ms (must apply manually) |
+| `spellbin_discord.json` | Debug spell balance (not applied by default) |
+
+### 4. Build the client
 
 **Windows:**
 ```powershell
