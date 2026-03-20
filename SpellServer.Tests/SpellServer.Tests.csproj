@@ -29,6 +29,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="PacketTests.cs" />
+    <Compile Include="PacketReaderWriterTests.cs" />
+    <Compile Include="TestHelpers.cs" />
+    <Compile Include="GamePacketOutgoingTests.cs" />
+    <Compile Include="GamePacketIncomingTests.cs" />
+    <Compile Include="LauncherTests.cs" />
     <Compile Include="IniCacheTests.cs" />
     <Compile Include="ArenaPlayerTests.cs" />
     <Compile Include="LoggingTests.cs" />

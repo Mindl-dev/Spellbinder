@@ -30,8 +30,8 @@ if (-not (Test-Path $csc)) {
 }
 
 Push-Location $ScriptDir
-& $csc /target:winexe /out:Play.exe `
-    /reference:System.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Net.Http.dll `
+& $csc /target:winexe /out:Play.exe /win32icon:spellbinder.ico `
+    /reference:System.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Net.Http.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll `
     Play.cs
 if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Error "Compile failed"; exit 1 }
 Pop-Location
@@ -76,6 +76,12 @@ if ($Server) {
         (Get-Content $mainDat -Raw) -replace "address=.*", "address=$Server" | Set-Content $mainDat -NoNewline
     }
 }
+
+# Write version.txt from git tag
+$gitTag = git describe --tags --abbrev=0 2>$null
+if (-not $gitTag) { $gitTag = "v0.0.0" }
+Set-Content "$OutDir\version.txt" $gitTag.Trim()
+Write-Host "Version: $gitTag"
 
 Write-Host ""
 Write-Host "=== Built $OutDir ==="

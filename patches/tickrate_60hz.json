@@ -1,0 +1,16 @@
+{
+  "target": "game.dll tick rate — 500ms to 16ms (60hz position updates)",
+  "target_file": "game.dll",
+  "clean_md5": "4d68de929660dc96f6f6505302a86854",
+  "patches": [
+    {
+      "name": "tickrate_500ms_to_16ms",
+      "description": "Changes position update interval from 500ms (2/sec) to 16ms (~60/sec). Instruction at VA 0x4481EA: mov dword_5992E0, 1F4h → mov dword_5992E0, 10h. The 4-byte LE value is at file offset 0x481F0.",
+      "file_offset": "0x481F0",
+      "virtual_address": "0x4481F0",
+      "original": "f4010000",
+      "patched": "10000000",
+      "note": "Server speedhack detector (Arena.cs PlayerMove) must be adjusted — 500 states in <30s triggers kick. At 60hz, 500 states = 8.3s. Raise threshold or adjust time window."
+    }
+  ]
+}

@@ -66,6 +66,11 @@ if [ -d "$SCRIPT_DIR/defaults" ]; then
     cp "$SCRIPT_DIR/defaults/"* "$APP_BUNDLE/Contents/Resources/game/" 2>/dev/null
 fi
 
+# Version file from git tag
+GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+echo "$GIT_TAG" > "$APP_BUNDLE/Contents/Resources/version.txt"
+echo "Version: $GIT_TAG"
+
 # Launch script
 cp "$SCRIPT_DIR/launch_mac.sh" "$APP_BUNDLE/Contents/MacOS/launch.sh"
 chmod +x "$APP_BUNDLE/Contents/MacOS/launch.sh"
