@@ -1,7 +1,8 @@
-# build_win.ps1 — Build distributable Windows client from Content/
-# Usage: .\client\build_win.ps1 [-Server "ip"] [-Release]
+# build_win.ps1 — Build distributable Windows client from GameFiles/
+# Usage: .\client\build_win.ps1 [-Version "v0.4.0"] [-Server "ip"] [-Release]
 # Prerequisites: run build_content.py first
 param(
+    [string]$Version,
     [string]$Server,
     [switch]$Release
 )
@@ -77,9 +78,17 @@ if ($Server) {
     }
 }
 
-# Write version.txt from git tag
-$gitTag = git describe --tags --abbrev=0 2>$null
-if (-not $gitTag) { $gitTag = "v0.0.0" }
+# Write version.txt — from -Version param, git tag, or error on -Release
+if ($Version) {
+    $gitTag = $Version
+} else {
+    $gitTag = git describe --tags --abbrev=0 2>$null
+    if (-not $gitTag) { $gitTag = "v0.0.0" }
+}
+if ($Release -and $gitTag -eq "v0.0.0") {
+    Write-Error "Release builds require a version: .\client\build_win.ps1 -Version v0.4.0 -Release"
+    exit 1
+}
 Set-Content "$OutDir\version.txt" $gitTag.Trim()
 Write-Host "Version: $gitTag"
 
