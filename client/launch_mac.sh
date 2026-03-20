@@ -75,7 +75,9 @@ for i in "${!SERVER_NAMES[@]}"; do
 done
 [ -z "$ADDRESS" ] && exit 1
 
-[ -f "$GAME_DIR/main.dat" ] && sed -i "" "s/^address=.*/address=${ADDRESS}/" "$GAME_DIR/main.dat"
+# Resolve DNS to IP (main.dat doesn't support hostnames)
+RESOLVED_IP=$(python3 -c "import socket; print(socket.gethostbyname('$ADDRESS'))" 2>/dev/null || echo "$ADDRESS")
+[ -f "$GAME_DIR/main.dat" ] && sed -i "" "s/^address=.*/address=${RESOLVED_IP}/" "$GAME_DIR/main.dat"
 
 # Try CrossOver first (best rendering)
 if [ -d "$CX" ]; then

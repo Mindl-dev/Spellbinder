@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -39,9 +40,11 @@ namespace SpellBinder
 
         private static readonly string[][] Servers = new string[][]
         {
-            new[] { "Community Server", "45.33.60.131" },
+            new[] { "Community Server", "spellbinder.blackeon.net" },
             new[] { "Localhost", "127.0.0.1" },
         };
+
+        // TODO: Auto-update — check GitHub releases on startup, download + extract if newer
 
         // Team colors for orbs
         private static Color TeamColor(string team)
@@ -237,6 +240,26 @@ namespace SpellBinder
             return text.Trim();
         }
 
+        /// <summary>Resolve a hostname to an IP address. Returns the input unchanged if it's already an IP.</summary>
+        private string ResolveToIP(string hostOrIP)
+        {
+            IPAddress ip;
+            if (IPAddress.TryParse(hostOrIP, out ip))
+                return hostOrIP; // already an IP
+
+            try
+            {
+                var addresses = Dns.GetHostAddresses(hostOrIP);
+                foreach (var addr in addresses)
+                {
+                    if (addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        return addr.ToString(); // first IPv4 address
+                }
+            }
+            catch { }
+            return hostOrIP; // fallback to original if resolution fails
+        }
+
         private void WriteMainDat(string address)
         {
             string mainDat = Path.Combine(gameDir, "main.dat");
@@ -245,7 +268,9 @@ namespace SpellBinder
                 SetStatus("main.dat not found!", true);
                 return;
             }
-            WritePrivateProfileString("socket", "address", address, mainDat);
+            // main.dat doesn't support DNS — resolve to IP
+            string ip = ResolveToIP(address);
+            WritePrivateProfileString("socket", "address", ip, mainDat);
         }
 
         private void SetStatus(string msg, bool error)
