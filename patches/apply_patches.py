@@ -135,6 +135,31 @@ def main():
             print()
         return
 
+    # Cross-check: if this is an interp patch, verify server-side constant matches
+    if "interp" in os.path.basename(patch_path).lower():
+        arena_cs = os.path.join(os.path.dirname(patches_dir), "SpellServer", "Arena", "Arena.cs")
+        if os.path.exists(arena_cs):
+            import re
+            with open(arena_cs) as f:
+                arena_src = f.read()
+            match = re.search(r'ClientInterpDelayMs\s*=\s*(\d+)', arena_src)
+            if not match:
+                print("FATAL: ClientInterpDelayMs not found in Arena.cs — has it been refactored?")
+                print(f"  Searched: {arena_cs}")
+                sys.exit(1)
+            server_ms = int(match.group(1))
+            # Extract client interp from patch: initial timer value (patched bytes as LE uint16)
+            for p in patches:
+                if p["name"] == "interp_initial_timer":
+                    client_val = int.from_bytes(bytes.fromhex(p["patched"]), "little")
+                    client_ms = client_val // 10  # timer ticks to ms
+                    if server_ms != client_ms:
+                        print(f"FATAL: Server ClientInterpDelayMs={server_ms}ms != client interp={client_ms}ms")
+                        print(f"  Update ClientInterpDelayMs in Arena.cs to match.")
+                        sys.exit(1)
+                    print(f"  [interp sync] Server={server_ms}ms, Client={client_ms}ms [OK]")
+                    break
+
     # Apply
     print(f"Applying {len(patches)} patches:")
     applied = apply_patches(data, patches)

@@ -167,6 +167,8 @@ namespace SpellServer
                     sb.AppendFormat(",\"class\":\"{0}\"", c.Class);
                 }
 
+                sb.AppendFormat(",\"ping\":{0}", player.Ping);
+
                 if (player.ActiveArena != null)
                 {
                     sb.AppendFormat(",\"arena\":\"{0}\"", EscapeJson(player.ActiveArena.GameName));
