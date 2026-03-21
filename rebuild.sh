@@ -9,6 +9,9 @@ podman rm spellbinder 2>/dev/null || true
 
 mkdir -p Logs
 
+echo "Pruning old images..."
+podman image prune -f >/dev/null 2>&1 || true
+
 echo "Building..."
 podman build -t spellbinder .
 
