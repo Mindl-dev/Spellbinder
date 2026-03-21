@@ -50,8 +50,11 @@ echo "=== Syncing game files ==="
 rsync -az --delete "$REPO_DIR/GameFiles/" "$REMOTE:$REMOTE_DIR/GameFiles/" 2>/dev/null || \
     scp -r "$REPO_DIR/GameFiles/"* "$REMOTE:$REMOTE_DIR/GameFiles/"
 
+# Get version from local git tag
+LOCAL_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+
 echo "=== Building on $REMOTE ==="
-ssh "$REMOTE" "cd $REMOTE_DIR && chmod +x client/build_mac.sh && REPO_ROOT=$REMOTE_DIR ./client/build_mac.sh $RELEASE"
+ssh "$REMOTE" "cd $REMOTE_DIR && chmod +x client/build_mac.sh && REPO_ROOT=$REMOTE_DIR ./client/build_mac.sh --version $LOCAL_VERSION $RELEASE"
 
 if [ -n "$RELEASE" ]; then
     echo "=== Copying SpellBinder-mac.zip back ==="

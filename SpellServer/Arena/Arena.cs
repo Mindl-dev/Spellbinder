@@ -59,6 +59,7 @@ namespace SpellServer
 	    private readonly Thread WorkerThread;
 
 	    private const Int32 TickRate = 5;
+	    private const Int32 ClientInterpDelayMs = 100;
 
         public ArenaTeamCollection ArenaTeams;
         public ArenaPlayerCollection ArenaPlayers;
@@ -1295,13 +1296,13 @@ namespace SpellServer
 
                         OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(newPos, projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
 
-                        // Lag compensation: check collision against where the target was
-                        // when the shooter fired, based on shooter's ping
+                        // Lag compensation: rewind by ping/2 + client interpolation delay
                         OrientedBoundingBox targetBox;
                         if (projectile.Owner != null && projectile.Owner.WorldPlayer.Ping > 0)
                         {
+                            Int32 rewindMs = (projectile.Owner.WorldPlayer.Ping / 2) + ClientInterpDelayMs;
                             Int64 rewindTime = NativeMethods.PerformanceCount -
-                                (Int64)(projectile.Owner.WorldPlayer.Ping * NativeMethods.PerformanceFrequency / 2000);
+                                (Int64)(rewindMs * NativeMethods.PerformanceFrequency / 1000);
                             Vector3 pastPos = arenaPlayer.GetPositionAtTime(rewindTime);
                             targetBox = new OrientedBoundingBox(pastPos, arenaPlayer.BoundingBox.Size, arenaPlayer.BoundingBox.Rotation);
                         }
@@ -1312,9 +1313,26 @@ namespace SpellServer
 
                         if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) ||
                             (!arenaPlayer.IsAlive && projectile.Spell.Friendly != SpellFriendlyType.FriendlyDead) ||
-                            projectile.Owner.WorldPlayer.PlayerId == arenaPlayer.WorldPlayer.PlayerId ||
-                            !targetBox.Collides(testProjectileBox))
+                            projectile.Owner.WorldPlayer.PlayerId == arenaPlayer.WorldPlayer.PlayerId)
                             continue;
+
+                        bool hit = targetBox.Collides(testProjectileBox);
+                        float dist = Vector3.Distance(targetBox.Origin, testProjectileBox.Origin);
+
+                        if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        {
+                            if (hit)
+                            {
+                                Int32 rewindMs = projectile.Owner != null ? (projectile.Owner.WorldPlayer.Ping / 2) + ClientInterpDelayMs : 0;
+                                Program.Log($"[HitReg] HIT {arenaPlayer.ActiveCharacter?.Name} by {projectile.Owner?.ActiveCharacter?.Name} spell={projectile.Spell?.Name} dist={dist:F0} rewind={rewindMs}ms", System.Drawing.Color.Green, "Misc");
+                            }
+                            else if (dist < 120) // near miss — within ~2.5x player width
+                            {
+                                Program.Log($"[HitReg] NEAR MISS {arenaPlayer.ActiveCharacter?.Name} by {projectile.Owner?.ActiveCharacter?.Name} dist={dist:F0}", System.Drawing.Color.Orange, "Misc");
+                            }
+                        }
+
+                        if (!hit) continue;
 
                         if (projectile.Owner.WorldPlayer.PlayerId != arenaPlayer.WorldPlayer.PlayerId)
                         {
@@ -3317,9 +3335,14 @@ namespace SpellServer
                 }
 
                 // Only reject runes in walls if the caster isn't near the rune
-                // (prevents false positives on ramps/elevations where the player is standing)
+                // (prevents false positives on ramps/elevations and mid-jump placement)
                 float casterDist = Vector3.Distance(arenaPlayer.BoundingBox.Origin, rune.BoundingBox.Origin);
-                if (casterDist > 100 && rune.IsInWall(Grid))
+                bool inWall = rune.IsInWall(Grid);
+                if (inWall)
+                {
+                    Program.Log($"[Rune] {arenaPlayer.ActiveCharacter?.Name} rune at ({rune.BoundingBox.Origin.X:F0},{rune.BoundingBox.Origin.Y:F0},{rune.BoundingBox.Origin.Z:F0}) inWall=true casterDist={casterDist:F0} {(casterDist > 100 ? "REJECTED" : "ALLOWED (near caster)")}", Color.Orange, "Misc");
+                }
+                if (casterDist > 100 && inWall)
                 {
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.ObjectDeath(rune.ObjectId, UDP));
                     return false;
