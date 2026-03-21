@@ -129,15 +129,12 @@ namespace SpellServer
                     {
                         Player connectedPlayer = PlayerManager.Players.FindByAccountId(AccountId);
 
-                        if (connectedPlayer != null)
+                        if (connectedPlayer != null && player != connectedPlayer)
                         {
-                            Error = player != connectedPlayer ? ErrorType.LoggedIn : ErrorType.None;
-
-                            if (Error == ErrorType.LoggedIn)
-                            {
-	                            connectedPlayer.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
-                                connectedPlayer.Disconnect = true;
-                            }
+                            // Kick the ghost session and allow the new login through
+                            connectedPlayer.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
+                            connectedPlayer.Disconnect = true;
+                            Network.Disconnect(connectedPlayer);
                         }
 
                         if (serial != "Not_Found" && serial != "VMWare" && serial != "VirtualPC")
