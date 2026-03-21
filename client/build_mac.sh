@@ -17,6 +17,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --server) SERVER="$2"; shift 2 ;;
         --release) RELEASE=1; shift ;;
+        --version) VERSION_TAG="$2"; shift 2 ;;
         *) GAME_DIR="$1"; shift ;;
     esac
 done
@@ -39,7 +40,7 @@ echo "Copying game files..."
 for f in "$GAME_DIR"/*; do
     base="$(basename "$f")"
     case "$base" in
-        DDraw.dll|D3DImm.dll|D3D8.dll|D3D9.dll|dgVoodoo*|UNWISE.EXE|spell.exe|Play.exe|play.exe)
+        DDraw.dll|D3DImm.dll|D3D8.dll|D3D9.dll|dgVoodoo*|UNWISE.EXE|spell.exe|game.exe|Play.exe|play.exe)
             echo "  Skipping $base (not needed on Mac)"
             ;;
         *)
@@ -48,10 +49,8 @@ for f in "$GAME_DIR"/*; do
     esac
 done
 
-# Ensure game.exe exists (the game binary is game.dll but Wine needs .exe)
-if [ ! -f "$APP_BUNDLE/Contents/Resources/game/game.exe" ]; then
-    cp "$APP_BUNDLE/Contents/Resources/game/game.dll" "$APP_BUNDLE/Contents/Resources/game/game.exe"
-fi
+# CrossOver/Wine needs .exe extension — copy patched game.dll as game.exe
+cp "$APP_BUNDLE/Contents/Resources/game/game.dll" "$APP_BUNDLE/Contents/Resources/game/game.exe"
 
 # Server config
 cat > "$APP_BUNDLE/Contents/Resources/servers.txt" << 'SERVERS'
@@ -66,8 +65,8 @@ if [ -d "$SCRIPT_DIR/defaults" ]; then
     cp "$SCRIPT_DIR/defaults/"* "$APP_BUNDLE/Contents/Resources/game/" 2>/dev/null
 fi
 
-# Version file from git tag
-GIT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+# Version file from --version arg or git tag
+GIT_TAG="${VERSION_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")}"
 echo "$GIT_TAG" > "$APP_BUNDLE/Contents/Resources/version.txt"
 echo "Version: $GIT_TAG"
 

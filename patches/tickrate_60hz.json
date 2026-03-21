@@ -2,6 +2,7 @@
   "target": "game.dll tick rate — 500ms to 16ms (60hz position updates)",
   "target_file": "game.dll",
   "clean_md5": "4d68de929660dc96f6f6505302a86854",
+  "patched_md5": "da9cffa35703673662609f23799b167a",
   "patches": [
     {
       "name": "tickrate_500ms_to_16ms",

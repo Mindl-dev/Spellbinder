@@ -1,6 +1,8 @@
 {
   "target": "game.dll interpolation window — 300 to 1000 (30ms to 100ms)",
   "target_file": "game.dll",
+  "clean_md5": "da9cffa35703673662609f23799b167a",
+  "patched_md5": "62785b59192924e13b3dbb6dae38d096",
   "patches": [
     {
       "name": "interp_initial_timer",
