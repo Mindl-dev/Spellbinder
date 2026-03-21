@@ -45,7 +45,9 @@ namespace SpellServer
 	    private const Int32 PingInterval = 4000;
 
 	    private readonly Thread ProcessReceiveThread;
+        #pragma warning disable CS0169 // UDP receive thread — unused until UDP support is implemented
         private Thread UDPReceiveThread;
+        #pragma warning restore CS0169
         public TcpClient TcpClient;
         //public UdpClient UdpClient;
         public IPEndPoint UdpEndPoint;
@@ -281,7 +283,7 @@ namespace SpellServer
             _receiveBuffer = new Byte[TcpClient.ReceiveBufferSize];
             IpAddress = ((IPEndPoint)TcpClient.Client.RemoteEndPoint).Address.ToString();
 
-            Program.ServerForm.MainLog.WriteMessage(String.Format("Connection from {0}.", IpAddress), Color.Black);
+            Program.Log(String.Format("Connection from {0}.", IpAddress), Color.Black);
 
             Disconnect = false;
 	        DisconnectReason = Resources.Strings_Disconnect.LostConnection;
@@ -337,7 +339,7 @@ namespace SpellServer
             UDPReceiveThread.IsBackground = true;
             UDPReceiveThread.Start();
 
-            Program.ServerForm.MainLog.WriteMessage($"UDP bound for {IpAddress}", Color.Cyan);
+            Program.Log($"UDP bound for {IpAddress}", Color.Cyan);
         }*/
 
         /*private void ProcessUdpReceive()
@@ -361,7 +363,7 @@ namespace SpellServer
                         byte[] data = Network._gameUDPListener.Receive(ref remoteEP);
                         int bytesReceived = data.Length;
 
-                        Program.ServerForm.MainLog.WriteMessage(String.Format("[ProcessUdpReceive] {0}",remoteEP.Address.ToString()), Color.Orange);
+                        Program.Log(String.Format("[ProcessUdpReceive] {0}",remoteEP.Address.ToString()), Color.Orange);
 
                         if (bytesReceived == 0) continue;
 
@@ -371,7 +373,7 @@ namespace SpellServer
                         if (totalBytes > receiveBuffer.Length)
                         {
                             // Should never happen with UDP, but safety first
-                            Program.ServerForm.MainLog.WriteMessage(
+                            Program.Log(
                                 $"[UDP] Packet too large from {IpAddress}: {totalBytes} bytes", Color.Orange);
                             overflowBytes = 0;
                             continue;
@@ -401,7 +403,7 @@ namespace SpellServer
                         if (UdpEndPoint != null && !UdpEndPoint.Equals(remoteEP))
                         {
                             // Spoofed packet? Log and ignore
-                            Program.ServerForm.MainLog.WriteMessage(
+                            Program.Log(
                                 $"[UDP] Spoofed packet from {remoteEP} (expected {UdpEndPoint})", Color.Red);
                         }
                     }
@@ -416,7 +418,7 @@ namespace SpellServer
                     }
                     catch (Exception ex) when (ex.Message.Contains("WSACancelBlockingCall") || ex is ObjectDisposedException)
                     {
-                        Program.ServerForm.MainLog.WriteMessage(
+                        Program.Log(
                             $"[ProcessUdpReceive] Player: {Username}, Error: {ex.Message}", Color.Red);
                         break;
                     }
@@ -431,12 +433,12 @@ namespace SpellServer
             }
             catch (Exception ex)
             {
-                Program.ServerForm.MainLog.WriteMessage(
+                Program.Log(
                     $"[ProcessUdpReceive] Fatal error for {Username}: {ex.Message}\n{ex.StackTrace}", Color.Red);
             }
             finally
             {
-                Program.ServerForm.MainLog.WriteMessage("UDP Disconnect", Color.Red);
+                Program.Log("UDP Disconnect", Color.Red);
                 Network.Disconnect(this);
             }
         }*/
@@ -483,7 +485,7 @@ namespace SpellServer
 	        }
 	        catch (Exception ex)
 	        {
-		        Program.ServerForm.MainLog.WriteMessage(String.Format("[ProcessReceive] , Player: {0}, Function: {1}, Message: {2}, Trace: {3}", Username, ex.TargetSite, ex.Message, ex.GetStackTrace()), Color.Red);
+		        Program.Log(String.Format("[ProcessReceive] , Player: {0}, Function: {1}, Message: {2}, Trace: {3}", Username, ex.TargetSite, ex.Message, ex.GetStackTrace()), Color.Red);
 	        }
 	        finally
 	        {

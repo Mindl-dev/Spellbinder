@@ -260,7 +260,7 @@ namespace SpellServer
                     inStream.Seek(2, SeekOrigin.Begin);
                     inStream.Read(relayBuffer, 0, 10);
 
-                    Program.ServerForm.MainLog.WriteMessage($"targetname: {targetArenaPlayer.ActiveCharacter.Name}, targetid: {targetArenaPlayer.ArenaPlayerId.ToString()}", Color.Red);
+                    Program.Log($"targetname: {targetArenaPlayer.ActiveCharacter.Name}, targetid: {targetArenaPlayer.ArenaPlayerId.ToString()}", Color.Red);
 
                     if (targetArenaPlayer != null)
                     {
@@ -393,7 +393,7 @@ namespace SpellServer
 
                     Rune rune = new Rune(objectId, player.ActiveArenaPlayer, spell, new SharpDX.Vector3(xPos, yPos, zPos), fDirection, relayBuffer);
 
-                    Program.ServerForm.MainLog.WriteMessage($"rune id: {objectId.ToString()}", Color.Red);
+                    Program.Log($"rune id: {objectId.ToString()}", Color.Red);
 
                     if (player.ActiveArena.CastRune(player.ActiveArenaPlayer, rune))
                     {
@@ -449,7 +449,7 @@ namespace SpellServer
                     Single fDirection = MathHelper.DirectionToRadians(NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)));
                     ushort Direction = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 0));
 
-                    Program.ServerForm.MainLog.WriteMessage($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
+                    Program.Log($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
 
                     // Read angle as byte (0–255)
                     inStream.Seek(2, SeekOrigin.Current);
@@ -457,7 +457,7 @@ namespace SpellServer
                     Int32 angle = rawangle > 0x7F ? (rawangle & 0x7F) ^ 0x7F : -rawangle;
                     Single fAngle = angle;
 
-                    Program.ServerForm.MainLog.WriteMessage($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
+                    Program.Log($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
 
                     Byte[] relayBuffer = new Byte[16];
                     inStream.Seek(2, SeekOrigin.Begin);
@@ -551,7 +551,7 @@ namespace SpellServer
                         if (player.ActiveCharacter.Class == SpellServer.Character.PlayerClass.Runemage)
                         {
                             
-                            Program.ServerForm.MainLog.WriteMessage($"spellid: {spell.Id.ToString()}", Color.Red);
+                            Program.Log($"spellid: {spell.Id.ToString()}", Color.Red);
 
                             if (spell.Id == 286)
                             {
@@ -609,7 +609,7 @@ namespace SpellServer
                     Trigger trigger = player.ActiveArena.Grid.Triggers[triggerId];
                     if (trigger == null) return;
 
-                    Program.ServerForm.MainLog.WriteMessage($"trigger id: {triggerId.ToString()}", Color.Red);
+                    Program.Log($"trigger id: {triggerId.ToString()}", Color.Red);
 
                     player.ActiveArena.ActivatedTrigger(player.ActiveArenaPlayer, trigger);
                 }
@@ -621,9 +621,16 @@ namespace SpellServer
                 {
                     SpellServer.Character tempChar = new SpellServer.Character(inStream);
 
-                    SaveError save = SpellServer.Character.Save(player, tempChar);                  
+                    SaveError save = SpellServer.Character.Save(player, tempChar);
 
-                    if (save == SaveError.Success) Network.Send(player, Outgoing.Player.SaveSuccess(player, tempChar.Slot));
+                    if (save == SaveError.Success)
+                    {
+                        Network.Send(player, Outgoing.Player.SaveSuccess(player, tempChar.Slot));
+                    }
+                    else
+                    {
+                        Program.Log(String.Format("Character save failed for {0} (char: {1}, slot: {2}): {3}", player.Username, tempChar.Name, tempChar.Slot, save), Color.Red);
+                    }
                 }
                 public static void Delete(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -638,7 +645,7 @@ namespace SpellServer
 
                     if (deleteCharacter != null)
                     {
-                        Program.ServerForm.MiscLog.WriteMessage(String.Format("[Character Delete] {{{0}}} {1} ({2}), Level: {3}, Class: {4}, EXP: {5}, IP: {6}, Serial: {7}", player.AccountId, player.Username, deleteCharacter.Name, deleteCharacter.Level, deleteCharacter.Class, deleteCharacter.Experience, player.IpAddress, player.Serial), Color.Blue);
+                        Program.Log(String.Format("[Character Delete] {{{0}}} {1} ({2}), Level: {3}, Class: {4}, EXP: {5}, IP: {6}, Serial: {7}", player.AccountId, player.Username, deleteCharacter.Name, deleteCharacter.Level, deleteCharacter.Class, deleteCharacter.Experience, player.IpAddress, player.Serial), Color.Blue, "Misc");
                         
 						MySQL.CharacterStatistics.OverallDeleteByCharId((deleteCharacter.CharacterId));
 	                    MySQL.CharacterStatistics.WeeklyDeleteByCharId((deleteCharacter.CharacterId));
@@ -683,7 +690,7 @@ namespace SpellServer
                     //Byte[] buffer = new Byte[40];
                     //inStream.Read(buffer, 0, (int) inStream.Length);
 
-                    //Program.ServerForm.MainLog.WriteMessage(String.Format("[EstablishDatagram-Inbound] {0}", BitConverter.ToString(buffer)), Color.Red);
+                    //Program.Log(String.Format("[EstablishDatagram-Inbound] {0}", BitConverter.ToString(buffer)), Color.Red);
 
                     Byte[] ipBuffer = new byte[20];
                     inStream.Read(ipBuffer, 0, 20);
@@ -698,7 +705,7 @@ namespace SpellServer
                     player.UdpportBE = new byte[] { port[1], port[0] };
                     player.UdpIpAddress = ipAddr;
 
-                    Program.ServerForm.MainLog.WriteMessage($"UdpportLE: {BitConverter.ToString(player.UdpportLE)}, UdpIp: {player.UdpIpAddress}", Color.Red);
+                    Program.Log($"UdpportLE: {BitConverter.ToString(player.UdpportLE)}, UdpIp: {player.UdpIpAddress}", Color.Red);
 
                     Network.Send(player, Outgoing.Player.EstablishDatagram(player, UDP), UDP);
 
@@ -770,13 +777,13 @@ namespace SpellServer
 
                     player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
 
-                    Thread.Sleep(2000);
-
                     for (Int32 i = 0; i < arena.ArenaPlayers.Count; i++)
                     {
                         Network.Send(player, Outgoing.Arena.PlayerState(arena.ArenaPlayers[i], UDP));
                     }
                 }
+                private const Int32 MaxChatMessage = 128; // chat buffer overflow mitigation — client strcpy at sub_435BC0
+
                 public static void Chat(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
                     Int32 tLen = Convert.ToInt32(inStream.Length) - 10;
@@ -790,6 +797,13 @@ namespace SpellServer
                     inStream.Read(cBuffer, 0, tLen);
 
                     String message = Encoding.ASCII.GetString(cBuffer).Split((Char) 0)[0];
+
+                    if (message.Length > MaxChatMessage)
+                    {
+                        Program.Log(String.Format("{0} oversized chat: {1} bytes (max {2}), dropped",
+                            player.Username, message.Length, MaxChatMessage), Color.Red, "Cheat");
+                        return;
+                    }
 
                     SpellServer.World.ProcessChatMessage(player, target, targetType, message);
                 }
@@ -927,7 +941,7 @@ namespace SpellServer
                     {
                         Boolean isTaken = SpellServer.Cabal.IsCabalNameTaken(name);
 
-                        Program.ServerForm.MainLog.WriteMessage($"CabalName isTaken: {isTaken}, name: {name}", Color.Red);
+                        Program.Log($"CabalName isTaken: {isTaken}, name: {name}", Color.Red);
 
                         Network.Send(player, Outgoing.Study.IsNameTaken(player, name, isTaken, UDP));
                     }
@@ -935,7 +949,7 @@ namespace SpellServer
                     {
                         Boolean isTaken = SpellServer.Cabal.IsCabalTagTaken(name);
 
-                        Program.ServerForm.MainLog.WriteMessage($"TAG isTaken: {isTaken}, name: {name}", Color.Red);
+                        Program.Log($"TAG isTaken: {isTaken}, name: {name}", Color.Red);
 
                         Network.Send(player, Outgoing.Study.IsNameTaken(player, name, isTaken, UDP));
                     }
@@ -986,7 +1000,7 @@ namespace SpellServer
                     {
                         Boolean isValid = SpellServer.Cabal.IsCabalNameValid(name, false);
 
-                        Program.ServerForm.MainLog.WriteMessage($"CabalName isValid: {isValid}, name: {name}", Color.Red);
+                        Program.Log($"CabalName isValid: {isValid}, name: {name}", Color.Red);
 
                         Network.Send(player, Outgoing.Study.IsNameValid(player, name, nameType, isValid, UDP));
                     }
@@ -994,7 +1008,7 @@ namespace SpellServer
                     {                        
                         Boolean isValid = SpellServer.Cabal.IsCabalTagValid(name);
 
-                        Program.ServerForm.MainLog.WriteMessage($"TAG isValid: {isValid}, name: {name}", Color.Red);
+                        Program.Log($"TAG isValid: {isValid}, name: {name}", Color.Red);
                         
                         Network.Send(player, Outgoing.Study.IsNameValid(player, name, nameType, isValid, UDP));
                     }
@@ -1368,7 +1382,7 @@ namespace SpellServer
                         hackString.Append(String.Format("({0}[{1}]) {2}({3})", player.AccountId, player.ActiveCharacter.CharacterId, player.Username, player.ActiveCharacter.Name));
                     }
 
-                    Program.ServerForm.CheatLog.WriteMessage(hackString.ToString(), Color.Red);
+                    Program.Log(hackString.ToString(), Color.Red, "Cheat");
 
 					player.DisconnectReason = Resources.Strings_Disconnect.CheatProgram;
                     player.Disconnect = true;
@@ -1452,7 +1466,7 @@ namespace SpellServer
                         hackString.Append(String.Format("({0}[{1}]) {2}({3}) Program: {4}, Type: {5}", player.AccountId, player.ActiveCharacter.CharacterId, player.Username, player.ActiveCharacter.Name, programName, cheatTypeName));
                     }
 
-                    Program.ServerForm.CheatLog.WriteMessage(hackString.ToString(), Color.Red);
+                    Program.Log(hackString.ToString(), Color.Red, "Cheat");
 
 	                player.DisconnectReason = Resources.Strings_Disconnect.CheatProgram;
                     player.Disconnect = true;

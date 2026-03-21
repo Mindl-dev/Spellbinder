@@ -77,12 +77,27 @@ namespace SpellServer
         public Byte[] PacketData;
         public PacketOutFunction Function;
 
-        public Packet(MemoryStream inStream)
+        /// <summary>Build an outgoing server→client packet.
+        /// Layout: [2:length] [2:source_id] [1:func_id] [N:data] [2:trailing]
+        /// The inStream starts with [0x00, func_id, data...] — the leading 0x00
+        /// is the low byte of source_id (originally hardcoded to 0).</summary>
+        /// <param name="inStream">Stream starting with 0x00 + func_id + payload</param>
+        /// <param name="sourceId">Player ID for the client to route this packet (0 = server/system)</param>
+        public Packet(MemoryStream inStream, UInt16 sourceId = 0)
         {
-            MemoryStream outStream = new MemoryStream((Int32)inStream.Length + 5);
-            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)inStream.Length)), 0, 2);
-            outStream.WriteByte(0x00);
-            inStream.WriteTo(outStream);
+            // Outgoing packet layout: [2:length] [2:source_id] [1:func_id] [N:data] [2:trailing]
+            // inStream arrives as: [0x00(padding), func_id, data...]
+            // We replace the padding byte with source_id, keeping the total size identical.
+            // Length field = inStream.Length = source_id(1 byte used) + func_id + data
+            Byte[] streamData = inStream.ToArray();
+            Int16 payloadLength = (Int16)inStream.Length;
+            MemoryStream outStream = new MemoryStream(streamData.Length + 5);
+            outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(payloadLength)), 0, 2);
+            // Source ID as big-endian uint16 — replaces the [padding, inStream[0]] pair
+            outStream.WriteByte((Byte)(sourceId >> 8));
+            outStream.WriteByte((Byte)(sourceId & 0xFF));
+            // Write func_id + payload (skip the leading 0x00 padding byte from inStream)
+            outStream.Write(streamData, 1, streamData.Length - 1);
             outStream.WriteByte(0x00);
             outStream.WriteByte(0x00);
             PacketData = outStream.GetBuffer();

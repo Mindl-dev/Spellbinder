@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{576D4738-0379-430B-BECF-DEBF70D588BC}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>SpellServer.Tests</RootNamespace>
+    <AssemblyName>SpellServer.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="nunit.framework">
+      <HintPath>..\packages\NUnit.3.14.0\lib\net45\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="PacketTests.cs" />
+    <Compile Include="PacketReaderWriterTests.cs" />
+    <Compile Include="TestHelpers.cs" />
+    <Compile Include="GamePacketOutgoingTests.cs" />
+    <Compile Include="IniCacheTests.cs" />
+    <Compile Include="ArenaPlayerTests.cs" />
+    <Compile Include="LoggingTests.cs" />
+    <Compile Include="IntegrationTests.cs" />
+    <Compile Include="IniCacheVsWin32Tests.cs" />
+    <Compile Include="PasswordHasherTests.cs" />
+    <Compile Include="InputSanitizationTests.cs" />
+    <Compile Include="ApiServerTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Helper\Helper.csproj">
+      <Project>{4071d462-6324-42d7-9974-16c2a8e89b11}</Project>
+      <Name>Helper</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\SpellServer\SpellServer.csproj">
+      <Project>{D36802FD-9C66-4996-B1E9-22F0329B191F}</Project>
+      <Name>SpellServer</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

@@ -5,7 +5,7 @@ using System.Windows.Forms;
 
 namespace Helper
 {
-    public class LogBox : ExtendedRichTextBox
+    public class LogBox : ExtendedRichTextBox, ILogWriter
     {
         public readonly Object SyncRoot = new Object();
 
@@ -54,16 +54,13 @@ namespace Helper
 
         void PrintTimerTick(object sender, EventArgs e)
         {
-            if (Messages.Count > 10)
-            {
-                for (Int32 i = Messages.Count - 1; i >= 0; i--)
-                {
-                    ProcessMessage(i);
-                }
-            }
-            else
+            // Drain all pending messages in FIFO order (always from index 0).
+            // Cap iterations to prevent infinite loop if ProcessMessage fails to remove.
+            int maxDrain = Messages.Count;
+            for (int drain = 0; drain < maxDrain && Messages.Count > 0; drain++)
             {
                 ProcessMessage(0);
+                if (maxDrain >= Messages.Count) break; //breaks the loop if no messages are removed
             }
 
             if (HasChanged && IsScrollToCaret)

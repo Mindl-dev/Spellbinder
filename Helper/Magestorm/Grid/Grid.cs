@@ -108,6 +108,21 @@ namespace Helper
         }
         public Grid(Grid grid) : this()
         {
+            if (grid == null) throw new ArgumentNullException(nameof(grid), "Grid copy: source grid is null");
+
+            // Validate all required fields upfront so we get a clear message
+            var nullFields = new System.Collections.Generic.List<String>();
+            if (grid.GridBlocks == null) nullFields.Add("GridBlocks");
+            if (grid.Thins == null) nullFields.Add("Thins");
+            if (grid.Tiles == null) nullFields.Add("Tiles");
+            if (grid.Triggers == null) nullFields.Add("Triggers");
+            if (grid.Pools == null) nullFields.Add("Pools");
+            if (grid.DragonShrine == null) nullFields.Add("DragonShrine");
+            if (grid.PheonixShrine == null) nullFields.Add("PheonixShrine");
+            if (grid.GryphonShrine == null) nullFields.Add("GryphonShrine");
+            if (nullFields.Count > 0)
+                throw new InvalidOperationException($"Grid copy '{grid.Name}' (id={grid.GridId}): null fields: {String.Join(", ", nullFields)}");
+
             GridBlocks = grid.GridBlocks;
             Thins = grid.Thins;
             Tiles = grid.Tiles;
@@ -196,6 +211,7 @@ namespace Helper
             ExpBonus = grid.ExpBonus;
 
             Maps = grid.Maps;
+            Tables = grid.Tables;
 
             SubPixelLibrary = grid.SubPixelLibrary;
 
@@ -254,7 +270,7 @@ namespace Helper
                 }
             }
         }
-        private void LoadHollowZones(int id, LogBox logBox)
+        private void LoadHollowZones(int id, ILogWriter logBox)
         {
             // 1. Point to your static data definitions
             HashSet<long> sourceData = null;
@@ -281,7 +297,7 @@ namespace Helper
             // This ensures grid.HollowZones is NEVER null.
             this.HollowZones = new HashSet<long>(sourceData);
         }
-        public static void LoadAllGrids(LogBox logBox)
+        public static void LoadAllGrids(ILogWriter logBox)
 		{
 			String fName = String.Format("{0}\\Arenas.dat", Directory.GetCurrentDirectory());
 			Int32 aCount = NativeMethods.GetPrivateProfileInt32("arenadefs", "numarenas", fName);
@@ -333,14 +349,14 @@ namespace Helper
                     }
                 }*/
 
-                Application.DoEvents();
+                try { Application.DoEvents(); } catch { }
 			}
 
 			logBox.WriteMessage(String.Format("{0} out of {1} Arenas loaded.", i, aCount), System.Drawing.Color.Blue);
 
         }
 
-        public Boolean Load(Int32 gridId, LogBox logBox)
+        public Boolean Load(Int32 gridId, ILogWriter logBox)
         {
             try
             {
@@ -873,7 +889,7 @@ namespace Helper
 
             return BitConverter.ToInt16(_rawTerrainData, rawByteOffset);
         }
-        private void LoadGrid(Boolean isServer, LogBox logBox)
+        private void LoadGrid(Boolean isServer, ILogWriter logBox)
         {
             const int MAIN_SIZE = 16384 * 38; // 622592 bytes
 

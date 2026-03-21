@@ -194,6 +194,8 @@
     <Compile Include="Network\MailManager.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Network\PasswordHasher.cs" />
+    <Compile Include="Network\InputSanitizer.cs" />
     <Compile Include="Network\MySQL.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -205,10 +207,13 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Network\Packet.cs" />
+    <Compile Include="Network\PacketReader.cs" />
+    <Compile Include="Network\PacketWriter.cs" />
     <Compile Include="Network\Subscription.cs">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Network\WebChat.cs" />
+    <Compile Include="Network\ApiServer.cs" />
     <Compile Include="Resources\Strings_Arena.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  spellbinder:
+    build: .
+    ports:
+      - "10601:10601/udp"
+      - "10602:10602/tcp"
+    volumes:
+      # Game content (copyrighted — not baked into image)
+      # Needs: Spells.dat, Arenas.dat, Grids/{grid00..03}/, spellbinder-server.sql
+      # Source from the full game installer (spelinst.exe) or the Content/ dir in this repo
+      - ./Content:/app/Content
+      # Persist MySQL data across restarts
+      - spellbinder-data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  spellbinder-data:

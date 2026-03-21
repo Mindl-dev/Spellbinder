@@ -58,10 +58,34 @@ namespace SpellServer
             }
             catch (Exception ex)
             {
-                Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                Program.Log(ex.Message, Color.Red);
             }
 
             return null;
+        }
+
+        public static bool CreateAccount(string username, string hashedPassword)
+        {
+            try
+            {
+                using (var conn = new MySqlConnection(ConnectionString))
+                {
+                    conn.Open();
+                    using (var cmd = new MySqlCommand(
+                        "INSERT INTO accounts (username, password, Admin) VALUES (@username, @password, 0)",
+                        conn))
+                    {
+                        cmd.Parameters.AddWithValue("@username", username);
+                        cmd.Parameters.AddWithValue("@password", hashedPassword);
+                        return cmd.ExecuteNonQuery() > 0;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"CreateAccount error: {ex.Message}", Color.Red);
+                return false;
+            }
         }
     }
     public static class ServerSettings
@@ -91,7 +115,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -125,7 +149,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 			}
 
@@ -155,7 +179,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -186,7 +210,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -220,7 +244,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -254,7 +278,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 			}
 
@@ -287,7 +311,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -319,7 +343,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -359,7 +383,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return null;
@@ -396,7 +420,7 @@ namespace SpellServer
                 }
                 catch (Exception ex)
                 {
-                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                    Program.Log(ex.Message, Color.Red);
                 }
 
                 return null;
@@ -434,7 +458,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return null;
@@ -471,8 +495,8 @@ namespace SpellServer
 				}
                 catch (Exception ex)
 				{
-                    Program.ServerForm.MainLog.WriteMessage("MySQL SaveCabal", Color.Red);
-                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                    Program.Log("MySQL SaveCabal", Color.Red);
+                    Program.Log(ex.Message, Color.Red);
                 }
 
 				return false;
@@ -519,8 +543,8 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-                    Program.ServerForm.MainLog.WriteMessage("MySQL LoadCabals", Color.Red);
-                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                    Program.Log("MySQL LoadCabals", Color.Red);
+                    Program.Log(ex.Message, Color.Red);
                 }
 
                 return cabalList;
@@ -560,7 +584,7 @@ namespace SpellServer
                 }
                 catch (Exception ex)
                 {
-                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                    Program.Log(ex.Message, Color.Red);
                 }
 
                 return null;
@@ -598,7 +622,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return null;
@@ -716,8 +740,8 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-                    Program.ServerForm.MainLog.WriteMessage("MySQL Save", Color.Red);
-                    Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+                    Program.Log(String.Format("MySQL Save failed for char {0} (account {1}): {2}", character.Name, character.AccountId, ex.Message), Color.Red);
+                    Program.Log(ex.StackTrace, Color.Red);
 				}
 
 				return false;
@@ -755,7 +779,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return null;
@@ -794,7 +818,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return null;
@@ -833,7 +857,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return null;
@@ -866,7 +890,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -918,7 +942,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return 0;
@@ -963,7 +987,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -1006,7 +1030,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -1039,7 +1063,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;
@@ -1072,7 +1096,7 @@ namespace SpellServer
 				}
 				catch (Exception ex)
 				{
-					Program.ServerForm.MainLog.WriteMessage(ex.Message, Color.Red);
+					Program.Log(ex.Message, Color.Red);
 				}
 
 				return false;

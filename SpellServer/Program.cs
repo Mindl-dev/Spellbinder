@@ -15,6 +15,10 @@ namespace SpellServer
 		public static Boolean ServerStarted;
 		public static String[] Arguments;
 		public static ServerForm ServerForm;
+		public static Boolean Headless;
+		public static ArenaSpecialFlag DefaultDebugFlags;
+		public static ConsoleLogBox HeadlessMainLog;
+		public static ConsoleLogBox HeadlessChatLog;
 
         [STAThread]
         public static void Main(String[] arguments)
@@ -22,35 +26,95 @@ namespace SpellServer
 	        try
 	        {
 		        Arguments = arguments;
+				Headless = Array.Exists(arguments, a => a == "--headless" || a == "-h");
 
-				NativeMethods.BeginTimePeriod(1);
+				var debugArg = Array.Find(arguments, a => a.StartsWith("--debug="));
+			if (debugArg != null)
+			{
+				foreach (var flag in debugArg.Substring("--debug=".Length).Split(','))
+				{
+					if (Enum.TryParse<ArenaSpecialFlag>(flag.Trim(), true, out var parsed))
+						DefaultDebugFlags |= parsed;
+					else
+						Console.WriteLine($"WARNING: Unknown debug flag '{flag.Trim()}'. Valid: {String.Join(", ", Enum.GetNames(typeof(ArenaSpecialFlag)))}");
+				}
+				Console.WriteLine($"Arena debug flags: {DefaultDebugFlags}");
+			}
 
-				Application.EnableVisualStyles();
-				Application.SetCompatibleTextRenderingDefault(false);
+			if (Array.Exists(arguments, a => a == "--no-sanitize"))
+				{
+					InputSanitizer.Enabled = false;
+					Console.WriteLine("WARNING: Input sanitization DISABLED (--no-sanitize). For protocol debugging only!");
+				}
 
-				Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+				// High-resolution timer — Windows only (winmm.dll), safe to skip on Linux
+				try { NativeMethods.BeginTimePeriod(1); } catch (DllNotFoundException) { }
 
-				Application.ThreadException += OnThreadException;
 				AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
-				AppDomain.CurrentDomain.ProcessExit += (s, e) => NativeMethods.EndTimePeriod(1);
+				AppDomain.CurrentDomain.ProcessExit += (s, e) => { try { NativeMethods.EndTimePeriod(1); } catch (DllNotFoundException) { } };
 
-                ServerForm = new ServerForm();
+				if (Headless)
+				{
+					HeadlessMainLog = new ConsoleLogBox("Main");
+					HeadlessChatLog = new ConsoleLogBox("Chat");
+					HeadlessMainLog.WriteMessage("Starting in headless mode...", Color.Blue);
+					StartServer();
+					// Block the main thread — server runs on background threads
+					HeadlessMainLog.WriteMessage("Server running. Press Ctrl+C to stop.", Color.Green);
+					var exitEvent = new System.Threading.ManualResetEvent(false);
+					Console.CancelKeyPress += (s, e) => { e.Cancel = true; exitEvent.Set(); };
+					exitEvent.WaitOne();
+				}
+				else
+				{
+					Application.EnableVisualStyles();
+					Application.SetCompatibleTextRenderingDefault(false);
+					Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+					Application.ThreadException += OnThreadException;
 
-                // THIS IS THE MAGIC LINE
-                ServerForm.Shown += (sender, e) =>
-                {
-                    // Form is now fully shown — UI thread is running — SAFE TO DO HEAVY WORK
-                    Program.ServerForm.MainLog.WriteMessage("Form shown — initializing server...", Color.Blue);
-                    StartServer();  // ← This now calls LoadSpells() safely
-                };
-
-                Application.Run(ServerForm = new ServerForm());
+					ServerForm = new ServerForm();
+					ServerForm.Shown += (sender, e) =>
+					{
+						Log("Form shown — initializing server...", Color.Blue);
+						StartServer();
+					};
+					Application.Run(ServerForm);
+				}
 	        }
-	        finally 
+	        finally
 	        {
-				Application.Exit();
+				if (!Headless) Application.Exit();
 	        }
         }
+
+		/// <summary>Write to log — works in both GUI and headless mode.
+		/// In GUI mode, routes to the appropriate log tab by category.
+		/// In headless mode, all categories go to console with a prefix.</summary>
+		public static void Log(String text, Color color, String category = "Main")
+		{
+			if (Headless || ServerForm == null)
+			{
+				// Headless mode or GUI not yet initialized — write to console
+				var prefix = category == "Main" ? "" : $"[{category}] ";
+				if (HeadlessMainLog != null)
+					HeadlessMainLog.WriteMessage($"{prefix}{text}", color);
+				else
+					Console.WriteLine($"{prefix}{text}");
+			}
+			else
+			{
+				switch (category)
+				{
+					case "Chat":    ServerForm.ChatLog?.WriteMessage(text, color); break;
+					case "Cheat":   ServerForm.CheatLog?.WriteMessage(text, color); break;
+					case "Admin":   ServerForm.AdminLog?.WriteMessage(text, color); break;
+					case "Whisper": ServerForm.WhisperLog?.WriteMessage(text, color); break;
+					case "Report":  ServerForm.ReportLog?.WriteMessage(text, color); break;
+					case "Misc":    ServerForm.MiscLog?.WriteMessage(text, color); break;
+					default:        ServerForm.MainLog?.WriteMessage(text, color); break;
+				}
+			}
+		}
 
 	    public static void StartServer()
 	    {
@@ -58,22 +122,22 @@ namespace SpellServer
 
 		    ServerStarted = true;
 
-            Program.ServerForm.MainLog.WriteMessage("Starting server initialization...", Color.Blue);
+            Log("Starting server initialization...", Color.Blue);
 
 			try
 			{
 				SpellManager.LoadSpells();
-				Program.ServerForm.MainLog.WriteMessage("Spells loaded successfully.", Color.Green);
+				Log("Spells loaded successfully.", Color.Green);
 			}
 			catch (Exception ex)
 			{
-                Program.ServerForm.MainLog.WriteMessage($"FATAL: Failed to load Spells.dat → {ex.Message}", Color.Red);
-                Program.ServerForm.MainLog.WriteMessage(ex.StackTrace, Color.Red);
+                Log($"FATAL: Failed to load Spells.dat → {ex.Message}", Color.Red);
+                Log(ex.StackTrace, Color.Red);
                 return;
             }
 
 			Character.LoadFilteredNames();
-			Grid.LoadAllGrids(ServerForm.MainLog);
+			Grid.LoadAllGrids(Headless ? (ILogWriter)HeadlessMainLog : ServerForm.MainLog);
 
 			MySQL.OnlineAccounts.SetAllOffline();
 			MySQL.OnlineCharacters.SetAllOffline();
@@ -82,6 +146,7 @@ namespace SpellServer
 			CabalManager.LoadCabals();
 
 			Network.Listen();
+			ApiServer.Start();
 	    }
 
 	    private static void OnThreadException(Object sender, ThreadExceptionEventArgs e)
@@ -102,7 +167,7 @@ namespace SpellServer
 		        Settings.Default.Locked = true;
 		        String trace = exception.GetStackTrace();
 
-		        ServerForm.MainLog.WriteMessage(String.Format("[Exception] {0}", trace), Color.Red);
+		        Log(String.Format("[Exception] {0}", trace), Color.Red);
 
 		        MailManager.QueueMail("Server Crash", trace);
 
@@ -112,7 +177,7 @@ namespace SpellServer
 			        Thread.Sleep(1);
 		        }
 
-		        ServerForm.PurgeAllLogMessages();
+		        if (!Headless) ServerForm?.PurgeAllLogMessages();
 	        }
 	        finally
 	        {

@@ -100,7 +100,7 @@ namespace SpellServer
         }
         public static void JoinCabal(Player player, Cabal cabal)
         {
-            Program.ServerForm.MainLog.WriteMessage($"{player.ActiveCharacter.Name} is joining Cabal: {cabal.CabalName}({cabal.CabalTag})", Color.Red);
+            Program.Log($"{player.ActiveCharacter.Name} is joining Cabal: {cabal.CabalName}({cabal.CabalTag})", Color.Red);
             Save(player, cabal, false);
 
             UpdateAllPlayers(player, cabal, true);
@@ -121,7 +121,7 @@ namespace SpellServer
 
                 bool isNew = true;
 
-                Program.ServerForm.MainLog.WriteMessage($"{player.ActiveCharacter.Name} is creating and joining Cabal: {cabalName}({cabalTag})", Color.Red);
+                Program.Log($"{player.ActiveCharacter.Name} is creating and joining Cabal: {cabalName}({cabalTag})", Color.Red);
 
                 CabalSaveError saved = Save(player, newCabal, isNew);
 
@@ -133,7 +133,7 @@ namespace SpellServer
         {
             player.ActiveCharacter.CabalId = 0;
 
-            Program.ServerForm.MainLog.WriteMessage($"{player.ActiveCharacter.Name} is leaving Cabal: {cabal.CabalName}({cabal.CabalTag})", Color.Red);
+            Program.Log($"{player.ActiveCharacter.Name} is leaving Cabal: {cabal.CabalName}({cabal.CabalTag})", Color.Red);
 
             //Save(player, CabalManager.Cabals.FindById(player.ActiveCharacter.CabalId), false);
 
@@ -203,12 +203,12 @@ namespace SpellServer
 
                     /*if (Join)
                     {
-                        Program.ServerForm.MainLog.WriteMessage($"Sending CabalJoin message to {targetplayer.ActiveCharacter.Name}", Color.Red);
+                        Program.Log($"Sending CabalJoin message to {targetplayer.ActiveCharacter.Name}", Color.Red);
                         Network.Send(targetplayer, GamePacket.Outgoing.Study.CabalJoin(player, targetplayer));
                     }
                     else
                     {
-                        Program.ServerForm.MainLog.WriteMessage($"Sending LeaveCabal message to {targetplayer.ActiveCharacter.Name}", Color.Red);
+                        Program.Log($"Sending LeaveCabal message to {targetplayer.ActiveCharacter.Name}", Color.Red);
                         Network.Send(targetplayer, GamePacket.Outgoing.Study.LeaveCabal(player, targetplayer, cabal));
                     }*/
                 }
