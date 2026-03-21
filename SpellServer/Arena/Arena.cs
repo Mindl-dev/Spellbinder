@@ -3337,7 +3337,12 @@ namespace SpellServer
                 // Only reject runes in walls if the caster isn't near the rune
                 // (prevents false positives on ramps/elevations and mid-jump placement)
                 float casterDist = Vector3.Distance(arenaPlayer.BoundingBox.Origin, rune.BoundingBox.Origin);
-                if (casterDist > 100 && rune.IsInWall(Grid))
+                bool inWall = rune.IsInWall(Grid);
+                if (inWall)
+                {
+                    Program.Log($"[Rune] {arenaPlayer.ActiveCharacter?.Name} rune at ({rune.BoundingBox.Origin.X:F0},{rune.BoundingBox.Origin.Y:F0},{rune.BoundingBox.Origin.Z:F0}) inWall=true casterDist={casterDist:F0} {(casterDist > 100 ? "REJECTED" : "ALLOWED (near caster)")}", Color.Orange, "Misc");
+                }
+                if (casterDist > 100 && inWall)
                 {
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.ObjectDeath(rune.ObjectId, UDP));
                     return false;

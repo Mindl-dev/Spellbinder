@@ -508,13 +508,9 @@ namespace SpellServer
 
             Int64 elapsedActiveTime = ActiveArenaPlayer.ActiveTime.ElapsedSeconds;
 
-            if (elapsedActiveTime >= (Flags.HasFlag(PlayerFlag.MagestormPlus) ? 480 : 300))
+            if (elapsedActiveTime >= 1200) // 20 minutes
             {
                 ActiveArena.ArenaKickPlayer(ActiveArenaPlayer);
-            }
-            else if (elapsedActiveTime >= (Flags.HasFlag(PlayerFlag.MagestormPlus) ? 460 : 280))
-            {
-
             }
         }
     }

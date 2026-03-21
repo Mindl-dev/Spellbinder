@@ -104,8 +104,13 @@ fi
 
 mkdir -p Logs/Main Logs/Cheat
 
-# Compress old logs daily at midnight
-echo '0 0 * * * find /app/Logs -name "*.txt" ! -newermt "today" -exec gzip -q {} \;' | crontab -
+# Daily cron jobs at midnight: compress old logs, backup database
+mkdir -p /app/Logs/Backups
+(cat <<'CRON'
+0 0 * * * find /app/Logs -maxdepth 2 -name "*.txt" ! -newermt "today" -exec gzip -q {} \;
+5 0 * * * mysqldump -u root magestorm 2>/dev/null | gzip > /app/Logs/Backups/magestorm-$(date +\%Y\%m\%d).sql.gz && find /app/Logs/Backups -name "*.sql.gz" -mtime +30 -delete
+CRON
+) | crontab -
 cron
 
 echo "Starting SpellBinder server..."
