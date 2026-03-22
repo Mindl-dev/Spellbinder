@@ -16,10 +16,13 @@ ENV_FILE="$REPO_DIR/.env"
 
 RELEASE=""
 REMOTE=""
-for arg in "$@"; do
-    case "$arg" in
-        --release) RELEASE="--release" ;;
-        *@*) REMOTE="$arg" ;;
+VERSION=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --release) RELEASE="--release"; shift ;;
+        --version) VERSION="$2"; shift 2 ;;
+        *@*) REMOTE="$1"; shift ;;
+        *) shift ;;
     esac
 done
 
@@ -29,7 +32,7 @@ if [ -z "$REMOTE" ]; then
 fi
 if [ -z "$REMOTE" ]; then
     echo "ERROR: No Mac build host specified."
-    echo "Usage: ./client/build_mac_remote.sh user@host [--release]"
+    echo "Usage: ./client/build_mac_remote.sh --version v0.4.1 user@host [--release]"
     echo "Or set MAC_BUILD_HOST in .env"
     exit 1
 fi
@@ -50,11 +53,15 @@ echo "=== Syncing game files ==="
 rsync -az --delete "$REPO_DIR/GameFiles/" "$REMOTE:$REMOTE_DIR/GameFiles/" 2>/dev/null || \
     scp -r "$REPO_DIR/GameFiles/"* "$REMOTE:$REMOTE_DIR/GameFiles/"
 
-# Get version from local git tag
-LOCAL_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+# Version is required
+if [ -z "$VERSION" ]; then
+    echo "ERROR: --version required."
+    echo "Usage: ./client/build_mac_remote.sh --version v0.4.1 [user@host] [--release]"
+    exit 1
+fi
 
 echo "=== Building on $REMOTE ==="
-ssh "$REMOTE" "cd $REMOTE_DIR && chmod +x client/build_mac.sh && REPO_ROOT=$REMOTE_DIR ./client/build_mac.sh --version $LOCAL_VERSION $RELEASE"
+ssh "$REMOTE" "cd $REMOTE_DIR && chmod +x client/build_mac.sh && REPO_ROOT=$REMOTE_DIR ./client/build_mac.sh --version $VERSION $RELEASE"
 
 if [ -n "$RELEASE" ]; then
     echo "=== Copying SpellBinder-mac.zip back ==="

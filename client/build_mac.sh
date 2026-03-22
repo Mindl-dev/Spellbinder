@@ -65,8 +65,12 @@ if [ -d "$SCRIPT_DIR/defaults" ]; then
     cp "$SCRIPT_DIR/defaults/"* "$APP_BUNDLE/Contents/Resources/game/" 2>/dev/null
 fi
 
-# Version file from --version arg or git tag
-GIT_TAG="${VERSION_TAG:-$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")}"
+# Version file — --version is required
+if [ -z "$VERSION_TAG" ]; then
+    echo "ERROR: --version required. Usage: ./client/build_mac.sh --version v0.4.1 [--release]"
+    exit 1
+fi
+GIT_TAG="$VERSION_TAG"
 echo "$GIT_TAG" > "$APP_BUNDLE/Contents/Resources/version.txt"
 echo "Version: $GIT_TAG"
 

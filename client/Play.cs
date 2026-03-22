@@ -14,7 +14,7 @@ namespace SpellBinder
 {
     public class PlayForm : Form
     {
-        private const string VERSION = "0.4.0";
+        private const string VERSION = "0.4.1";
         private const string GITHUB_RELEASE_API = "https://api.github.com/repos/Mindl-dev/Spellbinder/releases/latest";
         private const string GITHUB_ASSET_WIN = "SpellBinder-win.zip";
 

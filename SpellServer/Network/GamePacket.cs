@@ -188,6 +188,10 @@ namespace SpellServer
 
                     //When we say 1st, 2nd, 3rd bit etc. We are talking in wire order, we're 0 indexed.
 
+
+                    //-------------------------------------
+                    //Old
+
                     //remove the first 16 bits of the stream which seem to always be 0x0000
                     inStream.Seek(2, SeekOrigin.Begin);
 
@@ -198,21 +202,23 @@ namespace SpellServer
                     //convert first 16 bits (0th-15th) of payload to a ushort
                     ushort rawWord = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 0)); // Note: check endianness
 
-                    // take the 10th and 11th bit of the payload, and store it as the elementId TODO this seems wrong
+                    // take the 10th and 11th bit of the payload, TODO, why would it be clobbered by the walking angle?
                     int elementId = (rawWord >> 9) & 0x03;
+
+                    //-------------------------------------
+                    //New
 
                     // PacketReader reader = new PacketReader(inStream);
                     // //skip the first 16 bits of the stream which seem to always be 0x0000
                     // reader.Skip(2); // data[-2] and data[-1]
 
                     // //convert first 16 bits (0th-15th) of payload to a ushort
-                    // ushort rawWord = reader.ReadUInt16BE(); // data[0]
+                    // byte firstByte = reader.ReadByte(); // data[0]
 
-                    // // take the 2and and 3rd bit of the payload, and store it as the elementId TODO this seems wrong
-                    // int elementId = (rawWord >> 9) & 0x03;
+                    // // take the 2and and 3rd bit ? of the payload, and store it as the elementId TODO this seems wrong
+                    // int elementId = firstByte & 0x03;
 
-                    // byte elementIdRaw = reader.ReadByte(); // first byte of the payload
-                    // int elementId2 = elementIdRaw & 0x03;
+                    //-------------------------------------
 
                     // take bits 0-11 of the payload, and store it as the walkingAngle. Is non zero if moving.
                     //Walking angle is the angle the player is walking in, is non zero if moving.
@@ -1344,7 +1350,7 @@ namespace SpellServer
 
                     if (player.ActiveCharacter.AvailableStatPoints > 0)
                     {
-                        SpellServer.World.SendSystemMessage(player, "You have unspent stat points.  Go to the website to spend them.");
+                        SpellServer.World.SendSystemMessage(player, "You have unspent stat points. Go to the character select to spend them.");
                     }
                     
                     if (player.Flags.HasFlag(PlayerFlag.ChatDisabled))
