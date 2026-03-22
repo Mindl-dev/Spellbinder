@@ -133,7 +133,7 @@ namespace SpellServer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Have fun playing Magestorm!")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Have fun playing SpellBinder!")]
         public string MessageOfTheDay {
             get {
                 return ((string)(this["MessageOfTheDay"]));

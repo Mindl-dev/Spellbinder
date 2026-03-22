@@ -2926,6 +2926,10 @@ namespace SpellServer
 
             if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoShrineBiasing) || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) return;
 
+            // Rate limit bias attempts — 1 roll per 2 seconds regardless of client tick rate
+            if (!arenaPlayer.BiasCooldown.HasElapsed) return;
+            arenaPlayer.BiasCooldown.Reset();
+
             lock (SyncRoot)
             {
                 Int32 penaltyDivider = 3;
@@ -3020,6 +3024,10 @@ namespace SpellServer
         {
             Pool pool = Grid.Pools.FindById(poolId);
             if (pool == null || !arenaPlayer.IsAlive || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoPoolBiasing) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
+
+            // Rate limit bias attempts — shares cooldown with shrine biasing
+            if (!arenaPlayer.BiasCooldown.HasElapsed) return;
+            arenaPlayer.BiasCooldown.Reset();
 
             lock (SyncRoot)
             {

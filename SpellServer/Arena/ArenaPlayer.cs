@@ -107,6 +107,7 @@ namespace SpellServer
         public Boolean HasFliedSinceHackDetect;
 
         public Interval ValhallaProtection;
+        public Interval BiasCooldown;
 
         private Vector3 _previousLocation;
         private Int16 _previousLocationTick;
@@ -498,6 +499,7 @@ namespace SpellServer
                 NonFriendlyWallTime = new Interval(1000, false);
                 FriendlyWallTime = new Interval(1000, false);
                 ValhallaProtection = new Interval(2000, false);
+                BiasCooldown = new Interval(2000, true); // 2 seconds between bias attempts
                 ActiveTime = new Interval(0, false);
                 BoundingBox = new OrientedBoundingBox(Location, PlayerStandingSize, 0.0f);
 
