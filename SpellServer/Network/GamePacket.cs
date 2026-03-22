@@ -1876,9 +1876,14 @@ namespace SpellServer
                             {
                                 outStream.Write(BitConverter.GetBytes(arenaPlayer.ArenaPlayerId), 0, 2);
                             }
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[0])); 
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[1])); // PlayerId if needed
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[2])); // PlayerId if needed
+                            // TODO: Shrine links (pool IDs for ley network topology)
+                            // Commented out — needs testing on dev server first, may change packet size
+                            //for (int l = 0; l < 3; l++)
+                            //{
+                            //    outStream.WriteByte(l < arena.ArenaTeams[i].Shrine.Links.Count
+                            //        ? Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[l])
+                            //        : (Byte)0xFF);
+                            //}
                         }
                         else
                         {
