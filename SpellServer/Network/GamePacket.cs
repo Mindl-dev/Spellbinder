@@ -154,7 +154,7 @@ namespace SpellServer
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
 
-                    ● // PlayerMoveState packet layout (12 bytes payload after 2-byte skip)
+                    // PlayerMoveState packet layout (12 bytes payload after 2-byte skip)
                     //
                     // Wire order (big-endian, as seen in Wireshark):
                     //   Byte:   00   01   02   03   04   05   06   07   08   09   10   11
