@@ -334,92 +334,6 @@ namespace SpellServer
             }
         }
 
-        /*public Team WinningTeam
-        {
-            get
-            {
-                lock (SyncRoot)
-                {
-                    State teamState = CurrentState == State.Ended || CurrentState == State.CleanUp ? EndState : CurrentState;
-
-                    if ((!ArenaTeams.Gryphon.Shrine.IsDamaged || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) && !ArenaTeams.Gryphon.Shrine.IsIndestructible)
-                    {
-                        if (teamState == State.GryphonVictory)
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDamaged || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDamaged || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Gryphon;
-                            }
-                        }
-                        else
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDead || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDead || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Gryphon;
-                            }
-                        }
-                    }
-
-                    if ((!ArenaTeams.Pheonix.Shrine.IsDamaged || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) && !ArenaTeams.Pheonix.Shrine.IsIndestructible)
-                    {
-                        if (teamState == State.PheonixVictory)
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDamaged || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Gryphon.Shrine.IsDamaged || ArenaTeams.Gryphon.Shrine.IsIndestructible))
-                            {
-                                return Team.Pheonix;
-                            }
-                        }
-                        else
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDead || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Gryphon.Shrine.IsDead || ArenaTeams.Gryphon.Shrine.IsIndestructible))
-                            {
-                                return Team.Pheonix;
-                            }
-                        }
-                    }
-
-                    if ((!ArenaTeams.Dragon.Shrine.IsDamaged || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) && !ArenaTeams.Dragon.Shrine.IsIndestructible)
-                    {
-                        if (teamState == State.DragonVictory)
-                        {
-                            if ((ArenaTeams.Gryphon.Shrine.IsDamaged || ArenaTeams.Gryphon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDamaged || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Dragon;
-                            }
-                        }
-                        else
-                        {
-                            if ((ArenaTeams.Gryphon.Shrine.IsDead || ArenaTeams.Gryphon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDead || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Dragon;
-                            }
-                        }
-                    }
-
-                    if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.GuildRules) && (CurrentState == State.Ended || CurrentState == State.CleanUp))
-                    {
-                        if (ArenaTeams.Gryphon.Shrine.GuildPoints > ArenaTeams.Dragon.Shrine.GuildPoints && ArenaTeams.Gryphon.Shrine.GuildPoints > ArenaTeams.Pheonix.Shrine.GuildPoints)
-                        {
-                            EndState = State.GryphonVictory;
-                            return Team.Gryphon;
-                        }
-                        if (ArenaTeams.Pheonix.Shrine.GuildPoints > ArenaTeams.Dragon.Shrine.GuildPoints && ArenaTeams.Pheonix.Shrine.GuildPoints > ArenaTeams.Gryphon.Shrine.GuildPoints)
-                        {
-                            EndState = State.PheonixVictory;
-                            return Team.Pheonix;
-                        }
-                        if (ArenaTeams.Dragon.Shrine.GuildPoints > ArenaTeams.Gryphon.Shrine.GuildPoints && ArenaTeams.Dragon.Shrine.GuildPoints > ArenaTeams.Pheonix.Shrine.GuildPoints)
-                        {
-                            EndState = State.DragonVictory;
-                            return Team.Dragon;
-                        }
-                    }
-                }
-
-                return Team.Neutral;
-            }
-        }*/
-
         private void ProcessArena()
         {
             while (CurrentState != State.CleanUp)
@@ -1076,6 +990,12 @@ namespace SpellServer
                                 
                 if (collisionType != 0)
                 {
+                    if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking) && collisionType != 5)
+                    {
+                        var hitBlock = projectile.hitBlock;
+                        string blockInfo = hitBlock != null ? $"block=({hitBlock.X},{hitBlock.Y}) flags={hitBlock.BlockFlags} pillar={hitBlock.IsSolidPillar} floor={hitBlock.FloorZ} ceil={hitBlock.CeilingZ} highZ={hitBlock.HighBoxZ}" : "no block";
+                        Program.Log($"[Projectile] {projectile.Owner?.ActiveCharacter?.Name} spell={projectile.Spell?.Name} hit type={collisionType} at ({nextStepPos.X:F0},{nextStepPos.Y:F0},{nextStepPos.Z:F0}) {blockInfo}", Color.Orange, "Misc");
+                    }
                     // Handle collision (Bounce/Remove)
                     bool stopped = UpdateProjectileState(projectile, collisionType, nextStepPos, grid);
                     if (stopped && projectile.State == ObjectState.Collision)

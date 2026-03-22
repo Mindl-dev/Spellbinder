@@ -1660,11 +1660,19 @@ namespace SpellServer
                 }
                 public static MemoryStream PlayerMoveState(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
-                    MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveState);
-                    outStream.Write(relayBuffer, 0, 12);
-                    return outStream;
+                    try
+                    {
+                        MemoryStream outStream = new MemoryStream();
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveState);
+                        outStream.Write(relayBuffer, 0, 12);
+                        return outStream;
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log("Outgoing.PlayerMoveState error: " + ex.Message, Color.Red);
+                        return new MemoryStream();
+                    }
                 }
                 public static MemoryStream PlayerMoveStateShort(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
