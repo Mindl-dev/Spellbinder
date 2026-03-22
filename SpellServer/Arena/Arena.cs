@@ -2550,25 +2550,32 @@ namespace SpellServer
         public void GivePlayerExperience(ArenaPlayer arenaPlayer, Single baseAmount, ArenaPlayer.ExperienceType experienceType)
         {
             Single plusBonus = arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? Settings.Default.PlusExpBonus : 0.0f;
+            Single multiplier = Settings.Default.ExpMultiplier + Grid.ExpBonus + plusBonus;
+            Int32 awarded = 0;
 
             switch (experienceType)
             {
                 case ArenaPlayer.ExperienceType.Combat:
                 {
-					arenaPlayer.CombatExp += (Int32)(baseAmount * (Settings.Default.ExpMultiplier + Grid.ExpBonus + plusBonus));
+                    awarded = (Int32)(baseAmount * multiplier);
+					arenaPlayer.CombatExp += awarded;
                     break;
                 }
                 case ArenaPlayer.ExperienceType.Objective:
                 {
-					arenaPlayer.ObjectiveExp += (Int32)(baseAmount * (Settings.Default.ExpMultiplier + Grid.ExpBonus + plusBonus));
+                    awarded = (Int32)(baseAmount * multiplier);
+					arenaPlayer.ObjectiveExp += awarded;
                     break;
                 }
                 case ArenaPlayer.ExperienceType.Bonus:
                 {
-                    arenaPlayer.BonusExp += (Int32)(baseAmount * (1.0f + plusBonus));
+                    awarded = (Int32)(baseAmount * (1.0f + plusBonus));
+                    arenaPlayer.BonusExp += awarded;
                     break;
                 }
             }
+
+            Program.Log($"[XP] {arenaPlayer.ActiveCharacter?.Name} +{awarded} {experienceType} (base={baseAmount:F0} mult={multiplier:F2}) total={arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp + arenaPlayer.BonusExp}", Color.Blue, "Misc");
         }
 
         public void DoWallDamage(ArenaPlayer arenaPlayer, Wall wall, Spell spell, SpellDamage spellDamage, bool UDP = false)
