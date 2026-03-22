@@ -201,6 +201,19 @@ namespace SpellServer
                     // take the 10th and 11th bit of the payload, and store it as the elementId TODO this seems wrong
                     int elementId = (rawWord >> 9) & 0x03;
 
+                    // PacketReader reader = new PacketReader(inStream);
+                    // //skip the first 16 bits of the stream which seem to always be 0x0000
+                    // reader.Skip(2); // data[-2] and data[-1]
+
+                    // //convert first 16 bits (0th-15th) of payload to a ushort
+                    // ushort rawWord = reader.ReadUInt16BE(); // data[0]
+
+                    // // take the 2and and 3rd bit of the payload, and store it as the elementId TODO this seems wrong
+                    // int elementId = (rawWord >> 9) & 0x03;
+
+                    // byte elementIdRaw = reader.ReadByte(); // first byte of the payload
+                    // int elementId2 = elementIdRaw & 0x03;
+
                     // take bits 0-11 of the payload, and store it as the walkingAngle. Is non zero if moving.
                     //Walking angle is the angle the player is walking in, is non zero if moving.
                     int rawAngle = rawWord & 0x0FFF;
@@ -228,15 +241,12 @@ namespace SpellServer
                     int speedScalar = (rawZ >> 12) & 0x0F;
 
                     byte mSpeed = (byte)((speedScalar / 15.0f) * 255);
-                    int xPos = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 4)) & 0x1FFF;
-                    int yRaw = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 6));
-                    int yPos = yRaw & 0x1FFF;
+                    int xPos = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 4)) & 0x1FFF; //Verified
+                    int yRaw = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 6));//Verified
+                    int yPos = yRaw & 0x1FFF; //Verified
 
                     // Heading is 0-4096 . With 0 being South, 2048 being North, and 3072 East, and 1024 West.
-                    uint heading_raw = (data[6] << 8 | data[7]) & 0x0FFF; //bits 48-59 of the payload is heading
-
-                    //TODO create to_degrees method in Player.
-                    Logger.Log($"direction_in_degrees: {direction_in_degrees.ToString()}", Color.Red);
+                    int heading_raw = (data[6] << 8 | data[7]) & 0x0FFF; //bits 48-59 of the payload is heading
 
                     bool isSpecialState = (yRaw & 0x8000) != 0;
 
