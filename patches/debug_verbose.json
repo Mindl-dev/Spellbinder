@@ -1,0 +1,37 @@
+{
+  "target": "game.dll debug mode — enable verbose debug logging from startup",
+  "target_file": "game.dll",
+  "clean_md5": "62785b59192924e13b3dbb6dae38d096",
+  "pe_base": "0x400000",
+  "text_section_va": "0x1000",
+  "text_section_raw": "0x1000",
+  "patches": [
+    {
+      "name": "debug_flag_startup",
+      "description": "Redirect first call in PlayGame (sub_4474C0) to code cave that sets verbose_debug=2. Enables built-in debug logging from startup.",
+      "file_offset": "0x474E8",
+      "virtual_address": "0x4474E8",
+      "original": "e803120500",
+      "patched": "e8d48d1000",
+      "note": "call sub_4986F0 -> call 0x5502C1 (code cave)"
+    },
+    {
+      "name": "debug_flag_cave",
+      "description": "Code cave in CC padding: sets dword_6BF810=2 (verbose debug) then jumps to original function sub_4986F0.",
+      "file_offset": "0x1502C1",
+      "virtual_address": "0x5502C1",
+      "original": "cccccccccccccccccccccccccccccc",
+      "patched": "c70510f86b0002000000e92084f4ff",
+      "note": "mov dword ptr [0x6BF810], 2; jmp sub_4986F0"
+    },
+    {
+      "name": "debug_off_nop",
+      "description": "NOP out the /debug off command so debug mode can't be accidentally disabled.",
+      "file_offset": "0x334DA",
+      "virtual_address": "0x4334DA",
+      "original": "891d10f86b00",
+      "patched": "909090909090",
+      "note": "NOP the 'mov dword_6BF810, ebx' in debug off handler"
+    }
+  ]
+}

@@ -24,6 +24,9 @@ namespace SpellBinder
         private ListBox playerList;
         private Label playerLabel;
         private Process gameProcess;
+        private DateTime gameStartTime;
+        private StringBuilder gameStderr = new StringBuilder();
+        private StringBuilder gameStdout = new StringBuilder();
         private System.Windows.Forms.Timer watchdog;
         private System.Windows.Forms.Timer playerRefresh;
         private static readonly HttpClient http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
@@ -57,10 +60,10 @@ namespace SpellBinder
             if (team == null) return Color.FromArgb(160, 150, 190);
             switch (team.ToLower())
             {
-                case "dragon":  return Color.FromArgb(255, 100, 80);  // red-orange
-                case "phoenix": return Color.FromArgb(255, 200, 60);  // gold
-                case "griffin":  return Color.FromArgb(80, 180, 255);  // blue
-                case "griffon": return Color.FromArgb(80, 180, 255);  // blue (alt spelling)
+                case "dragon":  return Color.FromArgb(255, 100, 80);  // red
+                case "phoenix": return Color.FromArgb(80, 180, 255);  // blue
+                case "griffin":  return Color.FromArgb(255, 200, 60);  // gold
+                case "griffon": return Color.FromArgb(255, 200, 60);  // gold (alt spelling)
                 default:        return Color.FromArgb(160, 120, 255); // purple fallback
             }
         }
@@ -323,17 +326,43 @@ namespace SpellBinder
                 {
                     FileName = gameExe,
                     WorkingDirectory = gameDir,
-                    UseShellExecute = false
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
                 };
                 gameProcess = Process.Start(psi);
-                SetStatus("Connecting to " + address + "...", false);
+                gameStderr.Clear();
+                gameStdout.Clear();
+                gameProcess.ErrorDataReceived += (s2, e2) => { if (e2.Data != null) gameStderr.AppendLine(e2.Data); };
+                gameProcess.OutputDataReceived += (s2, e2) => { if (e2.Data != null) gameStdout.AppendLine(e2.Data); };
+                gameProcess.BeginErrorReadLine();
+                gameProcess.BeginOutputReadLine();
+                gameStartTime = DateTime.Now;
+                SetStatus("Hint: press G in-game to use your mouse", false);
                 playButton.Enabled = false;
                 playButton.Text = "RUNNING...";
                 watchdog.Start();
             }
             catch (Exception ex)
             {
-                SetStatus("Launch failed: " + ex.Message, true);
+                SetStatus("Launch failed! See crash.log", true);
+                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log");
+                try
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("=== SpellBinder Launch Failure ===");
+                    sb.AppendLine("Time: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                    sb.AppendLine("Error: " + ex.GetType().Name + ": " + ex.Message);
+                    sb.AppendLine("Stack: " + ex.StackTrace);
+                    sb.AppendLine("Game exe: " + gameExe);
+                    sb.AppendLine("Game dir: " + gameDir);
+                    sb.AppendLine("Exists: " + File.Exists(gameExe));
+                    sb.AppendLine();
+                    File.AppendAllText(logPath, sb.ToString() + "\n\n");
+                }
+                catch { }
+                MessageBox.Show("Could not launch game:\n" + ex.Message + "\n\nSee crash.log for details.",
+                    "Launch Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -342,10 +371,25 @@ namespace SpellBinder
             if (gameProcess == null || gameProcess.HasExited)
             {
                 watchdog.Stop();
-                SetStatus("Game exited.", false);
                 playButton.Enabled = true;
                 playButton.Text = "PLAY";
-                gameProcess = null;
+
+                int exitCode = 0;
+                try { exitCode = gameProcess.ExitCode; } catch { }
+                double secondsRan = (DateTime.Now - gameStartTime).TotalSeconds;
+
+                if (secondsRan < 5 || exitCode != 0)
+                {
+                    string diag = DiagnoseCrash(exitCode, secondsRan);
+                    gameProcess = null;
+                    SetStatus("Game crashed! See crash.log", true);
+                    MessageBox.Show(diag, "SpellBinder Crashed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    gameProcess = null;
+                    SetStatus("Game exited.", false);
+                }
                 return;
             }
 
@@ -889,6 +933,114 @@ namespace SpellBinder
                 if (!File.Exists(Application.ExecutablePath) && File.Exists(oldExe))
                     File.Move(oldExe, Application.ExecutablePath);
             }
+        }
+
+        private string DiagnoseCrash(int exitCode, double secondsRan)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("=== SpellBinder Crash Report ===");
+            sb.AppendLine("Time: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            uint uExitCode = unchecked((uint)exitCode);
+            sb.AppendLine("Exit code: " + exitCode + " (0x" + uExitCode.ToString("X8") + ")");
+            switch (uExitCode)
+            {
+                case 0xC0000005: sb.AppendLine("Meaning: ACCESS_VIOLATION — crash due to invalid memory access"); break;
+                case 0xC000001D: sb.AppendLine("Meaning: ILLEGAL_INSTRUCTION"); break;
+                case 0xC0000135: sb.AppendLine("Meaning: DLL_NOT_FOUND — a required DLL is missing"); break;
+                case 0xC0000142: sb.AppendLine("Meaning: DLL_INIT_FAILED — a DLL failed to initialize"); break;
+                case 0xC00000FD: sb.AppendLine("Meaning: STACK_OVERFLOW"); break;
+                case 0x80000003: sb.AppendLine("Meaning: BREAKPOINT — debugger breakpoint hit"); break;
+            }
+            sb.AppendLine("Ran for: " + secondsRan.ToString("F1") + " seconds");
+            sb.AppendLine("Launcher version: " + VERSION);
+            sb.AppendLine();
+
+            // Check Windows Event Log for crash details
+            sb.AppendLine("--- Windows crash info ---");
+            try
+            {
+                var eventLog = new System.Diagnostics.EventLog("Application");
+                DateTime cutoff = gameStartTime.AddSeconds(-1);
+                for (int i = eventLog.Entries.Count - 1; i >= Math.Max(0, eventLog.Entries.Count - 20); i--)
+                {
+                    var entry = eventLog.Entries[i];
+                    if (entry.TimeGenerated < cutoff) break;
+                    if (entry.Source == "Application Error" || entry.Source == "Windows Error Reporting")
+                    {
+                        sb.AppendLine(entry.Source + ": " + entry.Message.Replace("\r\n", " | ").Replace("\n", " | "));
+                        break;
+                    }
+                }
+            }
+            catch { sb.AppendLine("(could not read event log)"); }
+            sb.AppendLine();
+
+            // Capture stderr/stdout from the process
+            sb.AppendLine("--- Process output ---");
+            string stdout = gameStdout.ToString().Trim();
+            string stderr = gameStderr.ToString().Trim();
+            if (stdout.Length > 0)
+                sb.AppendLine("stdout: " + stdout);
+            if (stderr.Length > 0)
+                sb.AppendLine("stderr: " + stderr);
+            if (stdout.Length == 0 && stderr.Length == 0)
+                sb.AppendLine("(no output captured)");
+            sb.AppendLine();
+
+            // File inventory
+            sb.AppendLine("--- File check ---");
+            string[] expectedFiles = { "game.dll", "main.dat", "arena.dat", "spell.bin", "gspell.bin",
+                                        "DDraw.dll", "D3DImm.dll", "D3D8.dll", "D3D9.dll", "dgVoodoo.conf" };
+            foreach (string f in expectedFiles)
+            {
+                string path = Path.Combine(gameDir, f);
+                if (File.Exists(path))
+                {
+                    var fi = new FileInfo(path);
+                    sb.AppendLine("  OK   " + f + " (" + fi.Length + " bytes)");
+                }
+                else
+                {
+                    sb.AppendLine("  MISS " + f);
+                }
+            }
+            sb.AppendLine();
+
+            // System info
+            sb.AppendLine("--- System ---");
+            sb.AppendLine("OS: " + Environment.OSVersion);
+            sb.AppendLine("64-bit OS: " + Environment.Is64BitOperatingSystem);
+            sb.AppendLine("CLR: " + Environment.Version);
+            sb.AppendLine("Game dir: " + gameDir);
+            sb.AppendLine();
+
+            // Diagnosis
+            sb.AppendLine("--- Diagnosis ---");
+            bool missingDgv = false;
+            foreach (string dll in new[] { "DDraw.dll", "D3DImm.dll" })
+            {
+                if (!File.Exists(Path.Combine(gameDir, dll))) missingDgv = true;
+            }
+            if (!File.Exists(Path.Combine(gameDir, "game.dll")))
+                sb.AppendLine("game.dll is missing — reinstall from releases page.");
+            else if (missingDgv)
+                sb.AppendLine("dgVoodoo DLLs missing — needed for graphics on modern GPUs. Reinstall from releases page.");
+            else if (!File.Exists(Path.Combine(gameDir, "dgVoodoo.conf")))
+                sb.AppendLine("dgVoodoo.conf missing — reinstall from releases page.");
+            else
+                sb.AppendLine("All files present. Possible causes: antivirus, missing DirectX runtimes, GPU driver issue.");
+
+            // Write to log file
+            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log");
+            try
+            {
+                File.AppendAllText(logPath, sb.ToString() + "\n\n");
+            }
+            catch { }
+
+            return "Game crashed after " + secondsRan.ToString("F1") + "s.\n\n"
+                + "A crash report has been saved to:\n" + logPath + "\n\n"
+                + "Please send this file when reporting the issue.";
         }
 
         private static void CopyDirectory(string source, string dest)

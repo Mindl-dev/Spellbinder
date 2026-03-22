@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
 using System.Net;
+using System.Text;
 using NUnit.Framework;
 
 namespace SpellServer.Tests
@@ -371,6 +374,356 @@ namespace SpellServer.Tests
             Assert.AreEqual("A", ExtractJsonField(items[0], "account"));
             Assert.AreEqual("B", ExtractJsonField(items[1], "account"));
             Assert.AreEqual("C", ExtractJsonField(items[2], "account"));
+        }
+
+        // ================================================================
+        // Crash diagnostics tests
+        // ================================================================
+
+        /// <summary>Duplicated from Play.cs DiagnoseCrash — generates crash report string</summary>
+        private static string BuildCrashReport(int exitCode, double secondsRan, string gameDir)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("=== SpellBinder Crash Report ===");
+            sb.AppendLine("Time: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            uint uExitCode = unchecked((uint)exitCode);
+            sb.AppendLine("Exit code: " + exitCode + " (0x" + uExitCode.ToString("X8") + ")");
+            switch (uExitCode)
+            {
+                case 0xC0000005: sb.AppendLine("Meaning: ACCESS_VIOLATION"); break;
+                case 0xC0000135: sb.AppendLine("Meaning: DLL_NOT_FOUND"); break;
+                case 0xC0000142: sb.AppendLine("Meaning: DLL_INIT_FAILED"); break;
+            }
+            sb.AppendLine("Ran for: " + secondsRan.ToString("F1") + " seconds");
+            sb.AppendLine();
+
+            sb.AppendLine("--- File check ---");
+            string[] expectedFiles = { "game.dll", "main.dat", "DDraw.dll", "D3DImm.dll", "dgVoodoo.conf" };
+            foreach (string f in expectedFiles)
+            {
+                string path = Path.Combine(gameDir, f);
+                if (File.Exists(path))
+                    sb.AppendLine("  OK   " + f);
+                else
+                    sb.AppendLine("  MISS " + f);
+            }
+            return sb.ToString();
+        }
+
+        [Test]
+        public void CrashReport_AccessViolation_ShowsExitCode()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-crash-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDir);
+            try
+            {
+                string report = BuildCrashReport(unchecked((int)0xC0000005), 2.5, testDir);
+                StringAssert.Contains("0xC0000005", report);
+                StringAssert.Contains("ACCESS_VIOLATION", report);
+                StringAssert.Contains("2.5 seconds", report);
+            }
+            finally { Directory.Delete(testDir, true); }
+        }
+
+        [Test]
+        public void CrashReport_DllNotFound_ShowsMeaning()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-crash-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDir);
+            try
+            {
+                string report = BuildCrashReport(unchecked((int)0xC0000135), 0.1, testDir);
+                StringAssert.Contains("DLL_NOT_FOUND", report);
+            }
+            finally { Directory.Delete(testDir, true); }
+        }
+
+        [Test]
+        public void CrashReport_NormalExit_NoMeaning()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-crash-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDir);
+            try
+            {
+                string report = BuildCrashReport(0, 30.0, testDir);
+                StringAssert.Contains("0x00000000", report);
+                Assert.IsFalse(report.Contains("Meaning:"));
+            }
+            finally { Directory.Delete(testDir, true); }
+        }
+
+        [Test]
+        public void CrashReport_DetectsMissingDgVoodoo()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-crash-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDir);
+            try
+            {
+                // Only create game.dll and main.dat — no dgVoodoo
+                File.WriteAllText(Path.Combine(testDir, "game.dll"), "x");
+                File.WriteAllText(Path.Combine(testDir, "main.dat"), "x");
+                string report = BuildCrashReport(unchecked((int)0xC0000005), 1.0, testDir);
+                StringAssert.Contains("MISS DDraw.dll", report);
+                StringAssert.Contains("MISS D3DImm.dll", report);
+                StringAssert.Contains("OK   game.dll", report);
+            }
+            finally { Directory.Delete(testDir, true); }
+        }
+
+        [Test]
+        public void CrashReport_AllFilesPresent()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-crash-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDir);
+            try
+            {
+                foreach (string f in new[] { "game.dll", "main.dat", "DDraw.dll", "D3DImm.dll", "dgVoodoo.conf" })
+                    File.WriteAllText(Path.Combine(testDir, f), "x");
+                string report = BuildCrashReport(unchecked((int)0xC0000005), 1.0, testDir);
+                Assert.IsFalse(report.Contains("MISS"));
+            }
+            finally { Directory.Delete(testDir, true); }
+        }
+
+        [Test]
+        public void CrashReport_WritesToLogFile()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-crash-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(testDir);
+            try
+            {
+                string report = BuildCrashReport(unchecked((int)0xC0000005), 3.0, testDir);
+                string logPath = Path.Combine(testDir, "crash.log");
+                File.AppendAllText(logPath, report + "\n\n");
+
+                Assert.IsTrue(File.Exists(logPath));
+                string contents = File.ReadAllText(logPath);
+                StringAssert.Contains("ACCESS_VIOLATION", contents);
+                StringAssert.Contains("Crash Report", contents);
+            }
+            finally { Directory.Delete(testDir, true); }
+        }
+
+        // ================================================================
+        // Update preservation tests
+        // Simulates the backup → extract → restore flow from ApplyUpdate()
+        // ================================================================
+
+        private static readonly string[] PreservedFiles = { "main.dat", "user.dat", "keyboard.dat" };
+
+        private static void CopyDirectory(string source, string dest)
+        {
+            Directory.CreateDirectory(dest);
+            foreach (string file in Directory.GetFiles(source))
+            {
+                string destFile = Path.Combine(dest, Path.GetFileName(file));
+                try { File.Copy(file, destFile, true); } catch { }
+            }
+            foreach (string dir in Directory.GetDirectories(source))
+            {
+                CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
+            }
+        }
+
+        /// <summary>Simulate the backup/restore logic from ApplyUpdate()</summary>
+        private static void SimulateUpdate(string baseDir, string updateZip)
+        {
+            string gameDir = Path.Combine(baseDir, "game");
+
+            // Backup preserved files
+            var backups = new Dictionary<string, string>();
+            foreach (var name in PreservedFiles)
+            {
+                string path = Path.Combine(gameDir, name);
+                if (File.Exists(path))
+                {
+                    string bak = path + ".bak";
+                    File.Copy(path, bak, true);
+                    backups[name] = bak;
+                }
+            }
+
+            // Extract update
+            string tempDir = Path.Combine(Path.GetTempPath(), "SpellBinder-update-test-" + Guid.NewGuid().ToString("N"));
+            ZipFile.ExtractToDirectory(updateZip, tempDir);
+
+            string extractedRoot = tempDir;
+            string[] subdirs = Directory.GetDirectories(tempDir);
+            if (subdirs.Length == 1 && Directory.Exists(Path.Combine(subdirs[0], "game")))
+                extractedRoot = subdirs[0];
+
+            CopyDirectory(extractedRoot, baseDir);
+
+            // Restore preserved files
+            foreach (var kvp in backups)
+            {
+                string path = Path.Combine(gameDir, kvp.Key);
+                if (File.Exists(kvp.Value))
+                {
+                    File.Copy(kvp.Value, path, true);
+                    File.Delete(kvp.Value);
+                }
+            }
+
+            // Cleanup
+            try { Directory.Delete(tempDir, true); } catch { }
+        }
+
+        private string SetupFakeInstall(string testDir)
+        {
+            string baseDir = Path.Combine(testDir, "installed");
+            string gameDir = Path.Combine(baseDir, "game");
+            Directory.CreateDirectory(gameDir);
+
+            File.WriteAllText(Path.Combine(baseDir, "Play.exe"), "old-launcher");
+            File.WriteAllText(Path.Combine(baseDir, "version.txt"), "v0.3.0");
+            File.WriteAllText(Path.Combine(gameDir, "game.dll"), "old-game-dll");
+            File.WriteAllText(Path.Combine(gameDir, "main.dat"), "address=192.168.1.50");
+            File.WriteAllText(Path.Combine(gameDir, "user.dat"), "my-custom-keybinds");
+            File.WriteAllText(Path.Combine(gameDir, "keyboard.dat"), "my-keyboard-config");
+            File.WriteAllText(Path.Combine(gameDir, "arena.dat"), "old-arena");
+
+            return baseDir;
+        }
+
+        private string CreateFakeUpdateZip(string testDir)
+        {
+            string updateDir = Path.Combine(testDir, "update-content", "SpellBinder-win");
+            string gameDir = Path.Combine(updateDir, "game");
+            Directory.CreateDirectory(gameDir);
+
+            File.WriteAllText(Path.Combine(updateDir, "Play.exe"), "new-launcher");
+            File.WriteAllText(Path.Combine(updateDir, "version.txt"), "v0.4.0");
+            File.WriteAllText(Path.Combine(gameDir, "game.dll"), "new-patched-game-dll");
+            File.WriteAllText(Path.Combine(gameDir, "main.dat"), "address=default-server");
+            File.WriteAllText(Path.Combine(gameDir, "user.dat"), "default-user-settings");
+            File.WriteAllText(Path.Combine(gameDir, "keyboard.dat"), "default-keybinds");
+            File.WriteAllText(Path.Combine(gameDir, "arena.dat"), "new-arena");
+
+            string zipPath = Path.Combine(testDir, "SpellBinder-win.zip");
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+            ZipFile.CreateFromDirectory(Path.Combine(testDir, "update-content"), zipPath);
+            return zipPath;
+        }
+
+        [Test]
+        public void Update_PreservesUserDat()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string baseDir = SetupFakeInstall(testDir);
+                string zip = CreateFakeUpdateZip(testDir);
+                SimulateUpdate(baseDir, zip);
+
+                Assert.AreEqual("my-custom-keybinds",
+                    File.ReadAllText(Path.Combine(baseDir, "game", "user.dat")));
+            }
+            finally { try { Directory.Delete(testDir, true); } catch { } }
+        }
+
+        [Test]
+        public void Update_PreservesMainDat()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string baseDir = SetupFakeInstall(testDir);
+                string zip = CreateFakeUpdateZip(testDir);
+                SimulateUpdate(baseDir, zip);
+
+                Assert.AreEqual("address=192.168.1.50",
+                    File.ReadAllText(Path.Combine(baseDir, "game", "main.dat")));
+            }
+            finally { try { Directory.Delete(testDir, true); } catch { } }
+        }
+
+        [Test]
+        public void Update_PreservesKeyboardDat()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string baseDir = SetupFakeInstall(testDir);
+                string zip = CreateFakeUpdateZip(testDir);
+                SimulateUpdate(baseDir, zip);
+
+                Assert.AreEqual("my-keyboard-config",
+                    File.ReadAllText(Path.Combine(baseDir, "game", "keyboard.dat")));
+            }
+            finally { try { Directory.Delete(testDir, true); } catch { } }
+        }
+
+        [Test]
+        public void Update_OverwritesGameDll()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string baseDir = SetupFakeInstall(testDir);
+                string zip = CreateFakeUpdateZip(testDir);
+                SimulateUpdate(baseDir, zip);
+
+                Assert.AreEqual("new-patched-game-dll",
+                    File.ReadAllText(Path.Combine(baseDir, "game", "game.dll")));
+            }
+            finally { try { Directory.Delete(testDir, true); } catch { } }
+        }
+
+        [Test]
+        public void Update_OverwritesVersionTxt()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string baseDir = SetupFakeInstall(testDir);
+                string zip = CreateFakeUpdateZip(testDir);
+                SimulateUpdate(baseDir, zip);
+
+                Assert.AreEqual("new-launcher",
+                    File.ReadAllText(Path.Combine(baseDir, "Play.exe")));
+            }
+            finally { try { Directory.Delete(testDir, true); } catch { } }
+        }
+
+        [Test]
+        public void Update_NoBackupFiles_Left()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string baseDir = SetupFakeInstall(testDir);
+                string zip = CreateFakeUpdateZip(testDir);
+                SimulateUpdate(baseDir, zip);
+
+                string gameDir = Path.Combine(baseDir, "game");
+                Assert.IsFalse(File.Exists(Path.Combine(gameDir, "main.dat.bak")));
+                Assert.IsFalse(File.Exists(Path.Combine(gameDir, "user.dat.bak")));
+                Assert.IsFalse(File.Exists(Path.Combine(gameDir, "keyboard.dat.bak")));
+            }
+            finally { try { Directory.Delete(testDir, true); } catch { } }
+        }
+
+        [Test]
+        public void Update_PreservesFiles_WhenNoUserDatExists()
+        {
+            string testDir = Path.Combine(Path.GetTempPath(), "sb-test-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                string baseDir = SetupFakeInstall(testDir);
+                // Delete user.dat to simulate fresh install
+                File.Delete(Path.Combine(baseDir, "game", "user.dat"));
+                string zip = CreateFakeUpdateZip(testDir);
+                SimulateUpdate(baseDir, zip);
+
+                // Should get the default from the update since there was nothing to preserve
+                Assert.AreEqual("default-user-settings",
+                    File.ReadAllText(Path.Combine(baseDir, "game", "user.dat")));
+                // But main.dat should still be preserved
+                Assert.AreEqual("address=192.168.1.50",
+                    File.ReadAllText(Path.Combine(baseDir, "game", "main.dat")));
+            }
+            finally { try { Directory.Delete(testDir, true); } catch { } }
         }
     }
 }
