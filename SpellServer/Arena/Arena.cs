@@ -334,92 +334,6 @@ namespace SpellServer
             }
         }
 
-        /*public Team WinningTeam
-        {
-            get
-            {
-                lock (SyncRoot)
-                {
-                    State teamState = CurrentState == State.Ended || CurrentState == State.CleanUp ? EndState : CurrentState;
-
-                    if ((!ArenaTeams.Gryphon.Shrine.IsDamaged || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) && !ArenaTeams.Gryphon.Shrine.IsIndestructible)
-                    {
-                        if (teamState == State.GryphonVictory)
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDamaged || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDamaged || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Gryphon;
-                            }
-                        }
-                        else
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDead || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDead || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Gryphon;
-                            }
-                        }
-                    }
-
-                    if ((!ArenaTeams.Pheonix.Shrine.IsDamaged || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) && !ArenaTeams.Pheonix.Shrine.IsIndestructible)
-                    {
-                        if (teamState == State.PheonixVictory)
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDamaged || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Gryphon.Shrine.IsDamaged || ArenaTeams.Gryphon.Shrine.IsIndestructible))
-                            {
-                                return Team.Pheonix;
-                            }
-                        }
-                        else
-                        {
-                            if ((ArenaTeams.Dragon.Shrine.IsDead || ArenaTeams.Dragon.Shrine.IsIndestructible) && (ArenaTeams.Gryphon.Shrine.IsDead || ArenaTeams.Gryphon.Shrine.IsIndestructible))
-                            {
-                                return Team.Pheonix;
-                            }
-                        }
-                    }
-
-                    if ((!ArenaTeams.Dragon.Shrine.IsDamaged || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) && !ArenaTeams.Dragon.Shrine.IsIndestructible)
-                    {
-                        if (teamState == State.DragonVictory)
-                        {
-                            if ((ArenaTeams.Gryphon.Shrine.IsDamaged || ArenaTeams.Gryphon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDamaged || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Dragon;
-                            }
-                        }
-                        else
-                        {
-                            if ((ArenaTeams.Gryphon.Shrine.IsDead || ArenaTeams.Gryphon.Shrine.IsIndestructible) && (ArenaTeams.Pheonix.Shrine.IsDead || ArenaTeams.Pheonix.Shrine.IsIndestructible))
-                            {
-                                return Team.Dragon;
-                            }
-                        }
-                    }
-
-                    if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.GuildRules) && (CurrentState == State.Ended || CurrentState == State.CleanUp))
-                    {
-                        if (ArenaTeams.Gryphon.Shrine.GuildPoints > ArenaTeams.Dragon.Shrine.GuildPoints && ArenaTeams.Gryphon.Shrine.GuildPoints > ArenaTeams.Pheonix.Shrine.GuildPoints)
-                        {
-                            EndState = State.GryphonVictory;
-                            return Team.Gryphon;
-                        }
-                        if (ArenaTeams.Pheonix.Shrine.GuildPoints > ArenaTeams.Dragon.Shrine.GuildPoints && ArenaTeams.Pheonix.Shrine.GuildPoints > ArenaTeams.Gryphon.Shrine.GuildPoints)
-                        {
-                            EndState = State.PheonixVictory;
-                            return Team.Pheonix;
-                        }
-                        if (ArenaTeams.Dragon.Shrine.GuildPoints > ArenaTeams.Gryphon.Shrine.GuildPoints && ArenaTeams.Dragon.Shrine.GuildPoints > ArenaTeams.Pheonix.Shrine.GuildPoints)
-                        {
-                            EndState = State.DragonVictory;
-                            return Team.Dragon;
-                        }
-                    }
-                }
-
-                return Team.Neutral;
-            }
-        }*/
-
         private void ProcessArena()
         {
             while (CurrentState != State.CleanUp)
@@ -1076,6 +990,12 @@ namespace SpellServer
                                 
                 if (collisionType != 0)
                 {
+                    if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking) && collisionType != 5)
+                    {
+                        var hitBlock = projectile.hitBlock;
+                        string blockInfo = hitBlock != null ? $"block=({hitBlock.X},{hitBlock.Y}) flags={hitBlock.BlockFlags} pillar={hitBlock.IsSolidPillar} floor={hitBlock.FloorZ} ceil={hitBlock.CeilingZ} highZ={hitBlock.HighBoxZ}" : "no block";
+                        Program.Log($"[Projectile] {projectile.Owner?.ActiveCharacter?.Name} spell={projectile.Spell?.Name} hit type={collisionType} at ({nextStepPos.X:F0},{nextStepPos.Y:F0},{nextStepPos.Z:F0}) {blockInfo}", Color.Orange, "Misc");
+                    }
                     // Handle collision (Bounce/Remove)
                     bool stopped = UpdateProjectileState(projectile, collisionType, nextStepPos, grid);
                     if (stopped && projectile.State == ObjectState.Collision)
@@ -2550,25 +2470,32 @@ namespace SpellServer
         public void GivePlayerExperience(ArenaPlayer arenaPlayer, Single baseAmount, ArenaPlayer.ExperienceType experienceType)
         {
             Single plusBonus = arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? Settings.Default.PlusExpBonus : 0.0f;
+            Single multiplier = Settings.Default.ExpMultiplier + Grid.ExpBonus + plusBonus;
+            Int32 awarded = 0;
 
             switch (experienceType)
             {
                 case ArenaPlayer.ExperienceType.Combat:
                 {
-					arenaPlayer.CombatExp += (Int32)(baseAmount * (Settings.Default.ExpMultiplier + Grid.ExpBonus + plusBonus));
+                    awarded = (Int32)(baseAmount * multiplier);
+					arenaPlayer.CombatExp += awarded;
                     break;
                 }
                 case ArenaPlayer.ExperienceType.Objective:
                 {
-					arenaPlayer.ObjectiveExp += (Int32)(baseAmount * (Settings.Default.ExpMultiplier + Grid.ExpBonus + plusBonus));
+                    awarded = (Int32)(baseAmount * multiplier);
+					arenaPlayer.ObjectiveExp += awarded;
                     break;
                 }
                 case ArenaPlayer.ExperienceType.Bonus:
                 {
-                    arenaPlayer.BonusExp += (Int32)(baseAmount * (1.0f + plusBonus));
+                    awarded = (Int32)(baseAmount * (1.0f + plusBonus));
+                    arenaPlayer.BonusExp += awarded;
                     break;
                 }
             }
+
+            Program.Log($"[XP] {arenaPlayer.ActiveCharacter?.Name} +{awarded} {experienceType} (base={baseAmount:F0} mult={multiplier:F2}) total={arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp + arenaPlayer.BonusExp}", Color.Blue, "Misc");
         }
 
         public void DoWallDamage(ArenaPlayer arenaPlayer, Wall wall, Spell spell, SpellDamage spellDamage, bool UDP = false)
@@ -2926,6 +2853,10 @@ namespace SpellServer
 
             if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoShrineBiasing) || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) return;
 
+            // Rate limit bias attempts — 1 roll per 2 seconds regardless of client tick rate
+            if (!arenaPlayer.BiasCooldown.HasElapsed) return;
+            arenaPlayer.BiasCooldown.Reset();
+
             lock (SyncRoot)
             {
                 Int32 penaltyDivider = 3;
@@ -3020,6 +2951,10 @@ namespace SpellServer
         {
             Pool pool = Grid.Pools.FindById(poolId);
             if (pool == null || !arenaPlayer.IsAlive || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoPoolBiasing) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
+
+            // Rate limit bias attempts — shares cooldown with shrine biasing
+            if (!arenaPlayer.BiasCooldown.HasElapsed) return;
+            arenaPlayer.BiasCooldown.Reset();
 
             lock (SyncRoot)
             {

@@ -1721,11 +1721,19 @@ namespace SpellServer
                 }
                 public static MemoryStream PlayerMoveState(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
-                    MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveState);
-                    outStream.Write(relayBuffer, 0, 12);
-                    return outStream;
+                    try
+                    {
+                        MemoryStream outStream = new MemoryStream();
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveState);
+                        outStream.Write(relayBuffer, 0, 12);
+                        return outStream;
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log("Outgoing.PlayerMoveState error: " + ex.Message, Color.Red);
+                        return new MemoryStream();
+                    }
                 }
                 public static MemoryStream PlayerMoveStateShort(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
@@ -1937,9 +1945,14 @@ namespace SpellServer
                             {
                                 outStream.Write(BitConverter.GetBytes(arenaPlayer.ArenaPlayerId), 0, 2);
                             }
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[0])); 
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[1])); // PlayerId if needed
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[2])); // PlayerId if needed
+                            // TODO: Shrine links (pool IDs for ley network topology)
+                            // Commented out — needs testing on dev server first, may change packet size
+                            //for (int l = 0; l < 3; l++)
+                            //{
+                            //    outStream.WriteByte(l < arena.ArenaTeams[i].Shrine.Links.Count
+                            //        ? Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[l])
+                            //        : (Byte)0xFF);
+                            //}
                         }
                         else
                         {
