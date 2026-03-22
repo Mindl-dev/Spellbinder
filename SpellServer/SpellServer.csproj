@@ -209,6 +209,8 @@
     <Compile Include="Network\Packet.cs" />
     <Compile Include="Network\PacketReader.cs" />
     <Compile Include="Network\PacketWriter.cs" />
+    <Compile Include="Packets\InPacket.cs" />
+    <Compile Include="Packets\OutPacket.cs" />
     <Compile Include="Network\Subscription.cs">
       <SubType>Code</SubType>
     </Compile>
