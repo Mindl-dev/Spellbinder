@@ -275,8 +275,8 @@ namespace SpellServer
             long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             long lastTick = Arena.LastTickTimestamp;
             long staleMs = now - lastTick;
-            bool healthy = staleMs < 5000;
             int arenaCount = ArenaManager.Arenas.Count;
+            bool healthy = arenaCount == 0 || staleMs < 5000;
 
             string json = String.Format(
                 "{{\"healthy\":{0},\"tick_stale_ms\":{1},\"arenas\":{2}}}",
