@@ -7,6 +7,7 @@ using MySqlX.XDevAPI.Relational;
 using SharpDX;
 using SpellServer.Properties;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -61,6 +62,14 @@ namespace SpellServer
 	    private const Int32 TickRate = 5;
 	    private const Int32 ClientInterpDelayMs = 100;
 
+        /// <summary>Updated by every arena tick. Watchdog checks staleness to detect deadlocks.</summary>
+        private static long _lastTickTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        public static long LastTickTimestamp
+        {
+            get { return Interlocked.Read(ref _lastTickTimestamp); }
+            set { Interlocked.Exchange(ref _lastTickTimestamp, value); }
+        }
+
         public ArenaTeamCollection ArenaTeams;
         public ArenaPlayerCollection ArenaPlayers;
         public ArenaPlayerCollection ArenaPlayerHistory;
@@ -68,6 +77,24 @@ namespace SpellServer
         public ProjectileGroupCollection ProjectileGroups;
         public WallCollection Walls;
         public RuneCollection Runes;
+
+        private readonly ConcurrentQueue<Packets.InPacket> _inputQueue = new ConcurrentQueue<Packets.InPacket>();
+
+        public void Enqueue(Packets.InPacket packet)
+        {
+            _inputQueue.Enqueue(packet);
+        }
+
+        private void ProcessInput()
+        {
+            while (_inputQueue.TryDequeue(out var packet))
+            {
+                packet.Apply(this);
+            }
+        }
+
+        public ArenaConfig Config;
+        public ArenaState ArenaState;
 
         public ArenaRuleset Ruleset;
 
@@ -236,6 +263,11 @@ namespace SpellServer
                     TimeLimit = Grid.TimeLimit;
                 }
 
+                int eventExp = (ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.ExpEvent)) ? player.PreferredEventExp : 0;
+                Config = new ArenaConfig(ArenaId, TableId, grid, ruleset, levelRange,
+                    player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, eventExp);
+                ArenaState = new ArenaState(Config, ArenaTeams);
+
 				IdleDuration = new Interval(300000, false);
                 ShortGameName = Grid.ShortGameName;
 	            FounderCharId = player.ActiveCharacter.CharacterId;
@@ -347,6 +379,7 @@ namespace SpellServer
                 CurrentTickDelta = ProcessingTick.Delta;
                 FrameTime = ProcessingTick.PreciseDeltaSeconds;
                 ProcessingTick.Reset();
+                LastTickTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                 lock (SyncRoot)
                 {
@@ -354,6 +387,7 @@ namespace SpellServer
                     {                                              
                         try
                         {
+                            ProcessInput();
                             ProcessArenaPlayers();
                             ProcessProjectiles(FrameTime);
                             ProcessRunes();
@@ -1767,6 +1801,12 @@ namespace SpellServer
                 {
                     Projectile projectile = ProjectileGroups[i].Projectiles[j];
 
+                    if (projectile.Owner == null || projectile.Owner.OwnerArena == null)
+                    {
+                        RemoveProjectile(projectile);
+                        continue;
+                    }
+
                     Grid grid = projectile.Owner.OwnerArena.Grid;
 
                     /*if (DebugNumber == 0)
@@ -2869,12 +2909,20 @@ namespace SpellServer
         public void BiasedShrine(ArenaPlayer arenaPlayer, Byte shrineId, Byte team, Byte biasStrength)
         {
             Shrine shrine = Grid.GetShrineById(shrineId);
-            if (shrine == null || shrine.IsIndestructible || !arenaPlayer.IsAlive || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
-
-            if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoShrineBiasing) || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) return;
+            if (shrine == null) return;
+            if (shrine.IsIndestructible || !arenaPlayer.IsAlive || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) ||
+                Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoShrineBiasing) || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag))
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
+                return;
+            }
 
             // Rate limit bias attempts — 1 roll per 2 seconds regardless of client tick rate
-            if (!arenaPlayer.BiasCooldown.HasElapsed) return;
+            if (!arenaPlayer.BiasCooldown.HasElapsed)
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
+                return;
+            }
             arenaPlayer.BiasCooldown.Reset();
 
             lock (SyncRoot)
@@ -2970,10 +3018,19 @@ namespace SpellServer
         public void BiasedPool(ArenaPlayer arenaPlayer, Byte poolId, Byte poolTeam, Byte biasStrength)
         {
             Pool pool = Grid.Pools.FindById(poolId);
-            if (pool == null || !arenaPlayer.IsAlive || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoPoolBiasing) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
+            if (pool == null) return;
+            if (!arenaPlayer.IsAlive || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoPoolBiasing) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0));
+                return;
+            }
 
             // Rate limit bias attempts — shares cooldown with shrine biasing
-            if (!arenaPlayer.BiasCooldown.HasElapsed) return;
+            if (!arenaPlayer.BiasCooldown.HasElapsed)
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0));
+                return;
+            }
             arenaPlayer.BiasCooldown.Reset();
 
             lock (SyncRoot)

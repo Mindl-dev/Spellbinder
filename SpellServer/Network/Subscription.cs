@@ -99,9 +99,13 @@ namespace SpellServer
             Player ghost = players.FindByAccountId(accountId);
             if (ghost != null && ghost != newPlayer)
             {
+                // Flag for disconnect and close socket — don't call Network.Disconnect
+                // as it calls Arena.PlayerLeft which acquires lock(SyncRoot),
+                // deadlocking if the arena thread holds it. Socket close will cause
+                // the ghost's ProcessReceive to error out and clean up arena state.
                 ghost.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
                 ghost.Disconnect = true;
-                try { Network.Disconnect(ghost); } catch { }
+                try { ghost.TcpClient.Client.Close(); } catch { }
                 players.Remove(ghost);
             }
         }

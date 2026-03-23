@@ -295,6 +295,8 @@ namespace SpellServer
 
                 using (MemoryStream inStream = new MemoryStream(data, position + 10, fullPacketLength - 12, false))
                 {
+                    try
+                    {
                     switch (opcode)
                     {
                         case 0x01:
@@ -485,7 +487,8 @@ namespace SpellServer
                         }
                         case 0xA0:
                         {
-                            GamePacket.Incoming.Arena.ScoreRegistered(player, inStream);
+                            var packet = new Packets.ScoreRegisteredPacket(player, inStream);
+                            player.ActiveArena?.Enqueue(packet);
                             break;
                         }
                         case 0xA1:
@@ -583,8 +586,14 @@ namespace SpellServer
                             break;
                         }
                     }
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log($"[PacketError] opcode=0x{opcode:X2} player={player.Username}: {ex.Message}", Color.Red);
+                        Program.Log($"[PacketError] {ex.StackTrace}", Color.Red);
+                    }
                 }
-                
+
                 position += fullPacketLength;
             }
 

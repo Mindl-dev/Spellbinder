@@ -202,5 +202,17 @@ namespace SpellServer.Properties {
                 this["UDPPort"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool MultiboxAllowed {
+            get {
+                return ((bool)(this["MultiboxAllowed"]));
+            }
+            set {
+                this["MultiboxAllowed"] = value;
+            }
+        }
     }
 }

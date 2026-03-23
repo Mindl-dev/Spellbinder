@@ -58,6 +58,8 @@ namespace SpellServer
 
         public static void QueueMail(String subject, String body)
         {
+                if (String.IsNullOrEmpty(Settings.Default.NotifyEmail)) return;
+
                 MailMessage message = new MailMessage
                                       {
                                          From = new MailAddress("notify@magestorm.net", "Magestorm Server"),
@@ -67,7 +69,7 @@ namespace SpellServer
 
                 message.To.Add(Settings.Default.NotifyEmail);
 
-                Messages.Add(message); 
+                Messages.Add(message);
         }
     }
 }

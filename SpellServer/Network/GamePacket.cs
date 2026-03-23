@@ -46,32 +46,6 @@ namespace SpellServer
                 {
                     player.ActiveArena.AFFromClients = true;
                 }
-                public static void ScoreRegistered(SpellServer.Player player, MemoryStream inStream)
-                {
-                    inStream.Seek(2, SeekOrigin.Begin);
-
-                    byte[] data = new byte[4];
-                    inStream.Read(data, 0, 4);
-                    int timestamp = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    inStream.Read(data, 0, 4);
-                    int charLevel = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    inStream.Read(data, 0, 4);
-                    int experience = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    byte[] rawPayload = new byte[110];
-                    inStream.Read(rawPayload, 0, 110);
-
-                    string fullText = Encoding.ASCII.GetString(rawPayload);
-
-                    string[] clumps = fullText.Split(new[] { '\0', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    string accountName = clumps[0];
-                    int slot = (int.TryParse(clumps[1], out int s)) ? s : 0;
-                    string charName = clumps[2];
-
-                }
                 public static void PlayerInit(SpellServer.Player player, MemoryStream inStream)
                 {
                     inStream.Seek(2, SeekOrigin.Begin);
@@ -527,7 +501,8 @@ namespace SpellServer
                     Single fDirection = MathHelper.DirectionToRadians(NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)));
                     ushort Direction = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 0));
 
-                    Program.Log($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
+                    if (player.ActiveArena.DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        Program.Log($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
 
                     // Read angle as byte (0–255)
                     inStream.Seek(2, SeekOrigin.Current);
@@ -535,7 +510,8 @@ namespace SpellServer
                     Int32 angle = rawangle > 0x7F ? (rawangle & 0x7F) ^ 0x7F : -rawangle;
                     Single fAngle = angle;
 
-                    Program.Log($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
+                    if (player.ActiveArena.DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        Program.Log($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
 
                     Byte[] relayBuffer = new Byte[16];
                     inStream.Seek(2, SeekOrigin.Begin);
