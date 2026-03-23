@@ -527,7 +527,8 @@ namespace SpellServer
                     Single fDirection = MathHelper.DirectionToRadians(NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)));
                     ushort Direction = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 0));
 
-                    Program.Log($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
+                    if (player.ActiveArena.DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        Program.Log($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
 
                     // Read angle as byte (0–255)
                     inStream.Seek(2, SeekOrigin.Current);
@@ -535,7 +536,8 @@ namespace SpellServer
                     Int32 angle = rawangle > 0x7F ? (rawangle & 0x7F) ^ 0x7F : -rawangle;
                     Single fAngle = angle;
 
-                    Program.Log($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
+                    if (player.ActiveArena.DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        Program.Log($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
 
                     Byte[] relayBuffer = new Byte[16];
                     inStream.Seek(2, SeekOrigin.Begin);
