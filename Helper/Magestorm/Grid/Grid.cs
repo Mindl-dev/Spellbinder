@@ -386,13 +386,10 @@ namespace Helper
                 TimeLimit = NativeMethods.GetPrivateProfileInt16(keyName, "timelimit", arenaDatFilename);
                 ExpBonus = NativeMethods.GetPrivateProfileSingle(keyName, "expbonus", arenaDatFilename);
 
-                Pools = new PoolCollection();
-
-                Int32 poolCount = NativeMethods.GetPrivateProfileInt32("earthblooddefs", "numearthblood", WorldFilename);
-                for (Int32 x = 0; x < poolCount; x++)
-                {
-                    Pools.Add(new Pool(Convert.ToByte(x), NativeMethods.GetPrivateProfileInt16(String.Format("earthblood{0:00}", x), "power", WorldFilename), 100));
-                }
+                String nifsFilename = Path.Combine(Path.GetDirectoryName(WorldFilename), "NIFS", "NIFS.DAT");
+                if (!File.Exists(nifsFilename))
+                    nifsFilename = null;
+                Pools = LoadPools(WorldFilename, nifsFilename);
 
                 Int32 shrineCount = NativeMethods.GetPrivateProfileInt32("shrinedefs", "numshrines", WorldFilename);
                 for (Int32 x = 0; x < shrineCount; x++)
@@ -829,6 +826,39 @@ namespace Helper
                 }
             }
         }
+        public static PoolCollection LoadPools(String worldFilename, String nifsFilename = null)
+        {
+            var pools = new PoolCollection();
+            Int32 poolCount = NativeMethods.GetPrivateProfileInt32("earthblooddefs", "numearthblood", worldFilename);
+
+            for (Int32 x = 0; x < poolCount; x++)
+            {
+                String section = String.Format("earthblood{0:00}", x);
+                var pool = new Pool(Convert.ToByte(x), NativeMethods.GetPrivateProfileInt16(section, "power", worldFilename), 100);
+                pool.Fixture = NativeMethods.GetPrivateProfileByte(section, "fixture", worldFilename);
+                pool.Radius = NativeMethods.GetPrivateProfileInt16(section, "radius", worldFilename);
+
+                for (Int32 linkNum = 1; linkNum <= 5; linkNum++)
+                {
+                    Int16 link = NativeMethods.GetPrivateProfileInt16(section, String.Format("link{0}", linkNum), worldFilename);
+                    if (link != 0)
+                        pool.Links.Add(link);
+                }
+
+                // Load position from fixture in NIFS.DAT
+                if (nifsFilename != null && pool.Fixture > 0)
+                {
+                    String fixtureSection = String.Format("fixture{0:00}", pool.Fixture);
+                    pool.X = NativeMethods.GetPrivateProfileInt32(fixtureSection, "x", nifsFilename);
+                    pool.Y = NativeMethods.GetPrivateProfileInt32(fixtureSection, "y", nifsFilename);
+                    pool.Z = NativeMethods.GetPrivateProfileInt32(fixtureSection, "z", nifsFilename);
+                }
+
+                pools.Add(pool);
+            }
+            return pools;
+        }
+
         private void LoadSubPixelLibrary()
         {
             byte[] rawData = File.ReadAllBytes(SubPixelFilename);
