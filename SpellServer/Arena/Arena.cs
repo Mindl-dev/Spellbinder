@@ -1748,6 +1748,12 @@ namespace SpellServer
                 {
                     Projectile projectile = ProjectileGroups[i].Projectiles[j];
 
+                    if (projectile.Owner == null || projectile.Owner.OwnerArena == null)
+                    {
+                        RemoveProjectile(projectile);
+                        continue;
+                    }
+
                     Grid grid = projectile.Owner.OwnerArena.Grid;
 
                     /*if (DebugNumber == 0)
@@ -2849,9 +2855,13 @@ namespace SpellServer
         public void BiasedShrine(ArenaPlayer arenaPlayer, Byte shrineId, Byte team, Byte biasStrength)
         {
             Shrine shrine = Grid.GetShrineById(shrineId);
-            if (shrine == null || shrine.IsIndestructible || !arenaPlayer.IsAlive || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
-
-            if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoShrineBiasing) || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag)) return;
+            if (shrine == null) return;
+            if (shrine.IsIndestructible || !arenaPlayer.IsAlive || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) ||
+                Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoShrineBiasing) || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag))
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
+                return;
+            }
 
             // Rate limit bias attempts — 1 roll per 2 seconds regardless of client tick rate
             if (!arenaPlayer.BiasCooldown.HasElapsed)
@@ -2954,7 +2964,12 @@ namespace SpellServer
         public void BiasedPool(ArenaPlayer arenaPlayer, Byte poolId, Byte poolTeam, Byte biasStrength)
         {
             Pool pool = Grid.Pools.FindById(poolId);
-            if (pool == null || !arenaPlayer.IsAlive || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoPoolBiasing) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden)) return;
+            if (pool == null) return;
+            if (!arenaPlayer.IsAlive || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoPoolBiasing) || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden))
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0));
+                return;
+            }
 
             // Rate limit bias attempts — shares cooldown with shrine biasing
             if (!arenaPlayer.BiasCooldown.HasElapsed)

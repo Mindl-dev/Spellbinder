@@ -131,10 +131,11 @@ namespace SpellServer
 
                         if (connectedPlayer != null && player != connectedPlayer)
                         {
-                            // Kick the ghost session and allow the new login through
+                            // Flag for disconnect — don't call Network.Disconnect synchronously
+                            // as it calls Arena.PlayerLeft which acquires lock(SyncRoot),
+                            // deadlocking if the arena thread holds it
                             connectedPlayer.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
                             connectedPlayer.Disconnect = true;
-                            Network.Disconnect(connectedPlayer);
                         }
 
                         if (serial != "Not_Found" && serial != "VMWare" && serial != "VirtualPC")
