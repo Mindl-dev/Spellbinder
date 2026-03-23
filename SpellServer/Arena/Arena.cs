@@ -2649,7 +2649,13 @@ namespace SpellServer
             lock (SyncRoot)
             {
                 arenaPlayer.Location = location;
-                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerYank(arenaPlayer, playerId, location, UDP));
+                var yankPacket = GamePacket.Outgoing.Arena.PlayerYank(arenaPlayer, playerId, location, UDP);
+                byte[] yankBytes = yankPacket.ToArray();
+                Program.Log(String.Format("[Yank Packet] len={0} hex={1}",
+                    yankBytes.Length, BitConverter.ToString(yankBytes).Replace("-", " ")),
+                    System.Drawing.Color.Magenta);
+                yankPacket.Position = 0;
+                Network.Send(arenaPlayer.WorldPlayer, yankPacket);
             }
         }
 
@@ -2886,6 +2892,12 @@ namespace SpellServer
 
             lock (SyncRoot)
             {
+                if (DebugFlags.HasFlag(ArenaSpecialFlag.PlayerTracking))
+                {
+                    Program.Log(String.Format("[Move] {0} pos=({1:F0},{2:F0},{3:F0}) dir={4:F1} spd={5}",
+                        arenaPlayer.ActiveCharacter.Name, location.X, location.Y, location.Z, direction, mSpeed), System.Drawing.Color.Gray);
+                }
+
                 arenaPlayer.StatusFlags = statusFlags;
                 arenaPlayer.MoveSpeed = mSpeed;
                 arenaPlayer.Location = location;
