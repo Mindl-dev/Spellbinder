@@ -62,6 +62,14 @@ namespace SpellServer
 	    private const Int32 TickRate = 5;
 	    private const Int32 ClientInterpDelayMs = 100;
 
+        /// <summary>Updated by every arena tick. Watchdog checks staleness to detect deadlocks.</summary>
+        private static long _lastTickTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        public static long LastTickTimestamp
+        {
+            get { return Interlocked.Read(ref _lastTickTimestamp); }
+            set { Interlocked.Exchange(ref _lastTickTimestamp, value); }
+        }
+
         public ArenaTeamCollection ArenaTeams;
         public ArenaPlayerCollection ArenaPlayers;
         public ArenaPlayerCollection ArenaPlayerHistory;
@@ -371,6 +379,7 @@ namespace SpellServer
                 CurrentTickDelta = ProcessingTick.Delta;
                 FrameTime = ProcessingTick.PreciseDeltaSeconds;
                 ProcessingTick.Reset();
+                LastTickTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
                 lock (SyncRoot)
                 {

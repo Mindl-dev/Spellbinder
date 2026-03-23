@@ -1,6 +1,7 @@
 #!/bin/bash
-# Watchdog — polls the API every 10 seconds.
-# If 3 consecutive failures, dumps Mono thread stacks and restarts.
+# Watchdog — polls /api/health every 10 seconds.
+# Health endpoint checks arena tick recency, not just API liveness.
+# If 3 consecutive failures (tick stale >5s or API down), dumps thread stacks and restarts.
 #
 # Usage: ./watchdog.sh &
 # Safe to call from cron — exits if already running.
@@ -13,23 +14,30 @@ echo $$ > "$PIDFILE"
 trap "rm -f $PIDFILE" EXIT
 
 CONTAINER="spellbinder"
-API="http://localhost:10603/api/status"
+HEALTH_URL="http://localhost:10603/api/health"
 FAIL_THRESHOLD=3
 POLL_INTERVAL=10
 
 fails=0
 
-echo "[watchdog] Started. Polling $API every ${POLL_INTERVAL}s (threshold: ${FAIL_THRESHOLD} failures)"
+echo "[watchdog] Started. Polling $HEALTH_URL every ${POLL_INTERVAL}s (threshold: ${FAIL_THRESHOLD} failures)"
 
 while true; do
-    if curl -s --max-time 5 "$API" > /dev/null 2>&1; then
+    response=$(curl -s --max-time 5 "$HEALTH_URL" 2>/dev/null)
+    http_ok=$?
+
+    if [ $http_ok -eq 0 ] && echo "$response" | grep -q '"healthy":true'; then
         if [ $fails -gt 0 ]; then
             echo "[watchdog] $(date '+%H:%M:%S') Recovered after $fails failures"
         fi
         fails=0
     else
         fails=$((fails + 1))
-        echo "[watchdog] $(date '+%H:%M:%S') API unresponsive ($fails/$FAIL_THRESHOLD)"
+        if [ $http_ok -ne 0 ]; then
+            echo "[watchdog] $(date '+%H:%M:%S') API unreachable ($fails/$FAIL_THRESHOLD)"
+        else
+            echo "[watchdog] $(date '+%H:%M:%S') Tick stale: $response ($fails/$FAIL_THRESHOLD)"
+        fi
 
         if [ $fails -ge $FAIL_THRESHOLD ]; then
             echo "[watchdog] $(date '+%H:%M:%S') Server hung — dumping thread stacks"
