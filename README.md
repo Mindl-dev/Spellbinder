@@ -2,7 +2,7 @@
 
 ## The fastest and easiest way to play is to download a release here: 
 
-https://github.com/Mindl-dev/Spellbinder/releases/
+- https://github.com/Mindl-dev/Spellbinder/releases/
 
 - Mac users will want to view [this guide.](docs/mac_setup.md)
 
