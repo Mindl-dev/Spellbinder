@@ -1,4 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
+using Google.Protobuf.WellKnownTypes;
 using Helper;
 using Helper.Math;
 using Helper.Network;
@@ -109,20 +109,6 @@ namespace SpellServer
                     }
 
                     Network.Send(player, Outgoing.Arena.PlayerGod(player.ActiveArenaPlayer, godStatus, UDP));
-                }
-                public static void Yank(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
-                {
-                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || !player.IsAdmin) return;
-
-                    inStream.Seek(3, SeekOrigin.Begin);
-                    Byte targetId = (Byte)inStream.ReadByte();
-
-                    ArenaPlayer targetArenaPlayer = player.ActiveArena.ArenaPlayers.FindById(targetId);
-
-                    if (targetArenaPlayer != null)
-                    {
-                        player.ActiveArena.PlayerYank(player, targetArenaPlayer, player.ActiveArenaPlayer.ArenaPlayerId, player.ActiveArenaPlayer.Location);
-                    }
                 }
                 public static void PlayerMoveState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -1594,19 +1580,6 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     return outStream;
                 }
-                public static MemoryStream PlayerYank(ArenaPlayer arenaPlayer, Byte playerId, SharpDX.Vector3 location, bool UDP = false)
-                {
-                    MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)PacketOutFunction.PlayerYank);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(playerId)), 0, 2);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.X))), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Y))), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Z))), 0, 2);
-                    return outStream;
-                }
                 public static MemoryStream PlayerGod(ArenaPlayer arenaPlayer, Boolean godStatus, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
@@ -1809,8 +1782,26 @@ namespace SpellServer
                     outStream.Write(relayBuffer, 0, 34);
                     return outStream;
                 }
+                private static byte[] _lastRelayBuffer;
+                private static byte[] _lastProjBuffer;
+
                 public static MemoryStream CastProjectile(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
+                    // DEBUG: detect duplicate relay
+                    if (_lastRelayBuffer != null && relayBuffer.Length == _lastRelayBuffer.Length)
+                    {
+                        bool same = true;
+                        for (int i = 0; i < relayBuffer.Length; i++)
+                        {
+                            if (relayBuffer[i] != _lastRelayBuffer[i]) { same = false; break; }
+                        }
+                        if (same)
+                        {
+                            Program.Log("[CastProjectile DUPLICATE RELAY] " + BitConverter.ToString(relayBuffer), Color.Red);
+                        }
+                    }
+                    _lastRelayBuffer = (byte[])relayBuffer.Clone();
+
                     MemoryStream outStream = new MemoryStream();
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastProjectile);
@@ -1828,8 +1819,26 @@ namespace SpellServer
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Location.Z)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Direction)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Angle)), 0, 2);
+
+                    // DEBUG: detect duplicate proj
+                    byte[] projBuf = outStream.ToArray();
+                    if (_lastProjBuffer != null && projBuf.Length == _lastProjBuffer.Length)
+                    {
+                        bool same = true;
+                        for (int i = 0; i < projBuf.Length; i++)
+                        {
+                            if (projBuf[i] != _lastProjBuffer[i]) { same = false; break; }
+                        }
+                        if (same)
+                        {
+                            Program.Log("[CastProjectile DUPLICATE PROJ] spell=" + newProj.Spell.Name + " at " + newProj.Location, Color.Red);
+                        }
+                    }
+                    _lastProjBuffer = projBuf;
+                    outStream.Position = 0;
+
                     return outStream;
-                    
+
                 }
                 public static MemoryStream CastWall(Byte[] relayBuffer, bool UDP = false)
                 {

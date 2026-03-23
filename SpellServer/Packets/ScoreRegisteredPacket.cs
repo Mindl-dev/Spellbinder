@@ -4,6 +4,7 @@ using System.Text;
 
 namespace SpellServer.Packets
 {
+    [PacketOpcode(0xA0)]
     class ScoreRegisteredPacket : InPacket
     {
         public int Timestamp { get; set; }
@@ -14,9 +15,10 @@ namespace SpellServer.Packets
         public string CharName { get; set; }
         public override byte Opcode => 0xA0;
 
-        public ScoreRegisteredPacket(Player source, MemoryStream inStream)
+        public ScoreRegisteredPacket(Player source, MemoryStream inStream, bool isUdp = false)
         {
             Source = source;
+            IsUdp = isUdp;
 
             PacketReader reader = new PacketReader(inStream);
             reader.Skip(2);

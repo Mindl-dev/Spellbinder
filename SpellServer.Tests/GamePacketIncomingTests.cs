@@ -179,7 +179,7 @@ namespace SpellServer.Tests
             var p = MakePlayer();
             var stream = new MemoryStream(new byte[6]);
             Assert.DoesNotThrow(() =>
-                GamePacket.Incoming.Arena.Yank(p, stream));
+                new SpellServer.Packets.YankPacket(p, stream, isUdp: false).Apply(null));
         }
 
         // ================================================================

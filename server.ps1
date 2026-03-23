@@ -1,5 +1,8 @@
 # Kill, build, test, and restart the C# server
-param([switch]$SkipTests)
+param(
+    [switch]$SkipTests,
+    [string]$Debug
+)
 
 $ErrorActionPreference = "Stop"
 $ServerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -27,7 +30,20 @@ try {
 
     Write-Host "=== Starting server ==="
     Set-Location "$ServerDir\Build\Debug"
-    & .\SpellServer.exe --headless
+    $serverArgs = @("--headless")
+    if ($Debug -and $Debug.Trim().Length -gt 0) {
+        $normalizedDebug = $Debug.Trim()
+        if ($normalizedDebug.StartsWith("--debug=")) {
+            $normalizedDebug = $normalizedDebug.Substring("--debug=".Length)
+        }
+        elseif ($normalizedDebug.StartsWith("--debug")) {
+            $normalizedDebug = $normalizedDebug.Substring("--debug".Length).TrimStart("=")
+        }
+
+        $serverArgs += "--debug=$normalizedDebug"
+        Write-Host "=== Debug flags: $normalizedDebug ==="
+    }
+    & .\SpellServer.exe @serverArgs
 }
 finally {
     Pop-Location

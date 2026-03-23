@@ -14,7 +14,7 @@ namespace SpellBinder
 {
     public class PlayForm : Form
     {
-        private const string VERSION = "0.4.1";
+        private const string VERSION = "0.4.2";
         private const string GITHUB_RELEASE_API = "https://api.github.com/repos/Mindl-dev/Spellbinder/releases/latest";
         private const string GITHUB_ASSET_WIN = "SpellBinder-win.zip";
 
@@ -223,7 +223,7 @@ namespace SpellBinder
 
             Controls.AddRange(new Control[] { title, subtitle, sep, serverLabel, serverBox, registerButton, playButton, statusLabel, sep2, playerLabel, playerList });
 
-            watchdog = new System.Windows.Forms.Timer { Interval = 3000 };
+            watchdog = new System.Windows.Forms.Timer { Interval = 25000 };
             watchdog.Tick += OnWatchdog;
 
             playerRefresh = new System.Windows.Forms.Timer { Interval = 30000 };
@@ -381,14 +381,9 @@ namespace SpellBinder
                 if (secondsRan < 5 || exitCode != 0)
                 {
                     DiagnoseCrash(exitCode, secondsRan);
-                    gameProcess = null;
-                    SetStatus("Game crashed! See crash.log", true);
                 }
-                else
-                {
-                    gameProcess = null;
-                    SetStatus("Game exited.", false);
-                }
+                gameProcess = null;
+                SetStatus("Game exited.", false);
                 return;
             }
 

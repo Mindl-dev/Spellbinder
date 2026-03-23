@@ -56,7 +56,7 @@ cp "$APP_BUNDLE/Contents/Resources/game/game.dll" "$APP_BUNDLE/Contents/Resource
 cat > "$APP_BUNDLE/Contents/Resources/servers.txt" << 'SERVERS'
 # SpellBinder server list — one per line: name|address
 # Edit this file to add/remove servers
-Community Server|45.33.60.131
+Community Server|spellbinder.blackeon.net
 Localhost|127.0.0.1
 SERVERS
 
