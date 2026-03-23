@@ -1412,11 +1412,18 @@ namespace SpellServer
 
             if (oldZ >= gridCeil)
             {
-                if (oldZ < block.CeilingZ - projectile.Spell.MaxStep)
+                // Skip ceiling collision if projectile is flying level above a low geometric ceiling
+                // (e.g. pillar outcroppings that define a low gridCeil for the cell but open air above)
+                if (oldZ >= gridCeil && newZ >= gridCeil && oldZ == newZ)
+                {
+                    heightDetail = $"above_grid_ceil SKIPPED (flying level) oldZ={oldZ} gridCeil={gridCeil} blockCeil={block.CeilingZ}";
+                    // fall through — no collision
+                }
+                else if (oldZ < block.CeilingZ - projectile.Spell.MaxStep)
                 {
                     if (newZ < block.CeilingZ)
                     {
-                        heightDetail = $"above_grid_ceil oldZ={oldZ} newZ={newZ} blockCeil={block.CeilingZ} maxStep={projectile.Spell.MaxStep} (ret2)";
+                        heightDetail = $"above_grid_ceil oldZ={oldZ} newZ={newZ} gridCeil={gridCeil} gridFloor={gridFloor} blockCeil={block.CeilingZ} blockFloor={block.FloorZ} wallH={block.WallHeight} maxStep={projectile.Spell.MaxStep} (ret2)";
                         return 2;
                     }
                     else
@@ -1432,7 +1439,7 @@ namespace SpellServer
                     return 2;
                 }
 
-                if (projectile.Spell.Tall > block.HighBoxZ - block.CeilingZ)
+                if (projectile.Spell.Tall > block.HighBoxZ - block.CeilingZ && block.HighBoxZ != block.CeilingZ)
                 {
                     heightDetail = $"above_grid_ceil tall>highBoxZ-blockCeil tall={projectile.Spell.Tall} span={block.HighBoxZ - block.CeilingZ} (ret1)";
                     return 1;
