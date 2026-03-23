@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Helper;
 using Helper.Math;
 using Helper.Timing;
@@ -73,6 +73,11 @@ namespace SpellServer
         public Projectile hitSpell;
 
         public bool WallCollisionFlag = false;
+
+        /// <summary>
+        /// When <see cref="ArenaSpecialFlag.ProjectileTracking"/> is on, last non-zero collision branch + height sub-reason (server diagnostics).
+        /// </summary>
+        public string LastCollisionDebugDetail;
 
         public ProjectileGroup ParentGroup;
 

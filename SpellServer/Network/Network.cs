@@ -1,4 +1,4 @@
-﻿using Helper;
+using Helper;
 using Helper.Network;
 using MySqlX.XDevAPI;
 using Org.BouncyCastle.Asn1.X509;
@@ -12,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Security.Permissions;
 using System.Threading;
@@ -37,6 +38,48 @@ namespace SpellServer
         public static UdpClient _gameUDPListener;
         public static bool _udpServerRunning = true;
         private static readonly Dictionary<IPEndPoint, Player> _udpClients = new Dictionary<IPEndPoint, Player>();
+        private static readonly Dictionary<byte, Func<Player, MemoryStream, bool, Packets.InPacket>> _packetFactories =
+            BuildPacketFactories();
+
+        private static Dictionary<byte, Func<Player, MemoryStream, bool, Packets.InPacket>> BuildPacketFactories()
+        {
+            var factories = new Dictionary<byte, Func<Player, MemoryStream, bool, Packets.InPacket>>();
+            var packetBaseType = typeof(Packets.InPacket);
+            var types = packetBaseType.Assembly.GetTypes()
+                .Where(t => !t.IsAbstract && packetBaseType.IsAssignableFrom(t));
+
+            foreach (var type in types)
+            {
+                var opcodeAttr = type.GetCustomAttribute<Packets.PacketOpcodeAttribute>();
+                if (opcodeAttr == null)
+                    continue;
+
+                var ctor = type.GetConstructor(new[] { typeof(Player), typeof(MemoryStream), typeof(bool) });
+                if (ctor == null)
+                    continue;
+
+                if (factories.ContainsKey(opcodeAttr.Opcode))
+                {
+                    throw new InvalidOperationException(
+                        $"Duplicate PacketOpcodeAttribute for opcode 0x{opcodeAttr.Opcode:X2}: {type.FullName}");
+                }
+
+                factories[opcodeAttr.Opcode] = (player, inStream, isUdp) =>
+                    (Packets.InPacket)ctor.Invoke(new object[] { player, inStream, isUdp });
+            }
+
+            return factories;
+        }
+
+        private static bool TryDispatchPacketByLookup(byte opcode, Player player, MemoryStream inStream, bool isUdp)
+        {
+            if (!_packetFactories.TryGetValue(opcode, out var packetFactory))
+                return false;
+
+            var packet = packetFactory(player, inStream, isUdp);
+            player.ActiveArena?.Enqueue(packet);
+            return true;
+        }
 
         public static void Listen()
         {
@@ -297,6 +340,12 @@ namespace SpellServer
                 {
                     try
                     {
+                    if (TryDispatchPacketByLookup(opcode, player, inStream, isUdp: false))
+                    {
+                        position += fullPacketLength;
+                        continue;
+                    }
+
                     switch (opcode)
                     {
                         case 0x01:
@@ -485,20 +534,9 @@ namespace SpellServer
                             GamePacket.Incoming.Arena.PlayerInit(player, inStream); 
                             break;
                         }
-                        case 0xA0:
-                        {
-                            var packet = new Packets.ScoreRegisteredPacket(player, inStream);
-                            player.ActiveArena?.Enqueue(packet);
-                            break;
-                        }
                         case 0xA1:
                         {
                             GamePacket.Incoming.Study.HighScores(player, inStream);
-                            break;
-                        }
-                        case 0xA4:
-                        {
-                            GamePacket.Incoming.Arena.Yank(player, inStream);
                             break;
                         }
                         case 0xAC:

@@ -2,6 +2,17 @@ using System;
 
 namespace SpellServer.Packets
 {
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
+    public sealed class PacketOpcodeAttribute : Attribute
+    {
+        public byte Opcode { get; }
+
+        public PacketOpcodeAttribute(byte opcode)
+        {
+            Opcode = opcode;
+        }
+    }
+
     /// <summary>
     /// Base class for incoming (client->server) packets.
     ///
@@ -13,6 +24,12 @@ namespace SpellServer.Packets
     {
         /// <summary>The player who sent this packet.</summary>
         public Player Source { get; set; }
+
+        /// <summary>
+        /// Transport used by the sender.
+        /// False = TCP (default), True = UDP.
+        /// </summary>
+        public bool IsUdp { get; protected set; }
 
         /// <summary>Raw opcode byte for this packet type.</summary>
         public abstract byte Opcode { get; }
