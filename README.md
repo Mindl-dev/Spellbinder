@@ -2,7 +2,9 @@
 
 This is a fork of the Magestorm repo @ https://github.com/Magestorm/Magestorm.
 
-## The fastest and easiset way to play is to download a release here: https://github.com/Mindl-dev/Spellbinder/releases/
+## The fastest and easiest way to play is to download a release here: 
+
+https://github.com/Mindl-dev/Spellbinder/releases/
 
 Includes a private server (C#/.NET 4.8), binary patcher, and portable game client builds for Windows and macOS.
 
