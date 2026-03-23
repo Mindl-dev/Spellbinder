@@ -1626,9 +1626,9 @@ namespace SpellServer
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(playerId)), 0, 2);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(0x00);
-                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.X))), 0, 2);
-                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Y))), 0, 2);
-                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Z))), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.X))), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Y))), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Z))), 0, 2);
                     return outStream;
                 }
                 public static MemoryStream PlayerGod(ArenaPlayer arenaPlayer, Boolean godStatus, bool UDP = false)

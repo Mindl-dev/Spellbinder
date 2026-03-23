@@ -226,6 +226,10 @@ namespace SpellServer
             ChatCommand cmd = new ChatCommand(message);
             if (cmd.Command == null) return false;
 
+            // New command registry — migrating commands here one at a time
+            if (Commands.CommandRegistry.TryExecute(player, cmd)) return true;
+
+            // Legacy commands (migrate to Commands/ folder over time)
             // Generic Administrator Commands
             if (player.ActiveCharacter.OpLevel > 1)
             {

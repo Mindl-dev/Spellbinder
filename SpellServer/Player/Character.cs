@@ -995,7 +995,8 @@ namespace SpellServer
                     Program.Log(String.Format("[Picks Warning] AID: {0}, {1} ({2}) picks={3} max={4}", player.AccountId, player.Username, tCharacter.Name, numPicks, tCharacter.Level * 2), Color.Orange, "Cheat");
                 }
 
-                tCharacter.SpellPicks = (Byte)(((tCharacter.Level * 2) - numPicks) / 2);
+                int picksRemaining = ((tCharacter.Level * 2) - numPicks) / 2;
+                tCharacter.SpellPicks = (Byte)Math.Max(0, picksRemaining);
 
                 PlayerFlag tempFlag = player.Flags;
                 tempFlag &= ~PlayerFlag.MagestormPlus;

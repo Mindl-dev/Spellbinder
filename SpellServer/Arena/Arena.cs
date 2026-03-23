@@ -1208,6 +1208,25 @@ namespace SpellServer
                         return 7;
                     }
 
+                    // Phase 2: Check GridObject collision independent of height detection
+                    // Pillars/fixtures have normal floor/ceiling so height checks pass,
+                    // but we still need to test their bounding boxes
+                    GridObject standAloneObj = grid.GridObjects.GetObjectByLocation(nX, nY, grid);
+                    if (Program.DefaultDebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking) && standAloneObj != null)
+                    {
+                        Program.Log(String.Format("[Pillar] Found GridObject at ({0},{1}) objId={2}", nX, nY, standAloneObj.ObjectId), System.Drawing.Color.Cyan);
+                    }
+                    if (standAloneObj != null)
+                    {
+                        OrientedBoundingBox testProjectileBox = new OrientedBoundingBox(
+                            newPos, projectile.BoundingBox.Size, projectile.BoundingBox.Rotation);
+                        if (standAloneObj.ContainerBox.Collides(testProjectileBox))
+                        {
+                            projectile.hitBlock = grid.GridBlocks.GetBlockByLocation(nX, nY);
+                            return 9;
+                        }
+                    }
+
                     for (Int32 k = ArenaPlayers.Count - 1; k >= 0; k--)
                     {
                         ArenaPlayer arenaPlayer = ArenaPlayers[k];
@@ -2589,6 +2608,7 @@ namespace SpellServer
 
             lock (SyncRoot)
             {
+                arenaPlayer.Location = location;
                 Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerYank(arenaPlayer, playerId, location, UDP));
             }
         }

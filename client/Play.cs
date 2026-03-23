@@ -380,10 +380,9 @@ namespace SpellBinder
 
                 if (secondsRan < 5 || exitCode != 0)
                 {
-                    string diag = DiagnoseCrash(exitCode, secondsRan);
+                    DiagnoseCrash(exitCode, secondsRan);
                     gameProcess = null;
                     SetStatus("Game crashed! See crash.log", true);
-                    MessageBox.Show(diag, "SpellBinder Crashed", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 else
                 {

@@ -239,6 +239,9 @@
     <Compile Include="Sound\GameSound.cs" />
     <Compile Include="Spell\SpellTreeLevel.cs" />
     <Compile Include="World\ChatCommand.cs" />
+    <Compile Include="World\Commands\IChatCommand.cs" />
+    <Compile Include="World\Commands\CommandRegistry.cs" />
+    <Compile Include="World\Commands\YankCommand.cs" />
     <Compile Include="Player\Character.cs" />
     <Compile Include="Player\Player.cs" />
     <Compile Include="Player\PlayerManager.cs" />
