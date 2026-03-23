@@ -47,5 +47,8 @@
     <Setting Name="UDPPort" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">10601</Value>
     </Setting>
+    <Setting Name="MultiboxAllowed" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

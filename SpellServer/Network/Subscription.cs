@@ -143,7 +143,7 @@ namespace SpellServer
 
                             if (connectedPlayer != null)
                             {
-                                if (!connectedPlayer.IsAdmin && Admin == AdminLevel.None)
+                                if (!connectedPlayer.IsAdmin && Admin == AdminLevel.None && !Settings.Default.MultiboxAllowed)
                                 {
                                     Error = ErrorType.LoggedIn;
                                 }
