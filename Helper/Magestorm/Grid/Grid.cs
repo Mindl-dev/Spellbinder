@@ -398,6 +398,7 @@ namespace Helper
 
                     Int16 power = NativeMethods.GetPrivateProfileInt16(shrineString, "power", WorldFilename);
                     Int16 bias = NativeMethods.GetPrivateProfileInt16(shrineString, "bias", WorldFilename);
+                    Byte fixture = NativeMethods.GetPrivateProfileByte(shrineString, "fixture", WorldFilename);
                     Int16 link1 = NativeMethods.GetPrivateProfileInt16(shrineString, "link1", WorldFilename);
                     Int16 link2 = NativeMethods.GetPrivateProfileInt16(shrineString, "link2", WorldFilename);
                     Int16 link3 = NativeMethods.GetPrivateProfileInt16(shrineString, "link3", WorldFilename);
@@ -408,25 +409,35 @@ namespace Helper
                     Links.Add(link2);
                     Links.Add(link3);
 
+                    Shrine shrine = null;
                     switch (NativeMethods.GetPrivateProfileString(shrineString, "alignment", WorldFilename))
                     {
                         case "chaos":
-                            {
                                 DragonShrine = new Shrine(Team.Dragon, (Byte)x, power, bias, Links);
+                                shrine = DragonShrine;
                                 break;
-                            }
 
                         case "balance":
-                            {
                                 PheonixShrine = new Shrine(Team.Pheonix, (Byte)x, power, bias, Links);
+                                shrine = PheonixShrine;
                                 break;
-                            }
 
                         case "order":
-                            {
                                 GryphonShrine = new Shrine(Team.Gryphon, (Byte)x, power, bias, Links);
+                                shrine = GryphonShrine;
                                 break;
-                            }
+                    }
+
+                    if (shrine != null)
+                    {
+                        shrine.Fixture = fixture;
+                        if (nifsFilename != null && fixture > 0)
+                        {
+                            String fixtureSection = String.Format("fixture{0:00}", fixture);
+                            shrine.X = NativeMethods.GetPrivateProfileInt32(fixtureSection, "x", nifsFilename);
+                            shrine.Y = NativeMethods.GetPrivateProfileInt32(fixtureSection, "y", nifsFilename);
+                            shrine.Z = NativeMethods.GetPrivateProfileInt32(fixtureSection, "z", nifsFilename);
+                        }
                     }
                 }
 

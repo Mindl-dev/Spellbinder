@@ -46,6 +46,7 @@
     <Compile Include="InputSanitizationTests.cs" />
     <Compile Include="ApiServerTests.cs" />
     <Compile Include="PoolLoadingTests.cs" />
+    <Compile Include="LeyGraphTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Helper\Helper.csproj">
