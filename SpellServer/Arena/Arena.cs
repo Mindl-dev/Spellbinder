@@ -7,6 +7,7 @@ using MySqlX.XDevAPI.Relational;
 using SharpDX;
 using SpellServer.Properties;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -68,6 +69,24 @@ namespace SpellServer
         public ProjectileGroupCollection ProjectileGroups;
         public WallCollection Walls;
         public RuneCollection Runes;
+
+        private readonly ConcurrentQueue<Packets.InPacket> _inputQueue = new ConcurrentQueue<Packets.InPacket>();
+
+        public void Enqueue(Packets.InPacket packet)
+        {
+            _inputQueue.Enqueue(packet);
+        }
+
+        private void ProcessInput()
+        {
+            while (_inputQueue.TryDequeue(out var packet))
+            {
+                packet.Apply(this);
+            }
+        }
+
+        public ArenaConfig Config;
+        public ArenaState ArenaState;
 
         public ArenaRuleset Ruleset;
 
@@ -236,6 +255,11 @@ namespace SpellServer
                     TimeLimit = Grid.TimeLimit;
                 }
 
+                int eventExp = (ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.ExpEvent)) ? player.PreferredEventExp : 0;
+                Config = new ArenaConfig(ArenaId, TableId, grid, ruleset, levelRange,
+                    player.ActiveCharacter.CharacterId, player.ActiveCharacter.Name, eventExp);
+                ArenaState = new ArenaState(Config, ArenaTeams);
+
 				IdleDuration = new Interval(300000, false);
                 ShortGameName = Grid.ShortGameName;
 	            FounderCharId = player.ActiveCharacter.CharacterId;
@@ -354,6 +378,7 @@ namespace SpellServer
                     {                                              
                         try
                         {
+                            ProcessInput();
                             ProcessArenaPlayers();
                             ProcessProjectiles(FrameTime);
                             ProcessRunes();

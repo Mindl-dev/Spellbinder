@@ -487,7 +487,8 @@ namespace SpellServer
                         }
                         case 0xA0:
                         {
-                            GamePacket.Incoming.Arena.ScoreRegistered(player, inStream);
+                            var packet = new Packets.ScoreRegisteredPacket(player, inStream);
+                            player.ActiveArena?.Enqueue(packet);
                             break;
                         }
                         case 0xA1:

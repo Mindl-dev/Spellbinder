@@ -165,6 +165,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Arena\Arena.cs" />
+    <Compile Include="Arena\ArenaConfig.cs" />
+    <Compile Include="Arena\ArenaState.cs" />
     <Compile Include="Arena\ArenaTeam.cs" />
     <Compile Include="Arena\ArenaTeamCollection.cs" />
     <Compile Include="Arena\Bolt.cs" />
@@ -211,6 +213,7 @@
     <Compile Include="Network\PacketWriter.cs" />
     <Compile Include="Packets\InPacket.cs" />
     <Compile Include="Packets\OutPacket.cs" />
+    <Compile Include="Packets\ScoreRegisteredPacket.cs" />
     <Compile Include="Network\Subscription.cs">
       <SubType>Code</SubType>
     </Compile>

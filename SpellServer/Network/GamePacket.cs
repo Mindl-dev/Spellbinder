@@ -46,32 +46,6 @@ namespace SpellServer
                 {
                     player.ActiveArena.AFFromClients = true;
                 }
-                public static void ScoreRegistered(SpellServer.Player player, MemoryStream inStream)
-                {
-                    inStream.Seek(2, SeekOrigin.Begin);
-
-                    byte[] data = new byte[4];
-                    inStream.Read(data, 0, 4);
-                    int timestamp = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    inStream.Read(data, 0, 4);
-                    int charLevel = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    inStream.Read(data, 0, 4);
-                    int experience = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    byte[] rawPayload = new byte[110];
-                    inStream.Read(rawPayload, 0, 110);
-
-                    string fullText = Encoding.ASCII.GetString(rawPayload);
-
-                    string[] clumps = fullText.Split(new[] { '\0', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    string accountName = clumps[0];
-                    int slot = (int.TryParse(clumps[1], out int s)) ? s : 0;
-                    string charName = clumps[2];
-
-                }
                 public static void PlayerInit(SpellServer.Player player, MemoryStream inStream)
                 {
                     inStream.Seek(2, SeekOrigin.Begin);
