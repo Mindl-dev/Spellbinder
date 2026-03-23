@@ -1,6 +1,3 @@
-# SpellBinder Community Server & Client
-
-Fork of [Magestorm/Magestorm](https://github.com/Magestorm/Magestorm), adapted for SpellBinder: The Nexus Conflict (1999).
 # Spellbinder: The Nexus Conflict Server and Client
 
 This is a fork of the Magestorm repo @ https://github.com/Magestorm/Magestorm.
