@@ -199,7 +199,8 @@ namespace SpellServer
                 if (node.Type != LeyNodeType.Earthblood) continue;
                 float dx = node.X - x;
                 float dy = node.Y - y;
-                float dist = (float)Math.Sqrt(dx * dx + dy * dy); // 2D distance, Z ignored for proximity
+                float dz = node.Z - z;
+                float dist = (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
                 if (dist < minDist)
                 {
                     minDist = dist;
@@ -211,7 +212,7 @@ namespace SpellServer
         }
 
         /// <summary>Find the nearest node owned by a specific team.</summary>
-        public LeyNode GetNearestTeamNode(int x, int y, Team team)
+        public LeyNode GetNearestTeamNode(int x, int y, int z, Team team)
         {
             LeyNode nearest = null;
             float minDist = float.MaxValue;
@@ -222,7 +223,8 @@ namespace SpellServer
                 if (node.Team != team) continue;
                 float dx = node.X - x;
                 float dy = node.Y - y;
-                float dist = (float)Math.Sqrt(dx * dx + dy * dy);
+                float dz = node.Z - z;
+                float dist = (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
                 if (dist < minDist)
                 {
                     minDist = dist;
@@ -234,13 +236,14 @@ namespace SpellServer
         }
 
         /// <summary>Distance from a point to the nearest node of a team.</summary>
-        public float DistanceToNearestTeamNode(int x, int y, Team team)
+        public float DistanceToNearestTeamNode(int x, int y, int z, Team team)
         {
-            var node = GetNearestTeamNode(x, y, team);
+            var node = GetNearestTeamNode(x, y, z, team);
             if (node == null) return float.MaxValue;
             float dx = node.X - x;
             float dy = node.Y - y;
-            return (float)Math.Sqrt(dx * dx + dy * dy);
+            float dz = node.Z - z;
+            return (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
         }
 
         /// <summary>Sync node team/bias state from the live Pool/Shrine objects.</summary>

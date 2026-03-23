@@ -251,7 +251,7 @@ namespace SpellServer.Tests
         {
             var graph = BuildGrid00Graph();
             Assume.That(graph, Is.Not.Null);
-            var nearest = graph.GetNearestTeamNode(2112, 3072, Team.Dragon);
+            var nearest = graph.GetNearestTeamNode(2112, 3072, 260, Team.Dragon);
             Assert.IsNull(nearest, "No Dragon nodes exist yet");
         }
 
@@ -261,7 +261,7 @@ namespace SpellServer.Tests
             var graph = BuildGrid00Graph();
             Assume.That(graph, Is.Not.Null);
             graph.Nodes[0].Team = Team.Dragon;
-            var nearest = graph.GetNearestTeamNode(2112, 3072, Team.Dragon);
+            var nearest = graph.GetNearestTeamNode(2112, 3072, 260, Team.Dragon);
             Assert.IsNotNull(nearest);
             Assert.AreEqual(0, nearest.Id);
         }

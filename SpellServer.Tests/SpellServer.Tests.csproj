@@ -47,6 +47,7 @@
     <Compile Include="ApiServerTests.cs" />
     <Compile Include="PoolLoadingTests.cs" />
     <Compile Include="LeyGraphTests.cs" />
+    <Compile Include="LeyPowerCalculatorTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Helper\Helper.csproj">

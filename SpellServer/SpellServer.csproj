@@ -176,6 +176,7 @@
     <Compile Include="Arena\ArenaPlayerCollection.cs" />
     <Compile Include="Arena\GridBlockFlagData.cs" />
     <Compile Include="Arena\LeyGraph.cs" />
+    <Compile Include="Arena\LeyPowerCalculator.cs" />
     <Compile Include="Arena\Projectile.cs" />
     <Compile Include="Arena\ProjectileGroup.cs" />
     <Compile Include="Arena\ArenaRuleset.cs" />
