@@ -4,6 +4,8 @@
 
 https://github.com/Mindl-dev/Spellbinder/releases/
 
+- Mac users will want to view [this guide.](docs/mac_setup.md)
+
 ---
 
 This is a fork of the Magestorm repo @ https://github.com/Magestorm/Magestorm.
