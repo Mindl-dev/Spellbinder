@@ -1,5 +1,38 @@
 # Projectile Collision Bugs
 
+## Refactor Plan: CollisionClassifier
+
+`CollisionClassifier` is ~1000 lines of nested ifs doing broad phase, narrow phase, and resolution in one function. Refactoring into separate methods fixes the pillar bug for free and makes each collision type testable.
+
+### Target Architecture
+
+**1. Sweep the ray segment** — collect all grid cells the projectile passes through this tick. Extract the `leadingX/Y`, `nX/Y` calculation into a method returning a list of cells.
+
+**2. For each cell, classify the obstacle** — each check becomes its own method:
+```csharp
+CheckPlayerCollision(projectile, cell)      → type 5 or null
+CheckGridObjectCollision(projectile, cell)  → type 9 or null
+CheckWallCollision(projectile, cell)        → type 8 or null
+CheckHeightCollision(projectile, cell)      → type 2/3/6/7 or null
+```
+
+**3. Take the first hit** — closest collision along the ray wins.
+
+### What We Get For Free
+- **Pillar bug fixed** — `CheckGridObjectCollision` runs before `CheckHeightCollision`, so the bounding box catches the pillar and the phantom floor never triggers
+- **Each check is independently testable** — mock a cell, pass a projectile, verify result
+- **Readable** — each method is ~20 lines, not 1000
+- **New collision types are easy** — add a method, slot it into the priority order
+- **Bounce/AOE logic stays separate** — `CollisionClassifier` just returns what was hit, the caller decides what to do
+
+### Migration Path
+1. Extract one collision type at a time (start with player hit — type 5)
+2. Keep existing function working, delegate to new method
+3. Verify with existing tests + projectile tracking logs
+4. Repeat for each type until the nested ifs are gone
+
+---
+
 ## Bug 1: Phantom Wall Collision in Pillar Hallways
 
 ### Symptom
