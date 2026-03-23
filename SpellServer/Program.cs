@@ -145,6 +145,8 @@ namespace SpellServer
 
 			CabalManager.LoadCabals();
 
+			Commands.CommandRegistry.Initialize();
+
 			Network.Listen();
 			ApiServer.Start();
 	    }
