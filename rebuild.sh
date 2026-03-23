@@ -3,6 +3,12 @@ set -e
 
 cd "$(dirname "$0")"
 
+echo "Pausing watchdog..."
+if [ -f /tmp/spellbinder-watchdog.pid ]; then
+    kill "$(cat /tmp/spellbinder-watchdog.pid)" 2>/dev/null || true
+    rm -f /tmp/spellbinder-watchdog.pid
+fi
+
 echo "Stopping spellbinder..."
 podman stop spellbinder 2>/dev/null || true
 podman rm spellbinder 2>/dev/null || true
