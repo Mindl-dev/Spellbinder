@@ -4,11 +4,9 @@ This is a fork of the Magestorm repo @ https://github.com/Magestorm/Magestorm.
 
 If you just want to play, you can find the releases here: https://github.com/Mindl-dev/Spellbinder/releases/
 
-You will need the Arenas.dat, Spells.dat, and Grids folder located in the Content Folder in the directory where the SpellServer.exe file is launched from.
-
 Includes a private server (C#/.NET 4.8), binary patcher, and portable game client builds for Windows and macOS.
 
-## Quick Start — Play the Game
+## Quick Start — Build the client from source
 
 ### 1. Get the game installer
 Download `spelinst.exe` from the [Internet Archive](https://archive.org/details/spelinst) and place it in the repo root.
