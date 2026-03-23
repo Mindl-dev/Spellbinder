@@ -38,13 +38,39 @@ CheckHeightCollision(projectile, cell)      → type 2/3/6/7 or null
 ### Symptom
 Projectiles stop mid-air in hallways with pillar outcroppings on the sides. The spell visually appears to fly through open space on the client, but the server kills it at a grid cell boundary.
 
-### Root Cause
-`GetFloorHeight()` returns the geometric floor height (accounting for sub-pixel mesh data, slope, and pillar geometry) for the entire 64-unit grid cell. Pillar outcroppings raise the geometric floor to ~704 for the whole cell, even though the pillar only occupies part of the cell. A projectile flying at Z=528 through the open hallway enters a cell where `floor=704`, triggering `oldZ < floor - MaxStep` → collision type 2.
+### Root Cause (Verified 2026-03-23)
+**The data is correct. The collision sampling is wrong.**
+
+`GetFloorHeight()` returns the geometric floor at a single (x,y) point. For pillar cells, the floor mesh height varies across the 8×8 sub-cell grid — 224 units in the pillar center, 0 at the corners:
+
+```
+BlockType 22 (EastAndNorthCurvedRamp) FloorMeshHeight 8×8:
+  0    0  224  224  224  224    0    0
+  0  224  224  224  224  224  224    0
+224  224  224  224  224  224  224  224
+224  224  224  224  224  224  224  224
+224  224  224  224  224  224  224  224
+224  224  224  224  224  224  224  224
+  0  224  224  224  224  224  224    0
+  0    0  224  224  224  224    0    0
+```
+
+This is a cylindrical pillar shape. `FloorZ(480) + 224 = 704` — exactly the phantom floor from logs.
+
+The collision system calls `GetFloorHeight(leadingX, leadingY)` where `leadingX/Y` is the projectile's next position. If that point lands in a 224-height sub-cell, it reads `floor=704` and triggers `oldZ(528) < floor(704)` → wall collision. But the projectile ray might actually pass through the 0-height corners and clear the pillar entirely.
+
+**The problem is point-sampling vs ray-testing.** The current code tests a single point against the mesh height. A projectile flying through a corner of the cell should pass through the zero-height region, but if the sampled point is inside the raised mesh, it falsely collides.
+
+### Data Sources
+- `GEOMETRY.DAT`: floor/ceiling mesh height tables (130 bytes per BlockType: 64×int16 floor mesh + int16 SlopeProperty + 64×int16 ceiling mesh)
+- `SUBPIXEL.DAT`: per-cell 64×64 height detail maps (indexed by `DetailMapIndex` for floor, `LogicFlag` for ceiling)
+- `allgriddata.bin`: 19 bytes per cell — TileId, FloorZ, WallHeight, CeilingZ, BlockType, flags, indices
 
 ### Where in the Code
 - **`Arena.cs CollisionClassifier()`** ~line 1095: calls `CollisionHeightDetection()` for X-axis sweep
-- **`Arena.cs CollisionHeightDetection()`** ~line 1390: the `oldZ < floor` check at the bottom of the function (after the ceiling checks)
-- **`Grid.cs GetFloorHeight()`** line 1060: computes geometric floor from `block.FloorZ` + mesh height + sub-pixel library + slope data
+- **`Arena.cs CollisionHeightDetection()`** ~line 1390: the `oldZ < floor` check
+- **`Grid.cs GetFloorHeight()`** line 1068: computes `FloorZ + SubPixelLibrary[DetailMapIndex] + FloorMeshHeight[BlockType]`
+- **`Grid.cs GetFloorMeshHeight()`** line 874: reads from GEOMETRY.DAT terrain table
 
 ### Log Signature
 ```
@@ -52,9 +78,10 @@ hit type=2 ... detail=axis=X_leading_lateral (type2) height=oldZ<floor-maxStep o
 ```
 
 ### Possible Fixes
-1. **GridObject bounding box only**: For cells containing pillar geometry, skip the grid floor height check and only use the GridObject bounding box test (Phase 2 check). The bounding box is accurate to the pillar's actual shape.
-2. **Check if projectile was already above the floor**: If the projectile's origin cell had a lower floor and it's flying level (not descending), it shouldn't collide with a raised floor in an adjacent cell that it's clearly above.
-3. **Sub-cell collision**: Instead of using `GetFloorHeight(cellX, cellY)`, check the floor height at the projectile's exact X,Y position. This would correctly return a low floor for the open space between pillars.
+1. **Ray vs mesh test**: Instead of sampling a single point, test the ray segment against the mesh heightfield. Sample multiple points along the ray within the cell, or analytically intersect the ray with the mesh surface. Only collide if the ray actually passes through raised geometry.
+2. **Sample at entry point**: Instead of testing `leadingX/Y` (exit edge), test where the ray enters the cell. If the entry point has mesh height 0 (corner), the projectile clears the pillar.
+3. **GridObject bounding box priority**: For cells with non-zero `GetFloorMeshHeight`, skip the heightfield check and use the GridObject bounding box test instead. The bounding box is a better approximation for isolated objects like pillars.
+4. **Minimum-height ray test**: Sample `GetFloorHeight` at both the entry and exit points of the ray within the cell. Only collide if BOTH points have raised floors (the ray can't avoid the geometry).
 
 ### Also Fixed (Partial)
 - **Phantom ceiling collision**: `oldZ >= gridCeil` triggered for cells with low geometric ceilings (pillar tops) even when the projectile was flying level in open air. Fixed by skipping when `oldZ == newZ` (level flight). See the `SKIPPED (flying level)` path.
