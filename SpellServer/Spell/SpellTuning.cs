@@ -21,11 +21,11 @@ namespace SpellServer
         {
             switch (type)
             {
-                // Healing: potency/100 gives base HP, level adds scaling
-                // Heal I (potency=2000, lv1): 20 + 0.5 = 20.5 HP per tick
-                // Heal IV (potency=4000, lv10): 40 + 5 = 45 HP per tick
+                // Healing: potency IS base HP healed, level adds scaling
+                // Cure (potency=30, lv1): 30 + 0.5 = 30.5 HP
+                // Transfer IV (potency=50, lv10): 50 + 5 = 55 HP
                 case SpellEffectType.Healing:
-                    return potency / 100f + casterLevel * 0.5f;
+                    return potency + casterLevel * 0.5f;
 
                 // Bleed/DoT: potency is raw damage per tick, level adds a fraction
                 case SpellEffectType.Bleed:

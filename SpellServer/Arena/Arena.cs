@@ -617,7 +617,11 @@ namespace SpellServer
                         case SpellEffectType.Bleed:
                         {
                             if (hasElapsed) DoPlayerDamage(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell, null, false);
-
+                            break;
+                        }
+                        case SpellEffectType.Healing:
+                        {
+                            if (hasElapsed) DoPlayerHealing(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell);
                             break;
                         }
                     }

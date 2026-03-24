@@ -104,10 +104,12 @@ namespace SpellServer
            
             if (EffectSpell != null)
             {
-                // Duration field in Spells.dat is in seconds, Interval expects milliseconds
-                Duration = EffectSpell.Effect == SpellEffectType.Bleed
-                    ? new Interval(1000, EffectSpell.Duration)  // Bleed: tick every 1s, repeat Duration times
-                    : new Interval(EffectSpell.Duration * 1000, false);  // Everything else: Duration seconds
+                // Duration field is in seconds. Ticking effects (Bleed, Healing) tick every 1s.
+                // Non-ticking effects (buffs, shields) use a one-shot timer.
+                if (EffectSpell.Effect == SpellEffectType.Bleed || EffectSpell.Effect == SpellEffectType.Healing)
+                    Duration = new Interval(1000, EffectSpell.Duration);  // tick every 1s, Duration ticks
+                else
+                    Duration = new Interval(EffectSpell.Duration * 1000, false);  // one-shot: Duration seconds
             }
             else
             {
