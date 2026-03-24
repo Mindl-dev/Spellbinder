@@ -3455,6 +3455,22 @@ namespace SpellServer
                         if (targetArenaPlayer.IsAlive && ((arenaPlayer.ActiveTeam == targetArenaPlayer.ActiveTeam || arenaPlayer.ActiveTeam == Team.Neutral) || targetArenaPlayer.ActiveTeam == Team.Neutral))
                         {
                             DoPlayerEffect(arenaPlayer, arenaPlayer, spell, EffectType.Caster);
+
+                            // Transfer spells: caster pays HP cost immediately
+                            if (spell.CasterSpellEffect > 0)
+                            {
+                                Spell casterEffect = SpellManager.Spells[spell.CasterSpellEffect];
+                                if (casterEffect != null && casterEffect.Effect == SpellEffectType.Bleed)
+                                {
+                                    SpellDamage selfDmg = new SpellDamage(casterEffect);
+                                    if (selfDmg.Damage > 0)
+                                    {
+                                        arenaPlayer.CurrentHp -= selfDmg.Damage;
+                                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(arenaPlayer, arenaPlayer, selfDmg));
+                                    }
+                                }
+                            }
+
                             if (!DoPlayerEffect(targetArenaPlayer, arenaPlayer, spell, EffectType.Target)) return false;
                         }
                         else return false;
