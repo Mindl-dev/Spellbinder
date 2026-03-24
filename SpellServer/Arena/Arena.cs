@@ -2159,6 +2159,11 @@ namespace SpellServer
             {
                 SpellEffectType arenaEffectType = arenaEffect.EffectSpell.Effect;
 
+                // Spells.dat effect= field stores magnitude (2000, 3000, etc.) not SpellEffectType.
+                // Values > Expulse (19) are magnitudes miscast as enum — treat as Healing.
+                if ((int)arenaEffectType > (int)SpellEffectType.Expulse)
+                    arenaEffectType = SpellEffectType.Healing;
+
                 switch (arenaEffectType)
                 {
                     case SpellEffectType.None:
