@@ -2477,6 +2477,10 @@ namespace SpellServer
 
             Network.SendTo(this, GamePacket.Outgoing.Arena.PlayerResurrect(sourcePlayer, targetPlayer, UDP), Network.SendToType.Arena);
             Network.Send(targetPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(targetPlayer, null, new SpellDamage(null, 0, 0, 0), UDP));
+
+            // Spawn at ghost's current position (near the spirit gate)
+            var spawnPacket = new Packets.PlayerYankPacket(targetPlayer.ArenaPlayerId, targetPlayer.Location).ToBytes();
+            Network.SendTo(this, spawnPacket, Network.SendToType.Arena);
         }
 
         public void DoPlayerDamage(ArenaPlayer targetPlayer, ArenaPlayer sourcePlayer, Spell spell, SpellDamage spellDamage, Boolean showHitToSource, bool UDP = false)
