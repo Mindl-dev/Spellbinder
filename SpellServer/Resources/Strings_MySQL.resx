@@ -163,7 +163,7 @@
     <value>INSERT INTO `matches` (arenaid, tableid, creation_time, player_count, highest_player_count, max_players, current_state, end_state, short_name, long_name, founder_charid, duration, level_range, mode, rules) VALUES (@arenaid, @tableid, @creation_time, @player_count, @highest_player_count, @max_players, @current_state, @end_state, @short_name, @long_name, @founder_charid, @duration, @level_range, @mode, @rules)</value>
   </data>
   <data name="NonQuery_Insert_OnlineAccounts_SetOnline" xml:space="preserve">
-    <value>INSERT INTO `online_accounts` (accountid, username) VALUES (@accountid, @username)</value>
+    <value>REPLACE INTO `online_accounts` (accountid, username) VALUES (@accountid, @username)</value>
   </data>
   <data name="NonQuery_Update_Cabal_SaveExisting" xml:space="preserve">
     <value>UPDATE `cabals` SET cabalid=@cabalid, cabalname=@cabalname, cabaltag=@cabaltag, caballeader=@caballeader WHERE cabalid=@cabalid AND cabalname=@cabalname</value>
