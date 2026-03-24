@@ -10,6 +10,12 @@ namespace Helper
         public Int16 MaxBias;
         public Byte PoolId;
         public Team Team;
+        public Byte Fixture;
+        public Int16 Radius;
+        public Int32 X;
+        public Int32 Y;
+        public Int32 Z;
+        public ListCollection<Int16> Links;
         private Int16 _currentBias;
 
         public Pool(Byte poolId, Int16 power, Int16 maxBias)
@@ -19,6 +25,7 @@ namespace Helper
             MaxBias = maxBias;
             CurrentBias = 0;
             Power = power;
+            Links = new ListCollection<Int16>();
         }
 
         public Pool(Pool p)
@@ -28,6 +35,12 @@ namespace Helper
             MaxBias = p.MaxBias;
             CurrentBias = 0;
             Power = p.Power;
+            Fixture = p.Fixture;
+            Radius = p.Radius;
+            X = p.X;
+            Y = p.Y;
+            Z = p.Z;
+            Links = new ListCollection<Int16>(p.Links);
         }
 
         public Int16 CurrentBias

@@ -102,6 +102,7 @@ namespace SpellServer
 	    public Int64 MatchId;
         public Byte TableId;
         public Grid Grid;
+        public LeyGraph LeyGraph;
         public Interval Duration;
 	    public Interval IdleDuration;
         public State CurrentState;
@@ -200,6 +201,7 @@ namespace SpellServer
                 Grid = new Grid(grid);
                 Tables = grid.Tables.GetById(grid.GridId);
                 ArenaTeams = new ArenaTeamCollection(Grid);
+                LeyGraph = LeyGraph.Build(Grid.Pools, ArenaTeams.Dragon.Shrine, ArenaTeams.Pheonix.Shrine, ArenaTeams.Gryphon.Shrine);
                 ArenaPlayers = new ArenaPlayerCollection();
                 ArenaPlayerHistory = new ArenaPlayerCollection();
                 Runes = new RuneCollection();
@@ -2137,6 +2139,7 @@ namespace SpellServer
                             Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(arenaPlayer.WorldPlayer, String.Format("You have captured the {0} orb!", captureTeam.Shrine.Team)));
 
                             Network.SendToArena(arenaPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, captureTeam.Shrine, (Byte)biasAmount, UDP), true);
+                            LeyGraph?.SyncFromGameState();
                         }
                         break;
                     }
@@ -2474,6 +2477,10 @@ namespace SpellServer
 
             Network.SendTo(this, GamePacket.Outgoing.Arena.PlayerResurrect(sourcePlayer, targetPlayer, UDP), Network.SendToType.Arena);
             Network.Send(targetPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(targetPlayer, null, new SpellDamage(null, 0, 0, 0), UDP));
+
+            // Spawn at ghost's current position (near the spirit gate)
+            var spawnPacket = new Packets.PlayerYankPacket(targetPlayer.ArenaPlayerId, targetPlayer.Location).ToBytes();
+            Network.Send(targetPlayer.WorldPlayer, spawnPacket);
         }
 
         public void DoPlayerDamage(ArenaPlayer targetPlayer, ArenaPlayer sourcePlayer, Spell spell, SpellDamage spellDamage, Boolean showHitToSource, bool UDP = false)
@@ -2543,6 +2550,23 @@ namespace SpellServer
             }
 
             spellDamage.Damage -= resistedAmount;
+
+            // Earthpower damage scaling
+            if (sourcePlayer != null && LeyGraph != null)
+            {
+                float earthMult = LeyPowerCalculator.GetDamageMultiplier(sourcePlayer.ActiveTeam, LeyGraph);
+                spellDamage.Damage = (Int16)(spellDamage.Damage * earthMult);
+                spellDamage.Power = (Int16)(spellDamage.Power * earthMult);
+
+                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                {
+                    int ep = LeyPowerCalculator.GetTeamEarthpower(sourcePlayer.ActiveTeam, LeyGraph);
+                    Network.SendTo(this, GamePacket.Outgoing.System.DirectTextMessage(null,
+                        String.Format("[Earthpower] {0} team={1}% mult={2:F2}x dmg={3}",
+                        sourcePlayer.ActiveCharacter.Name, ep, earthMult, spellDamage.Damage)),
+                        Network.SendToType.Arena);
+                }
+            }
 
             if (targetPlayer.ActiveCharacter.Level < AveragePlayerLevel)
             {
@@ -3000,6 +3024,18 @@ namespace SpellServer
                 return;
             }
 
+            // Ley line connectivity check — nexus requires adjacent owned node
+            int shrineNodeId = shrine.ShrineId + LeyGraph.ShrineIdOffset;
+            BiasEligibility shrineEligibility = LeyGraph != null
+                ? LeyGraph.GetBiasEligibility(shrineNodeId, arenaPlayer.ActiveTeam)
+                : BiasEligibility.Connected;
+
+            if (shrineEligibility == BiasEligibility.Blocked)
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
+                return;
+            }
+
             // Rate limit bias attempts — 1 roll per 2 seconds regardless of client tick rate
             if (!arenaPlayer.BiasCooldown.HasElapsed)
             {
@@ -3063,6 +3099,10 @@ namespace SpellServer
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
+                // Nexus is 5x harder to bias than nodes (enemy attacking only)
+                if (!isFriendly)
+                    biasAmount = Math.Max(1, (Int32)(biasAmount * LeyPowerCalculator.NexusBiasMultiplier));
+
                 if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70)
                 {
                     if (isFriendly)
@@ -3090,6 +3130,7 @@ namespace SpellServer
 
                     Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                    LeyGraph?.SyncFromGameState();
                 }
                 else
                 {
@@ -3106,6 +3147,18 @@ namespace SpellServer
             {
                 Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0));
                 return;
+            }
+
+            // Ley line connectivity check
+            BiasEligibility eligibility = LeyGraph != null
+                ? LeyGraph.GetBiasEligibility(poolId, arenaPlayer.ActiveTeam)
+                : BiasEligibility.Connected;
+
+            if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking) && LeyGraph != null)
+            {
+                var node = LeyGraph.Nodes.ContainsKey(poolId) ? LeyGraph.Nodes[poolId] : null;
+                string neighbors = node != null ? string.Join(",", node.Neighbors.Select(n => $"{n.Id}({n.Team})")) : "?";
+                Program.Log($"[Bias] {arenaPlayer.ActiveCharacter.Name} team={arenaPlayer.ActiveTeam} pool={poolId} eligibility={eligibility} neighbors=[{neighbors}]", System.Drawing.Color.Yellow);
             }
 
             // Rate limit bias attempts — shares cooldown with shrine biasing
@@ -3171,6 +3224,10 @@ namespace SpellServer
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
+                // Back-hack penalty: disconnected nodes bias 4x slower
+                if (eligibility == BiasEligibility.Disconnected)
+                    biasAmount = Math.Max(1, (Int32)(biasAmount * LeyPowerCalculator.BackHackBiasMultiplier));
+
                 if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 75)
                 {
                     GivePlayerExperience(arenaPlayer, (((arenaPlayer.ActiveCharacter.Level / 9.2f) + 0.48f) * biasAmount), ArenaPlayer.ExperienceType.Objective);
@@ -3209,6 +3266,7 @@ namespace SpellServer
 
                     Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                    LeyGraph?.SyncFromGameState();
                 }
                 else
                 {
@@ -3237,6 +3295,10 @@ namespace SpellServer
 
                     arenaPlayer.ValhallaProtection.Reset();
                     arenaPlayer.CurrentHp = arenaPlayer.MaxHp;
+
+                    // Spawn at ghost's current position (the node/nexus the player walked to)
+                    var spawnPacket = new Packets.PlayerYankPacket(arenaPlayer.ArenaPlayerId, arenaPlayer.Location).ToBytes();
+                    Network.Send(arenaPlayer.WorldPlayer, spawnPacket);
                 }
                 else
                 {
