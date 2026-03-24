@@ -92,7 +92,7 @@ namespace SpellServer
                     {
                         case SpellType.Effect:
                         {
-                            tSpell = SpellManager.Spells[spell.TargetSpellEffect] ?? spell;
+                            tSpell = spell.TargetSpellEffect > 0 ? (SpellManager.Spells[spell.TargetSpellEffect] ?? spell) : spell;
 
                             Damage += spell.DamageBase;
 
