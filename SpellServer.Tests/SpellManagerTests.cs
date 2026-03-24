@@ -189,6 +189,62 @@ namespace SpellServer.Tests
                 Assert.AreEqual(SpellEffectType.Healing, cureEffect.Effect);
                 Assert.AreEqual(30, cureEffect.Potency);
                 Assert.AreEqual(1, cureEffect.Duration);
+
+                // ============================================================
+                // SpellDamage chaining — verify effect spells produce correct values
+                // ============================================================
+
+                // Cure Effect (spell 234, JSON-loaded, TargetSpellEffect=0)
+                // SpellDamage should use the spell itself when TargetSpellEffect=0
+                var cureDmg = new SpellDamage(cureEffect);
+                Assert.That(cureDmg.Healing, Is.GreaterThan(0), $"Cure Effect should produce healing (got {cureDmg.Healing})");
+
+                // Resist Heat Effect (spell 104, JSON-loaded, Resist type)
+                // Should not produce healing or damage — it's a buff stored in Effects[]
+                var resistDmg = new SpellDamage(resistHeatEffect);
+                Assert.AreEqual(0, resistDmg.Damage, "Resist effect should not deal damage");
+                Assert.AreEqual(0, resistDmg.Healing, "Resist effect should not heal");
+
+                // Flame Streak I (spell 1, Spells.dat-loaded, projectile with dice)
+                var flameStreakDmg = new SpellDamage(SpellManager.Spells[1]);
+                Assert.That(flameStreakDmg.Damage, Is.GreaterThan(0), "Flame Streak should deal damage");
+
+                // Fire Ball II (spell 124, projectile with AOE)
+                var fireballDmg = new SpellDamage(SpellManager.Spells[124]);
+                Assert.That(fireballDmg.Damage, Is.GreaterThan(0), "Fire Ball II should deal damage");
+
+                // Bless I Effect (spell 231, JSON-loaded, Bless type)
+                var blessEffect = SpellManager.Spells[231];
+                var blessDmg = new SpellDamage(blessEffect);
+                Assert.AreEqual(0, blessDmg.Damage, "Bless effect should not deal damage");
+
+                // ============================================================
+                // SpellTuning — verify ComputeEffectValue for loaded spells
+                // ============================================================
+
+                // Cure Effect: Healing potency=30, casterLevel=0 → 30 HP
+                float cureHeal = SpellTuning.ComputeEffectValue(SpellEffectType.Healing, SpellTuning.GetPotency(cureEffect), 0);
+                Assert.AreEqual(30f, cureHeal, 0.1f, "Cure should heal 30 HP at level 0");
+
+                // Cure Effect: Healing potency=30, casterLevel=10 → 35 HP
+                float cureHealLv10 = SpellTuning.ComputeEffectValue(SpellEffectType.Healing, SpellTuning.GetPotency(cureEffect), 10);
+                Assert.AreEqual(35f, cureHealLv10, 0.1f, "Cure should heal 35 HP at level 10");
+
+                // Resist Heat Effect: potency=20 → 20% reduction
+                float resistVal = SpellTuning.ComputeEffectValue(SpellEffectType.Resist, SpellTuning.GetPotency(resistHeatEffect), 0);
+                Assert.AreEqual(20f, resistVal, 0.1f, "Resist Heat should reduce 20%");
+
+                // Bless I Effect: potency=5, casterLevel=0 → 5%
+                float blessVal = SpellTuning.ComputeEffectValue(SpellEffectType.Bless, SpellTuning.GetPotency(blessEffect), 0);
+                Assert.AreEqual(5f, blessVal, 0.1f, "Bless I should reduce 5% at level 0");
+
+                // Bless I Effect: potency=5, casterLevel=10 → 8%
+                float blessValLv10 = SpellTuning.ComputeEffectValue(SpellEffectType.Bless, SpellTuning.GetPotency(blessEffect), 10);
+                Assert.AreEqual(8f, blessValLv10, 0.1f, "Bless I should reduce 8% at level 10");
+
+                // GetPotency prefers Potency field over Level
+                Assert.AreEqual(30, SpellTuning.GetPotency(cureEffect), "GetPotency should return Potency field");
+                Assert.AreEqual(20, SpellTuning.GetPotency(resistHeatEffect), "GetPotency should return Potency field");
             }
             finally
             {
