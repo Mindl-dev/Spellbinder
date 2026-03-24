@@ -734,7 +734,9 @@ namespace SpellServer
                     String name = ParseJsonString(obj, "name") ?? "Effect " + id;
                     String effectType = ParseJsonString(obj, "effect_type") ?? "None";
                     String element = ParseJsonString(obj, "element") ?? "None";
-                    int level = ParseJsonInt(obj, "level");
+                    // "potency" in JSON = effect strength. Renamed from "effect=" in Spells.dat
+                    // to avoid confusion with SpellEffectType enum. NOT character level.
+                    int potency = ParseJsonInt(obj, "potency");
                     int duration = ParseJsonInt(obj, "duration");
 
                     Spell spell = new Spell
@@ -742,7 +744,8 @@ namespace SpellServer
                         Id = (Int16)id,
                         Name = name,
                         Type = SpellType.Effect,
-                        Level = (Int16)level,
+                        Potency = potency,
+                        Level = (Int16)potency, // Legacy: existing formulas read Level. Will migrate to Potency.
                         Duration = duration,
                     };
 

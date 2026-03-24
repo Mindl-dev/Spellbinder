@@ -266,6 +266,7 @@
     <Compile Include="Spell\Spell.cs" />
     <Compile Include="Spell\SpellCollection.cs" />
     <Compile Include="Spell\SpellDamage.cs" />
+    <Compile Include="Spell\SpellTuning.cs" />
     <Compile Include="Spell\SpellTree.cs" />
     <Compile Include="Spell\SpellTreeCollection.cs" />
     <Compile Include="Statistics\StatisticSheet.cs" />

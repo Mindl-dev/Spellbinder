@@ -134,7 +134,7 @@ namespace SpellServer.Tests
                 count++;
                 StringAssert.Contains("\"name\"", obj, $"Missing name in effect object #{count}");
                 StringAssert.Contains("\"effect_type\"", obj, $"Missing effect_type in effect object #{count}");
-                StringAssert.Contains("\"level\"", obj, $"Missing level in effect object #{count}");
+                StringAssert.Contains("\"potency\"", obj, $"Missing potency in effect object #{count}");
                 StringAssert.Contains("\"duration\"", obj, $"Missing duration in effect object #{count}");
             }
 
