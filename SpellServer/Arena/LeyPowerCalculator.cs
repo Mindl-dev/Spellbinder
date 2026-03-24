@@ -26,7 +26,7 @@ namespace SpellServer
 
         // Biasing speed multipliers (applied to bias roll/amount)
         public const float BackHackBiasMultiplier = 0.25f;  // 4x slower when disconnected from network
-        public const float NexusBiasMultiplier = 1.0f;       // no extra penalty for now — tune later
+        public const float NexusBiasMultiplier = 0.33f;      // 3x harder to bias enemy nexus
 
         // Distance thresholds (world units)
         public const float NodeContactRadius = 192f;   // "direct contact" — standing on/near the node
