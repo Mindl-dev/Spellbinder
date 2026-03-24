@@ -3129,7 +3129,8 @@ namespace SpellServer
                     }
                 }
 
-                if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70)
+                // Healing own nexus always succeeds, attacking requires roll
+                if (biasAmount > 0 && (isFriendly || (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70))
                 {
                     if (isFriendly)
                     {
