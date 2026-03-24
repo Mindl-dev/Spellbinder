@@ -115,7 +115,11 @@ namespace SpellServer
                         }
                     }
 
-                    switch (tSpell.Effect)
+                    // Remap Spells.dat magnitude-as-enum values (> Expulse) to Healing
+                    SpellEffectType resolvedEffect = (int)tSpell.Effect > (int)SpellEffectType.Expulse
+                        ? SpellEffectType.Healing : tSpell.Effect;
+
+                    switch (resolvedEffect)
                     {
                         case SpellEffectType.Healing:
                         {
