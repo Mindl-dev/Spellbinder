@@ -3284,6 +3284,10 @@ namespace SpellServer
 
                     arenaPlayer.ValhallaProtection.Reset();
                     arenaPlayer.CurrentHp = arenaPlayer.MaxHp;
+
+                    // Spawn at ghost's current position (the node/nexus the player walked to)
+                    var spawnPacket = new Packets.PlayerYankPacket(arenaPlayer.ArenaPlayerId, arenaPlayer.Location).ToBytes();
+                    Network.SendTo(arenaPlayer.OwnerArena, spawnPacket, Network.SendToType.Arena);
                 }
                 else
                 {
