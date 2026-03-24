@@ -612,7 +612,10 @@ namespace SpellServer
                         continue;
                     }
 
-                    switch (arenaEffect.EffectSpell.Effect)
+                    SpellEffectType tickEffect = (int)arenaEffect.EffectSpell.Effect > (int)SpellEffectType.Expulse
+                        ? SpellEffectType.Healing : arenaEffect.EffectSpell.Effect;
+
+                    switch (tickEffect)
                     {
                         case SpellEffectType.Bleed:
                         {
