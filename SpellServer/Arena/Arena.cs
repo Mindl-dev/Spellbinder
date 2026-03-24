@@ -2432,6 +2432,10 @@ namespace SpellServer
             SpellDamage spellDamage = new SpellDamage(spell);
             Int16 hDifference = Convert.ToInt16(targetPlayer.MaxHp - targetPlayer.CurrentHp);
 
+            // Cap healing at 25% of max HP per cast
+            Int16 maxHeal = Convert.ToInt16(Math.Ceiling(targetPlayer.MaxHp * 0.25f));
+            if (spellDamage.Healing > maxHeal) spellDamage.Healing = maxHeal;
+
             if (spellDamage.Healing <= 0 || hDifference <= 0) return false;
 
             Int16 healingDone = spellDamage.Healing > hDifference ? hDifference : spellDamage.Healing;
