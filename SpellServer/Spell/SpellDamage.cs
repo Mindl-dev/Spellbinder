@@ -92,7 +92,7 @@ namespace SpellServer
                     {
                         case SpellType.Effect:
                         {
-                            tSpell = SpellManager.Spells[spell.TargetSpellEffect] ?? spell;
+                            tSpell = spell.TargetSpellEffect > 0 ? (SpellManager.Spells[spell.TargetSpellEffect] ?? spell) : spell;
 
                             Damage += spell.DamageBase;
 
@@ -115,17 +115,21 @@ namespace SpellServer
                         }
                     }
 
-                    switch (tSpell.Effect)
+                    // Remap Spells.dat magnitude-as-enum values (> Expulse) to Healing
+                    SpellEffectType resolvedEffect = (int)tSpell.Effect > (int)SpellEffectType.Expulse
+                        ? SpellEffectType.Healing : tSpell.Effect;
+
+                    switch (resolvedEffect)
                     {
                         case SpellEffectType.Healing:
                         {
-                            Healing = tSpell.Level != 255 ? CryptoRandom.GetInt16(Convert.ToInt16(Math.Floor(tSpell.Level * 0.80)), Convert.ToInt16(Math.Floor(tSpell.Level * 1.00))) : tSpell.Level;
-
+                            int potency = SpellTuning.GetPotency(tSpell);
+                            Healing = potency >= 255 ? (Int16)255 : (Int16)SpellTuning.ComputeEffectValue(SpellEffectType.Healing, potency, 0);
                             break;
                         }
                         case SpellEffectType.Bleed:
                         {
-                            Damage = tSpell.Level;
+                            Damage = (Int16)SpellTuning.ComputeEffectValue(SpellEffectType.Bleed, SpellTuning.GetPotency(tSpell), 0);
                             break;
                         }
                     }
@@ -139,7 +143,7 @@ namespace SpellServer
 
                     if (tSpell.Effect == SpellEffectType.Bleed)
                     {
-                        Damage = tSpell.Level;
+                        Damage = (Int16)SpellTuning.ComputeEffectValue(SpellEffectType.Bleed, SpellTuning.GetPotency(tSpell), 0);
                     }
 
                     Damage += spell.DamageBase;

@@ -189,7 +189,9 @@ namespace SpellServer
         }
         public static void Disconnect(Player player)
         {
-            player.TcpClient.Client.DisconnectAsync(new SocketAsyncEventArgs());
+            try { player.TcpClient.Client.DisconnectAsync(new SocketAsyncEventArgs()); }
+            catch (ObjectDisposedException) { } // Socket already closed by KickGhostSessions
+            catch (SocketException) { }
 
             Program.Log(String.Format("{0} has disconnected. ({1})", player.IsLoggedIn ? player.Username : player.IpAddress, player.DisconnectReason), Color.BlueViolet);
 
@@ -346,6 +348,9 @@ namespace SpellServer
                         continue;
                     }
 
+                    if (opcode == 0x27 || opcode == 0x2D)
+                        Program.Log($"[PacketDispatch] opcode=0x{opcode:X2} player={player.Username} arena={player.ActiveArena != null}", System.Drawing.Color.Magenta);
+
                     switch (opcode)
                     {
                         case 0x01:
@@ -422,6 +427,11 @@ namespace SpellServer
                         case 0x26:
                         {
                             GamePacket.Incoming.World.RequestedPlayer(player, inStream);
+                            break;
+                        }
+                        case 0x27: // CastEffect (self-cast shields, heals, buffs)
+                        {
+                            GamePacket.Incoming.Arena.CastEffect(player, inStream);
                             break;
                         }
                         case 0x28:

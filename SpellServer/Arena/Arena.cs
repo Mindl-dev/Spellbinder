@@ -612,12 +612,19 @@ namespace SpellServer
                         continue;
                     }
 
-                    switch (arenaEffect.EffectSpell.Effect)
+                    SpellEffectType tickEffect = (int)arenaEffect.EffectSpell.Effect > (int)SpellEffectType.Expulse
+                        ? SpellEffectType.Healing : arenaEffect.EffectSpell.Effect;
+
+                    switch (tickEffect)
                     {
                         case SpellEffectType.Bleed:
                         {
                             if (hasElapsed) DoPlayerDamage(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell, null, false);
-
+                            break;
+                        }
+                        case SpellEffectType.Healing:
+                        {
+                            if (hasElapsed) DoPlayerHealing(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell);
                             break;
                         }
                     }
@@ -2155,6 +2162,11 @@ namespace SpellServer
             {
                 SpellEffectType arenaEffectType = arenaEffect.EffectSpell.Effect;
 
+                // Spells.dat effect= field stores magnitude (2000, 3000, etc.) not SpellEffectType.
+                // Values > Expulse (19) are magnitudes miscast as enum — treat as Healing.
+                if ((int)arenaEffectType > (int)SpellEffectType.Expulse)
+                    arenaEffectType = SpellEffectType.Healing;
+
                 switch (arenaEffectType)
                 {
                     case SpellEffectType.None:
@@ -2167,7 +2179,7 @@ namespace SpellServer
 
                         if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoRaiseCall)) return false;
 
-                        DoPlayerResurrect(targetPlayer, sourcePlayer, arenaEffect.EffectSpell.Level);
+                        DoPlayerResurrect(targetPlayer, sourcePlayer, (Int16)SpellTuning.ComputeEffectValue(SpellEffectType.Resurrect, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0));
                         break;
                     }
                     case SpellEffectType.Bless:
@@ -2197,7 +2209,7 @@ namespace SpellServer
 
                             if (currentEffect != null)
                             {
-                                if (currentEffect.EffectSpell.Level > arenaEffect.EffectSpell.Level) return false;
+                                if (SpellTuning.GetPotency(currentEffect.EffectSpell) > SpellTuning.GetPotency(arenaEffect.EffectSpell)) return false;
                             }
 
                             targetPlayer.Effects[(Int32) arenaEffectType] = arenaEffect;
@@ -2428,6 +2440,10 @@ namespace SpellServer
             SpellDamage spellDamage = new SpellDamage(spell);
             Int16 hDifference = Convert.ToInt16(targetPlayer.MaxHp - targetPlayer.CurrentHp);
 
+            // Cap healing at 25% of max HP per cast
+            Int16 maxHeal = Convert.ToInt16(Math.Ceiling(targetPlayer.MaxHp * 0.25f));
+            if (spellDamage.Healing > maxHeal) spellDamage.Healing = maxHeal;
+
             if (spellDamage.Healing <= 0 || hDifference <= 0) return false;
 
             Int16 healingDone = spellDamage.Healing > hDifference ? hDifference : spellDamage.Healing;
@@ -2436,7 +2452,8 @@ namespace SpellServer
 
             if (arenaEffect != null && spellDamage.Healing < 255)
             {
-                healingDone = (Int16)(healingDone - (healingDone * (arenaEffect.EffectSpell.Level / 100f)));
+                float healReduction = SpellTuning.ComputeEffectValue(SpellEffectType.HealingReduction, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0);
+                healingDone = (Int16)(healingDone - (healingDone * (healReduction / 100f)));
             }
 
             targetPlayer.CurrentHp += healingDone;
@@ -2505,6 +2522,7 @@ namespace SpellServer
                     case SpellEffectType.Resist:
                     {
                         Single dReduction = 0;
+                        float resistPct = SpellTuning.ComputeEffectValue(arenaEffect.EffectSpell.Effect, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0);
 
                         switch (spell.Element)
                         {
@@ -2513,11 +2531,11 @@ namespace SpellServer
                             {
                                 if (arenaEffect.EffectSpell.Element == SpellElementType.None)
                                 {
-                                    dReduction = (arenaEffect.EffectSpell.Level*0.01f)*spellDamage.Damage;
+                                    dReduction = (resistPct * 0.01f) * spellDamage.Damage;
                                 }
                                 else
                                 {
-                                    dReduction = ((arenaEffect.EffectSpell.Level*0.5f)*0.01f)*spellDamage.Damage;
+                                    dReduction = ((resistPct * 0.5f) * 0.01f) * spellDamage.Damage;
                                 }
                                 break;
                             }
@@ -2529,7 +2547,7 @@ namespace SpellServer
                             {
                                 if ((arenaEffect.EffectSpell.Element == spell.Element || arenaEffect.EffectSpell.Element == SpellElementType.None) && spell.Element != SpellElementType.None)
                                 {
-                                    dReduction = (arenaEffect.EffectSpell.Level*0.01f)*spellDamage.Damage;
+                                    dReduction = (resistPct * 0.01f) * spellDamage.Damage;
                                 }
                                 break;
                             }
@@ -3440,6 +3458,27 @@ namespace SpellServer
                         if (targetArenaPlayer.IsAlive && ((arenaPlayer.ActiveTeam == targetArenaPlayer.ActiveTeam || arenaPlayer.ActiveTeam == Team.Neutral) || targetArenaPlayer.ActiveTeam == Team.Neutral))
                         {
                             DoPlayerEffect(arenaPlayer, arenaPlayer, spell, EffectType.Caster);
+
+                            // Transfer spells: caster pays HP cost immediately
+                            if (spell.CasterSpellEffect > 0)
+                            {
+                                Spell casterEffect = SpellManager.Spells[spell.CasterSpellEffect];
+                                if (casterEffect != null && casterEffect.Effect == SpellEffectType.Bleed)
+                                {
+                                    SpellDamage selfDmg = new SpellDamage(casterEffect);
+                                    if (selfDmg.Damage > 0)
+                                    {
+                                        // Don't let Transfer kill the caster — leave at 1 HP minimum
+                                        Int16 actualDmg = (Int16)Math.Min(selfDmg.Damage, arenaPlayer.CurrentHp - 1);
+                                        if (actualDmg > 0)
+                                        {
+                                            arenaPlayer.CurrentHp -= actualDmg;
+                                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(arenaPlayer, arenaPlayer, selfDmg));
+                                        }
+                                    }
+                                }
+                            }
+
                             if (!DoPlayerEffect(targetArenaPlayer, arenaPlayer, spell, EffectType.Target)) return false;
                         }
                         else return false;

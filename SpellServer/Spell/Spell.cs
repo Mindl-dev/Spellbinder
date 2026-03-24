@@ -154,6 +154,10 @@ namespace SpellServer
         public Int32 LeadingEdgeImageNum;
         public Int32 Length;
         public Int16 Level;
+        /// <summary>Effect strength. Renamed from "effect=" in Spells.dat / "level" in legacy code.
+        /// For effect spells: heal amount, damage reduction %, speed multiplier, etc.
+        /// Set from "potency" in spell_effects.json, or from Level for legacy dat-loaded effects.</summary>
+        public Int32 Potency;
         public Int32 LightGlow;
         public Int32 LightPattern;
         public Int32 Max;

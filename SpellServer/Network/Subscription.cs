@@ -99,6 +99,11 @@ namespace SpellServer
             Player ghost = players.FindByAccountId(accountId);
             if (ghost != null && ghost != newPlayer)
             {
+                // Clean up DB state before removing — prevents "Duplicate entry" on reconnect
+                try { MySQL.OnlineAccounts.SetOffline(ghost.AccountId); } catch { }
+                if (ghost.ActiveCharacter != null)
+                    try { MySQL.OnlineCharacters.SetOffline(ghost.ActiveCharacter.CharacterId); } catch { }
+
                 // Flag for disconnect and close socket — don't call Network.Disconnect
                 // as it calls Arena.PlayerLeft which acquires lock(SyncRoot),
                 // deadlocking if the arena thread holds it. Socket close will cause
@@ -196,7 +201,14 @@ namespace SpellServer
             Network.Send(player, GamePacket.Outgoing.Login.Connected(player));
             Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player));
 
-            MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
+            try
+            {
+                MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[Warning] SetOnline failed for {player.Username} (AID {player.AccountId}): {ex.Message}", Color.Orange);
+            }
 
             Program.Log(String.Format("(PID: {0}, AID: {1}, S/N: {2}) {3} has connected.",
                 player.PlayerId, player.AccountId, serial, player.Username), Color.MediumSlateBlue);
