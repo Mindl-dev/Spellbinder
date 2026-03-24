@@ -18,9 +18,10 @@ namespace SpellServer.Tests
         {
             // LoadSpells reads from Build/Debug/Spells.dat — need to find it
             string origDir = Directory.GetCurrentDirectory();
-            string dir = TestContext.CurrentContext.TestDirectory;
+            string dir = TestContext.CurrentContext.TestDirectory ?? Directory.GetCurrentDirectory();
             for (int i = 0; i < 6; i++)
             {
+                if (dir == null) break;
                 string candidate = Path.Combine(dir, "Build", "Debug");
                 if (File.Exists(Path.Combine(candidate, "Spells.dat")))
                 {
@@ -139,9 +140,10 @@ namespace SpellServer.Tests
         public void LoadSpellEffects_LookupById_ReturnsCorrectEffect()
         {
             string origDir = Directory.GetCurrentDirectory();
-            string dir = TestContext.CurrentContext.TestDirectory;
+            string dir = TestContext.CurrentContext.TestDirectory ?? Directory.GetCurrentDirectory();
             for (int i = 0; i < 6; i++)
             {
+                if (dir == null) break;
                 string candidate = Path.Combine(dir, "Build", "Debug");
                 if (File.Exists(Path.Combine(candidate, "Spells.dat")))
                 {
