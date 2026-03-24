@@ -267,6 +267,8 @@ namespace SpellServer
 
             Program.Log(String.Format("{0} Spells loaded.", spellCount), Color.Blue);
 
+            LoadSpellEffects();
+
             Program.Log("Loading Spell Lists...", Color.Blue);
 
             for (Int32 i = 0; i <= 9; i++)
@@ -688,6 +690,118 @@ namespace SpellServer
         {
             SpellTree spellTree = SpellTrees.FindBySlotAndClass(listNum, playerClass);
             return spellTree == null ? (Byte)0 : (Byte)spellTree.Id;
+        }
+
+        /// <summary>Load missing effect spells from spell_effects.json (shields, buffs, heals, transfers).</summary>
+        private static void LoadSpellEffects()
+        {
+            String path = Path.Combine(Directory.GetCurrentDirectory(), "spell_effects.json");
+            if (!File.Exists(path))
+            {
+                // Try Content/ path
+                path = Path.Combine(Directory.GetCurrentDirectory(), "..", "Content", "spell_effects.json");
+            }
+            if (!File.Exists(path))
+            {
+                Program.Log("spell_effects.json not found — shields, buffs, heals will not work!", Color.Red);
+                return;
+            }
+
+            try
+            {
+                String json = File.ReadAllText(path);
+                int loaded = 0;
+
+                // Minimal JSON parsing — no dependency on System.Text.Json
+                int searchFrom = 0;
+                while (true)
+                {
+                    int objStart = json.IndexOf('{', searchFrom);
+                    if (objStart < 0) break;
+                    int objEnd = json.IndexOf('}', objStart);
+                    if (objEnd < 0) break;
+                    searchFrom = objEnd + 1;
+
+                    String obj = json.Substring(objStart, objEnd - objStart + 1);
+
+                    // Skip the root object and comment fields
+                    if (obj.Contains("\"effects\"") || obj.Contains("\"_comment\"")) continue;
+
+                    int id = ParseJsonInt(obj, "id");
+                    if (id <= 0) continue;
+
+                    // Skip if spell already exists
+                    if (id < Spells.Count && Spells[id] != null) continue;
+
+                    String name = ParseJsonString(obj, "name") ?? "Effect " + id;
+                    String effectType = ParseJsonString(obj, "effect_type") ?? "None";
+                    String element = ParseJsonString(obj, "element") ?? "None";
+                    int level = ParseJsonInt(obj, "level");
+                    int duration = ParseJsonInt(obj, "duration");
+
+                    Spell spell = new Spell
+                    {
+                        Id = (Int16)id,
+                        Name = name,
+                        Type = SpellType.Effect,
+                        Level = (Int16)level,
+                        Duration = duration,
+                    };
+
+                    // Map effect_type string to enum
+                    SpellEffectType eff;
+                    if (Enum.TryParse(effectType, true, out eff))
+                        spell.Effect = eff;
+
+                    // Map element string to enum
+                    SpellElementType elem;
+                    if (Enum.TryParse(element, true, out elem))
+                        spell.Element = elem;
+
+                    // Ensure Spells list is large enough
+                    while (Spells.Count <= id)
+                        Spells.Add(null);
+
+                    Spells.Insert(id, spell);
+                    loaded++;
+                }
+
+                Program.Log(String.Format("Loaded {0} effect spells from spell_effects.json.", loaded), Color.Cyan);
+            }
+            catch (Exception ex)
+            {
+                Program.Log("Error loading spell_effects.json: " + ex.Message, Color.Red);
+            }
+        }
+
+        private static String ParseJsonString(String json, String key)
+        {
+            String search = "\"" + key + "\"";
+            int idx = json.IndexOf(search);
+            if (idx < 0) return null;
+            int colon = json.IndexOf(':', idx + search.Length);
+            if (colon < 0) return null;
+            int qStart = json.IndexOf('"', colon + 1);
+            if (qStart < 0) return null;
+            int qEnd = json.IndexOf('"', qStart + 1);
+            if (qEnd < 0) return null;
+            return json.Substring(qStart + 1, qEnd - qStart - 1);
+        }
+
+        private static int ParseJsonInt(String json, String key)
+        {
+            String search = "\"" + key + "\"";
+            int idx = json.IndexOf(search);
+            if (idx < 0) return 0;
+            int colon = json.IndexOf(':', idx + search.Length);
+            if (colon < 0) return 0;
+            int start = colon + 1;
+            while (start < json.Length && (json[start] == ' ' || json[start] == '\t')) start++;
+            int end = start;
+            while (end < json.Length && json[end] >= '0' && json[end] <= '9') end++;
+            if (end == start) return 0;
+            int val;
+            return Int32.TryParse(json.Substring(start, end - start), out val) ? val : 0;
         }
     }
 }
