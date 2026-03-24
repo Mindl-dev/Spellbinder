@@ -104,7 +104,10 @@ namespace SpellServer
            
             if (EffectSpell != null)
             {
-                Duration = EffectSpell.Effect == SpellEffectType.Bleed ? new Interval(1000, EffectSpell.Duration / 1000) : new Interval(EffectSpell.Duration, false);
+                // Duration field in Spells.dat is in seconds, Interval expects milliseconds
+                Duration = EffectSpell.Effect == SpellEffectType.Bleed
+                    ? new Interval(1000, EffectSpell.Duration)  // Bleed: tick every 1s, repeat Duration times
+                    : new Interval(EffectSpell.Duration * 1000, false);  // Everything else: Duration seconds
             }
             else
             {

@@ -201,7 +201,14 @@ namespace SpellServer
             Network.Send(player, GamePacket.Outgoing.Login.Connected(player));
             Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player));
 
-            MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
+            try
+            {
+                MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[Warning] SetOnline failed for {player.Username} (AID {player.AccountId}): {ex.Message}", Color.Orange);
+            }
 
             Program.Log(String.Format("(PID: {0}, AID: {1}, S/N: {2}) {3} has connected.",
                 player.PlayerId, player.AccountId, serial, player.Username), Color.MediumSlateBlue);

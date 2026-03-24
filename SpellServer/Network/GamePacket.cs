@@ -348,6 +348,8 @@ namespace SpellServer
                     Spell spell = SpellManager.Spells[spellId];
                     if (spell == null) return;
 
+                    Program.Log($"[CastEffect] {player.ActiveArenaPlayer.ActiveCharacter.Name} spell={spell.Name} (id={spellId}) effect={spell.Effect}", System.Drawing.Color.Cyan);
+
                     if (player.ActiveArena.CastEffect(player.ActiveArenaPlayer, spell))
                     {
                         Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.CastEffect(player.ActiveArenaPlayer, spellId, UDP), false);
@@ -357,6 +359,7 @@ namespace SpellServer
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
 
+                    long streamLen = inStream.Length;
                     Byte[] tBuffer = new Byte[2];
                     inStream.Seek(2, SeekOrigin.Begin);
 
@@ -366,18 +369,27 @@ namespace SpellServer
                     inStream.Seek(5, SeekOrigin.Current);
                     Byte targetId = (Byte)inStream.ReadByte();
 
-                    inStream.Seek(8, SeekOrigin.Current);
-                    Boolean isResisted = Convert.ToBoolean((Byte)inStream.ReadByte());
+                    // isResisted is at offset 18 from start — only read if stream is long enough
+                    Boolean isResisted = false;
+                    if (streamLen >= 20)
+                    {
+                        inStream.Seek(8, SeekOrigin.Current);
+                        int resistByte = inStream.ReadByte();
+                        if (resistByte >= 0) isResisted = resistByte != 0;
+                    }
 
+                    int relayLen = Math.Min(28, (int)(streamLen - 2));
                     Byte[] relayBuffer = new Byte[28];
                     inStream.Seek(2, SeekOrigin.Begin);
-                    inStream.Read(relayBuffer, 0, 28);
+                    inStream.Read(relayBuffer, 0, relayLen);
 
                     Spell spell = SpellManager.Spells[spellId];
                     if (spell == null) return;
 
                     ArenaPlayer targetArenaPlayer = player.ActiveArena.ArenaPlayers.FindById(targetId);
                     if (targetArenaPlayer == null) return;
+
+                    Program.Log($"[CastTargeted] {player.ActiveArenaPlayer.ActiveCharacter.Name} -> {targetArenaPlayer.ActiveCharacter.Name} spell={spell.Name} (id={spellId}) resisted={isResisted} len={streamLen}", System.Drawing.Color.Cyan);
 
                     if (isResisted)
                     {
