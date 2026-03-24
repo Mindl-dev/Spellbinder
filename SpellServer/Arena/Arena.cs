@@ -2167,7 +2167,7 @@ namespace SpellServer
 
                         if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoRaiseCall)) return false;
 
-                        DoPlayerResurrect(targetPlayer, sourcePlayer, arenaEffect.EffectSpell.Level);
+                        DoPlayerResurrect(targetPlayer, sourcePlayer, (Int16)SpellTuning.ComputeEffectValue(SpellEffectType.Resurrect, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0));
                         break;
                     }
                     case SpellEffectType.Bless:
@@ -2197,7 +2197,7 @@ namespace SpellServer
 
                             if (currentEffect != null)
                             {
-                                if (currentEffect.EffectSpell.Level > arenaEffect.EffectSpell.Level) return false;
+                                if (SpellTuning.GetPotency(currentEffect.EffectSpell) > SpellTuning.GetPotency(arenaEffect.EffectSpell)) return false;
                             }
 
                             targetPlayer.Effects[(Int32) arenaEffectType] = arenaEffect;
@@ -2436,7 +2436,8 @@ namespace SpellServer
 
             if (arenaEffect != null && spellDamage.Healing < 255)
             {
-                healingDone = (Int16)(healingDone - (healingDone * (arenaEffect.EffectSpell.Level / 100f)));
+                float healReduction = SpellTuning.ComputeEffectValue(SpellEffectType.HealingReduction, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0);
+                healingDone = (Int16)(healingDone - (healingDone * (healReduction / 100f)));
             }
 
             targetPlayer.CurrentHp += healingDone;
@@ -2505,6 +2506,7 @@ namespace SpellServer
                     case SpellEffectType.Resist:
                     {
                         Single dReduction = 0;
+                        float resistPct = SpellTuning.ComputeEffectValue(arenaEffect.EffectSpell.Effect, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0);
 
                         switch (spell.Element)
                         {
@@ -2513,11 +2515,11 @@ namespace SpellServer
                             {
                                 if (arenaEffect.EffectSpell.Element == SpellElementType.None)
                                 {
-                                    dReduction = (arenaEffect.EffectSpell.Level*0.01f)*spellDamage.Damage;
+                                    dReduction = (resistPct * 0.01f) * spellDamage.Damage;
                                 }
                                 else
                                 {
-                                    dReduction = ((arenaEffect.EffectSpell.Level*0.5f)*0.01f)*spellDamage.Damage;
+                                    dReduction = ((resistPct * 0.5f) * 0.01f) * spellDamage.Damage;
                                 }
                                 break;
                             }
@@ -2529,7 +2531,7 @@ namespace SpellServer
                             {
                                 if ((arenaEffect.EffectSpell.Element == spell.Element || arenaEffect.EffectSpell.Element == SpellElementType.None) && spell.Element != SpellElementType.None)
                                 {
-                                    dReduction = (arenaEffect.EffectSpell.Level*0.01f)*spellDamage.Damage;
+                                    dReduction = (resistPct * 0.01f) * spellDamage.Damage;
                                 }
                                 break;
                             }
