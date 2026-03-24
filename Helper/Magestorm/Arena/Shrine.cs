@@ -105,7 +105,7 @@ namespace Helper
             CurrentBias = bias;
             Power = power;
             IsDisabled = false;
-            Links = links;
+            Links = new ListCollection<Int16>(links);
 
         }
     }

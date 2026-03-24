@@ -643,6 +643,13 @@ namespace SpellServer
             Program.Log($"[ArenaJoin] Total: {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
             sw.Stop();
 
+            // Yank player to their team's shrine on first entry
+            if (Location.X != 0 || Location.Y != 0)
+            {
+                var spawnYank = new Packets.PlayerYankPacket(ArenaPlayerId, Location).ToBytes();
+                Network.Send(WorldPlayer, spawnYank);
+            }
+
             //Network.Send(WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(WorldPlayer, String.Format("This arena currently has an EXP bonus of {0}%.", ((arena.Grid.ExpBonus + (Properties.Settings.Default.ExpMultiplier - 1.0f) + (WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? 0.2f : 0.0f)) * 100))));
         }
     }

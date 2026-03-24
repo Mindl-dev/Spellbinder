@@ -14,7 +14,7 @@ namespace SpellBinder
 {
     public class PlayForm : Form
     {
-        private const string VERSION = "0.4.2";
+        private const string VERSION = "0.4.1";
         private const string GITHUB_RELEASE_API = "https://api.github.com/repos/Mindl-dev/Spellbinder/releases/latest";
         private const string GITHUB_ASSET_WIN = "SpellBinder-win.zip";
 
@@ -223,7 +223,7 @@ namespace SpellBinder
 
             Controls.AddRange(new Control[] { title, subtitle, sep, serverLabel, serverBox, registerButton, playButton, statusLabel, sep2, playerLabel, playerList });
 
-            watchdog = new System.Windows.Forms.Timer { Interval = 25000 };
+            watchdog = new System.Windows.Forms.Timer { Interval = 2000 };
             watchdog.Tick += OnWatchdog;
 
             playerRefresh = new System.Windows.Forms.Timer { Interval = 30000 };
@@ -387,7 +387,7 @@ namespace SpellBinder
                 return;
             }
 
-            if (gameProcess.MainWindowHandle != IntPtr.Zero && IsHungAppWindow(gameProcess.MainWindowHandle))
+            if ((DateTime.Now - gameStartTime).TotalSeconds > 30 && gameProcess.MainWindowHandle != IntPtr.Zero && IsHungAppWindow(gameProcess.MainWindowHandle))
             {
                 var result = MessageBox.Show(
                     "SpellBinder appears to be frozen.\nKill the process?",

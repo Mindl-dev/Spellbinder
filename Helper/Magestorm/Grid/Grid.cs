@@ -180,8 +180,20 @@ namespace Helper
             }
 
             PheonixShrine = new Shrine(grid.PheonixShrine.Team, grid.PheonixShrine.ShrineId, grid.PheonixShrine.Power, grid.PheonixShrine.CurrentBias, grid.PheonixShrine.Links);
+            PheonixShrine.Fixture = grid.PheonixShrine.Fixture;
+            PheonixShrine.X = grid.PheonixShrine.X;
+            PheonixShrine.Y = grid.PheonixShrine.Y;
+            PheonixShrine.Z = grid.PheonixShrine.Z;
             DragonShrine = new Shrine(grid.DragonShrine.Team, grid.DragonShrine.ShrineId, grid.DragonShrine.Power, grid.DragonShrine.CurrentBias, grid.DragonShrine.Links);
+            DragonShrine.Fixture = grid.DragonShrine.Fixture;
+            DragonShrine.X = grid.DragonShrine.X;
+            DragonShrine.Y = grid.DragonShrine.Y;
+            DragonShrine.Z = grid.DragonShrine.Z;
             GryphonShrine = new Shrine(grid.GryphonShrine.Team, grid.GryphonShrine.ShrineId, grid.GryphonShrine.Power, grid.GryphonShrine.CurrentBias, grid.GryphonShrine.Links);
+            GryphonShrine.Fixture = grid.GryphonShrine.Fixture;
+            GryphonShrine.X = grid.GryphonShrine.X;
+            GryphonShrine.Y = grid.GryphonShrine.Y;
+            GryphonShrine.Z = grid.GryphonShrine.Z;
 
             GameName = grid.GameName;
             GridFilename = grid.GridFilename;

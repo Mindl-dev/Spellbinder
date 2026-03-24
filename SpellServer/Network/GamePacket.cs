@@ -1974,8 +1974,7 @@ namespace SpellServer
                             outStream.WriteByte(arena.Grid.Pools[i].PoolId);
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].Team);
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].CurrentBias);
-                            outStream.WriteByte(0x00);
-                            outStream.WriteByte(0x00);
+                            outStream.WriteByte(0x00); // amount (no delta on initial load)
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].Power);
                             outStream.WriteByte(0x00);
                             if (JustLoaded)
