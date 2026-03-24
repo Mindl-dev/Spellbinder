@@ -102,6 +102,7 @@ namespace SpellServer
 	    public Int64 MatchId;
         public Byte TableId;
         public Grid Grid;
+        public LeyGraph LeyGraph;
         public Interval Duration;
 	    public Interval IdleDuration;
         public State CurrentState;
@@ -200,6 +201,7 @@ namespace SpellServer
                 Grid = new Grid(grid);
                 Tables = grid.Tables.GetById(grid.GridId);
                 ArenaTeams = new ArenaTeamCollection(Grid);
+                LeyGraph = LeyGraph.Build(Grid.Pools, ArenaTeams.Dragon.Shrine, ArenaTeams.Pheonix.Shrine, ArenaTeams.Gryphon.Shrine);
                 ArenaPlayers = new ArenaPlayerCollection();
                 ArenaPlayerHistory = new ArenaPlayerCollection();
                 Runes = new RuneCollection();
@@ -2137,6 +2139,7 @@ namespace SpellServer
                             Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(arenaPlayer.WorldPlayer, String.Format("You have captured the {0} orb!", captureTeam.Shrine.Team)));
 
                             Network.SendToArena(arenaPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, captureTeam.Shrine, (Byte)biasAmount, UDP), true);
+                            LeyGraph?.SyncFromGameState();
                         }
                         break;
                     }
@@ -2543,6 +2546,23 @@ namespace SpellServer
             }
 
             spellDamage.Damage -= resistedAmount;
+
+            // Earthpower damage scaling
+            if (sourcePlayer != null && LeyGraph != null)
+            {
+                float earthMult = LeyPowerCalculator.GetDamageMultiplier(sourcePlayer.ActiveTeam, LeyGraph);
+                spellDamage.Damage = (Int16)(spellDamage.Damage * earthMult);
+                spellDamage.Power = (Int16)(spellDamage.Power * earthMult);
+
+                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                {
+                    int ep = LeyPowerCalculator.GetTeamEarthpower(sourcePlayer.ActiveTeam, LeyGraph);
+                    Network.SendTo(this, GamePacket.Outgoing.System.DirectTextMessage(null,
+                        String.Format("[Earthpower] {0} team={1}% mult={2:F2}x dmg={3}",
+                        sourcePlayer.ActiveCharacter.Name, ep, earthMult, spellDamage.Damage)),
+                        Network.SendToType.Arena);
+                }
+            }
 
             if (targetPlayer.ActiveCharacter.Level < AveragePlayerLevel)
             {
@@ -3090,6 +3110,7 @@ namespace SpellServer
 
                     Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                    LeyGraph?.SyncFromGameState();
                 }
                 else
                 {
@@ -3209,6 +3230,7 @@ namespace SpellServer
 
                     Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                    LeyGraph?.SyncFromGameState();
                 }
                 else
                 {

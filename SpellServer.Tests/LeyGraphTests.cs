@@ -232,6 +232,77 @@ namespace SpellServer.Tests
         }
 
         // ================================================================
+        // Bias eligibility
+        // ================================================================
+
+        [Test]
+        public void BiasEligibility_NodeAdjacentToShrine_Connected()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            // Pool 8 is directly linked to shrine 102 (Dragon)
+            // Dragon shrine counts as team-owned
+            var elig = graph.GetBiasEligibility(8, Team.Dragon);
+            Assert.AreEqual(BiasEligibility.Connected, elig);
+        }
+
+        [Test]
+        public void BiasEligibility_NodeAdjacentToOwnedNode_Connected()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            // Own pool 8 (linked to shrine 102=Dragon)
+            graph.Nodes[8].Team = Team.Dragon;
+            // Pool 9 links to pool 8 — should be connected
+            var elig = graph.GetBiasEligibility(9, Team.Dragon);
+            Assert.AreEqual(BiasEligibility.Connected, elig);
+        }
+
+        [Test]
+        public void BiasEligibility_NodeNotAdjacent_Disconnected()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            // Pool 5 links to shrine 101 (Griffin) and pools 0, 1
+            // None of those are Dragon-owned, and shrine 101 is Griffin
+            // Pool 5 is not adjacent to Dragon network
+            var elig = graph.GetBiasEligibility(5, Team.Dragon);
+            Assert.AreEqual(BiasEligibility.Disconnected, elig);
+        }
+
+        [Test]
+        public void BiasEligibility_Nexus_RequiresAdjacentNode()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            // Try to attack Phoenix nexus (100) without any owned nodes adjacent to it
+            var elig = graph.GetBiasEligibility(100, Team.Dragon);
+            Assert.AreEqual(BiasEligibility.Blocked, elig);
+        }
+
+        [Test]
+        public void BiasEligibility_Nexus_WithAdjacentNode_Connected()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            // Phoenix shrine (100) links to pools 3, 6, 9
+            // Own pool 3 as Dragon
+            graph.Nodes[3].Team = Team.Dragon;
+            var elig = graph.GetBiasEligibility(100, Team.Dragon);
+            Assert.AreEqual(BiasEligibility.Connected, elig);
+        }
+
+        [Test]
+        public void BiasEligibility_OwnNexus_AlwaysConnected()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            // Dragon shrine (102) — Dragon can always repair their own nexus
+            var elig = graph.GetBiasEligibility(102, Team.Dragon);
+            Assert.AreEqual(BiasEligibility.Connected, elig);
+        }
+
+        // ================================================================
         // Proximity
         // ================================================================
 

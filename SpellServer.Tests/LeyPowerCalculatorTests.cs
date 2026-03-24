@@ -287,6 +287,51 @@ namespace SpellServer.Tests
         }
 
         // ================================================================
+        // Damage multiplier
+        // ================================================================
+
+        [Test]
+        public void DamageMultiplier_NoEarthpower_ReturnsBase()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            float mult = LeyPowerCalculator.GetDamageMultiplier(Team.Dragon, graph);
+            Assert.AreEqual(LeyPowerCalculator.EarthpowerDamageBase, mult, 0.01f);
+        }
+
+        [Test]
+        public void DamageMultiplier_FullEarthpower_ReturnsMax()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            // Give Dragon all nodes connected to shrine 102
+            // Dragon shrine links to pools 0, 7, 8
+            foreach (var node in graph.Nodes.Values)
+            {
+                if (node.Type == LeyNodeType.Earthblood && node.Pool != null)
+                {
+                    node.Team = Team.Dragon;
+                    node.Pool.Team = Team.Dragon;
+                }
+            }
+            float mult = LeyPowerCalculator.GetDamageMultiplier(Team.Dragon, graph);
+            float expected = LeyPowerCalculator.EarthpowerDamageBase + LeyPowerCalculator.EarthpowerDamageScale;
+            Assert.AreEqual(expected, mult, 0.01f);
+        }
+
+        [Test]
+        public void DamageMultiplier_PartialPower_IsBetween()
+        {
+            var graph = BuildGrid00Graph();
+            Assume.That(graph, Is.Not.Null);
+            graph.Nodes[8].Team = Team.Dragon;
+            graph.Nodes[8].Pool.Team = Team.Dragon;
+            float mult = LeyPowerCalculator.GetDamageMultiplier(Team.Dragon, graph);
+            Assert.That(mult, Is.GreaterThan(LeyPowerCalculator.EarthpowerDamageBase));
+            Assert.That(mult, Is.LessThan(LeyPowerCalculator.EarthpowerDamageBase + LeyPowerCalculator.EarthpowerDamageScale));
+        }
+
+        // ================================================================
         // Regen to power conversion
         // ================================================================
 

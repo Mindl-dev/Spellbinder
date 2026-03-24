@@ -17,6 +17,17 @@ namespace SpellServer
     /// </summary>
     public static class LeyPowerCalculator
     {
+        // Earthpower damage scaling
+        // damage *= EarthpowerDamageBase + (EarthpowerDamageScale * teamEarthpower / 100)
+        // At 0% earthpower: 0.7x damage. At 100%: 1.0x damage.
+        // Ratio at 100% vs 0% = 1.43x advantage.
+        public const float EarthpowerDamageBase = 0.7f;
+        public const float EarthpowerDamageScale = 0.3f;
+
+        // Biasing speed multipliers (applied to bias roll/amount)
+        public const float BackHackBiasMultiplier = 0.25f;  // 4x slower when disconnected from network
+        public const float NexusBiasMultiplier = 0.20f;     // 5x harder to bias a nexus than a node
+
         // Distance thresholds (world units)
         public const float NodeContactRadius = 192f;   // "direct contact" — standing on/near the node
         public const float NodeProximityRadius = 512f;  // "close proximity" — nearby but not touching
@@ -187,6 +198,16 @@ namespace SpellServer
         public static float RegenLevelToPowerPerTick(float regenLevel)
         {
             return BaseRegenRate + (regenLevel * (MaxRegenRate - BaseRegenRate));
+        }
+
+        /// <summary>
+        /// Get the damage multiplier for a team based on their earthpower.
+        /// 0% earthpower = 0.7x, 100% = 1.0x. Configurable via constants.
+        /// </summary>
+        public static float GetDamageMultiplier(Team team, LeyGraph graph)
+        {
+            int earthpower = GetTeamEarthpower(team, graph);
+            return EarthpowerDamageBase + (EarthpowerDamageScale * earthpower / 100f);
         }
 
         /// <summary>

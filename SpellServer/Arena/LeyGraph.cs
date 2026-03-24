@@ -169,6 +169,55 @@ namespace SpellServer
             return false;
         }
 
+        /// <summary>
+        /// Is a node adjacent (one hop) to a team-owned node or the team's shrine?
+        /// Used for front-line biasing — you can bias a node if it neighbors your network.
+        /// </summary>
+        public bool IsAdjacentToTeamNetwork(int nodeId, Team team)
+        {
+            if (!_nodes.ContainsKey(nodeId)) return false;
+            var node = _nodes[nodeId];
+
+            foreach (var neighbor in node.Neighbors)
+            {
+                if (neighbor.Team == team) return true;
+                if (neighbor.Type == LeyNodeType.Shrine && neighbor.Team == team) return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Classify how a team can bias a target node.
+        ///   Connected: node is adjacent to team's owned network → normal speed
+        ///   Disconnected: node exists but no adjacent team nodes → slow (back-hack)
+        ///   Blocked: target is a shrine and team has no connected path → cannot bias
+        /// </summary>
+        public BiasEligibility GetBiasEligibility(int nodeId, Team team)
+        {
+            if (!_nodes.ContainsKey(nodeId))
+                return BiasEligibility.Blocked;
+
+            var node = _nodes[nodeId];
+
+            // Nexus: own team can always repair, enemy requires adjacent owned node
+            if (node.Type == LeyNodeType.Shrine)
+            {
+                if (node.Team == team)
+                    return BiasEligibility.Connected; // repairing own nexus
+                if (IsAdjacentToTeamNetwork(nodeId, team))
+                    return BiasEligibility.Connected;
+                return BiasEligibility.Blocked;
+            }
+
+            // Earthblood node: check if adjacent to team network
+            if (IsAdjacentToTeamNetwork(nodeId, team))
+                return BiasEligibility.Connected;
+
+            // Not adjacent — back-hack (much slower)
+            return BiasEligibility.Disconnected;
+        }
+
         /// <summary>World distance from a position to a team's shrine. Returns float.MaxValue if shrine doesn't exist.</summary>
         public float DistanceToShrine(int x, int y, int z, Team team)
         {
@@ -268,6 +317,13 @@ namespace SpellServer
     {
         Earthblood,
         Shrine
+    }
+
+    public enum BiasEligibility
+    {
+        Connected,    // Adjacent to team network — normal bias speed
+        Disconnected, // No adjacent team nodes — back-hack (slow)
+        Blocked       // Cannot bias (nexus requires connected path)
     }
 
     public class LeyNode
