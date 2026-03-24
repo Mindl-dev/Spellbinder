@@ -704,7 +704,7 @@ namespace SpellServer.Tests
             Assert.AreEqual(75, data[4], "currentBias");
             Assert.AreEqual(0x00, data[5], "padding");
             Assert.AreEqual(25, data[6], "biasAmount");
-            Assert.AreEqual(0x00, data[7], "padding");
+            Assert.AreEqual(100, data[7], "power");
             // Bytes 8-9: ArenaPlayerId BE
             Assert.AreEqual(2, ReadBE16(data, 8), "playerId");
         }
@@ -725,7 +725,7 @@ namespace SpellServer.Tests
             Assert.AreEqual(40, data[4], "currentBias");
             Assert.AreEqual(0x00, data[5], "padding");
             Assert.AreEqual(10, data[6], "biasAmount");
-            Assert.AreEqual(0x00, data[7], "padding");
+            Assert.AreEqual(50, data[7], "power");
             Assert.AreEqual(4, ReadBE16(data, 8), "playerId");
         }
 
