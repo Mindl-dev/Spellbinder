@@ -3020,6 +3020,18 @@ namespace SpellServer
                 return;
             }
 
+            // Ley line connectivity check — nexus requires adjacent owned node
+            int shrineNodeId = shrine.ShrineId + LeyGraph.ShrineIdOffset;
+            BiasEligibility shrineEligibility = LeyGraph != null
+                ? LeyGraph.GetBiasEligibility(shrineNodeId, arenaPlayer.ActiveTeam)
+                : BiasEligibility.Connected;
+
+            if (shrineEligibility == BiasEligibility.Blocked)
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
+                return;
+            }
+
             // Rate limit bias attempts — 1 roll per 2 seconds regardless of client tick rate
             if (!arenaPlayer.BiasCooldown.HasElapsed)
             {
@@ -3083,6 +3095,10 @@ namespace SpellServer
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
+                // Nexus is 5x harder to bias than nodes (enemy attacking only)
+                if (!isFriendly)
+                    biasAmount = Math.Max(1, (Int32)(biasAmount * LeyPowerCalculator.NexusBiasMultiplier));
+
                 if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70)
                 {
                     if (isFriendly)
@@ -3128,6 +3144,11 @@ namespace SpellServer
                 Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0));
                 return;
             }
+
+            // Ley line connectivity check
+            BiasEligibility eligibility = LeyGraph != null
+                ? LeyGraph.GetBiasEligibility(poolId, arenaPlayer.ActiveTeam)
+                : BiasEligibility.Connected;
 
             // Rate limit bias attempts — shares cooldown with shrine biasing
             if (!arenaPlayer.BiasCooldown.HasElapsed)
@@ -3191,6 +3212,10 @@ namespace SpellServer
                 }
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
+
+                // Back-hack penalty: disconnected nodes bias 4x slower
+                if (eligibility == BiasEligibility.Disconnected)
+                    biasAmount = Math.Max(1, (Int32)(biasAmount * LeyPowerCalculator.BackHackBiasMultiplier));
 
                 if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 75)
                 {
