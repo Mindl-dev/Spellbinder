@@ -61,7 +61,7 @@ namespace SpellServer
         private const String BOLT_DEATH_EFFECT_CHANCE = "bolt_death_effect_chance";
         private const String BOLT_DEATH_EFFECT_RANGE = "bolt_death_effect_range";
         private const String BOUNCE = "bounce";
-        private const String CASTER_SPELL_EFFECT = "caster_spell_effect";
+        private const String CASTER_SPELL_EFFECT = "caster_spell_effect";
         private const String CAST_ANGLE = "cast_angle";
         private const String CAST_DISTANCE = "cast_distance";
         private const String CAST_SOUND = "cast_sound";

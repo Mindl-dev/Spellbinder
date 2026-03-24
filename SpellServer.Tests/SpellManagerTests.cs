@@ -88,9 +88,46 @@ namespace SpellServer.Tests
                 Assert.IsTrue(hasteI.Duration > 0, "Haste I should have duration");
 
                 var transferII = SpellManager.Spells[170];
+                Assert.AreEqual("Transfer II", transferII.Name);
+                Assert.AreEqual(SpellType.Shield, transferII.Type);
                 Assert.AreEqual(SpellFriendlyType.Friendly, transferII.Friendly);
-                Assert.IsTrue(transferII.TargetSpellEffect > 0, "Transfer II should have target_spell_effect");
-                // Note: CasterSpellEffect may be 0 due to INI parsing — investigate separately
+                Assert.AreEqual(253, transferII.CasterSpellEffect, "Transfer II caster_spell_effect=253");
+                Assert.AreEqual(254, transferII.TargetSpellEffect, "Transfer II target_spell_effect=254");
+                Assert.AreEqual(7, transferII.Power, "Transfer II power cost");
+                Assert.AreEqual(400, transferII.Range, "Transfer II range");
+
+                // Fire Ball II — projectile with AOE and death effect
+                var fireBallII = SpellManager.Spells[124];
+                Assert.AreEqual(SpellType.Projectile, fireBallII.Type);
+                Assert.IsTrue(fireBallII.DamageBase > 0 || fireBallII.DamageNumDice > 0, "Fire Ball II should deal damage");
+                Assert.IsTrue(fireBallII.EffectRadius > 0, "Fire Ball II should have AOE radius");
+                Assert.AreEqual(22, fireBallII.DeathSpellEffect, "Fire Ball II death_spell_effect=22 (burning)");
+                Assert.AreEqual(SpellElementType.Fire, fireBallII.Element);
+
+                // Reflective Ice II — projectile
+                var reflIceII = SpellManager.Spells[29];
+                Assert.IsNotNull(reflIceII, "Reflective Ice II should exist");
+                Assert.AreEqual("Reflective Ice II", reflIceII.Name);
+                Assert.AreEqual(SpellElementType.Cold, reflIceII.Element);
+                Assert.AreEqual(44, reflIceII.DeathSpellEffect, "Reflective Ice II death_spell_effect=44");
+
+                // Bless I — shield with friendly target
+                var blessI = SpellManager.Spells[114];
+                Assert.AreEqual("Bless I", blessI.Name);
+                Assert.AreEqual(SpellType.Shield, blessI.Type);
+                Assert.AreEqual(SpellFriendlyType.Friendly, blessI.Friendly);
+                Assert.AreEqual(0, blessI.CasterSpellEffect, "Bless I has no caster effect");
+                Assert.AreEqual(231, blessI.TargetSpellEffect, "Bless I target_spell_effect=231");
+
+                // Spirit Gate — teleport type
+                var spiritGate = SpellManager.Spells[176];
+                Assert.IsNotNull(spiritGate, "Spirit Gate should exist");
+                Assert.AreEqual("Spirit Gate", spiritGate.Name);
+
+                // Bleeding — projectile with bleed death effect
+                var bleeding = SpellManager.Spells[188];
+                Assert.IsNotNull(bleeding, "Bleeding should exist");
+                Assert.AreEqual(199, bleeding.DeathSpellEffect, "Bleeding death_spell_effect=199");
             }
             finally
             {
