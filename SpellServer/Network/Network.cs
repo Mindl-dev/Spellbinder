@@ -424,6 +424,11 @@ namespace SpellServer
                             GamePacket.Incoming.World.RequestedPlayer(player, inStream);
                             break;
                         }
+                        case 0x27: // CastEffect (self-cast shields, heals, buffs)
+                        {
+                            GamePacket.Incoming.Arena.CastEffect(player, inStream);
+                            break;
+                        }
                         case 0x28:
                         {
                             GamePacket.Incoming.Arena.BiasedPool(player, inStream);
