@@ -1902,7 +1902,7 @@ namespace SpellServer
                     outStream.WriteByte((Byte)shrine.CurrentBias);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(biasAmount);
-                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((Byte)shrine.Power);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     return outStream;
                 }
@@ -1916,7 +1916,7 @@ namespace SpellServer
                     outStream.WriteByte((Byte)pool.CurrentBias);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(biasAmount);
-                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((Byte)pool.Power);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     return outStream;
                 }
@@ -1934,9 +1934,9 @@ namespace SpellServer
                             outStream.WriteByte(arena.ArenaTeams[i].Shrine.ShrineId);
                             outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Team));
                             outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.CurrentBias));
-                            outStream.WriteByte(0x00);
+                            outStream.WriteByte(0x00); // padding
+                            outStream.WriteByte(0x00); // amount (no delta on initial load)
                             outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Power));
-                            outStream.WriteByte(0x00); // Bias Amount //Figure out bias amount if needed
                             if (JustLoaded)
                             {
                                 outStream.WriteByte(0x00);
@@ -1974,9 +1974,9 @@ namespace SpellServer
                             outStream.WriteByte(arena.Grid.Pools[i].PoolId);
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].Team);
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].CurrentBias);
+                            outStream.WriteByte(0x00); // padding
                             outStream.WriteByte(0x00); // amount (no delta on initial load)
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].Power);
-                            outStream.WriteByte(0x00);
                             if (JustLoaded)
                             {
                                 outStream.WriteByte(0x00);
