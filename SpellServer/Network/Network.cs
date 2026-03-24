@@ -189,7 +189,9 @@ namespace SpellServer
         }
         public static void Disconnect(Player player)
         {
-            player.TcpClient.Client.DisconnectAsync(new SocketAsyncEventArgs());
+            try { player.TcpClient.Client.DisconnectAsync(new SocketAsyncEventArgs()); }
+            catch (ObjectDisposedException) { } // Socket already closed by KickGhostSessions
+            catch (SocketException) { }
 
             Program.Log(String.Format("{0} has disconnected. ({1})", player.IsLoggedIn ? player.Username : player.IpAddress, player.DisconnectReason), Color.BlueViolet);
 
