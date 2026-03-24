@@ -3117,20 +3117,18 @@ namespace SpellServer
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
-                // Nexus bias success scales with network control (0 nodes = 0%, full nodes = 90%)
+                // Enemy nexus: success rate scales with earthpower (3 nodes ~30%, full network ~90%)
+                // This is the sole gate — no additional roll check for nexus attacks
+                bool nexusSuccess = true;
                 if (!isFriendly && LeyGraph != null)
                 {
                     int teamEarthpower = LeyPowerCalculator.GetTeamEarthpower(arenaPlayer.ActiveTeam, LeyGraph);
-                    int nexusChance = (int)(teamEarthpower * 0.9f); // 0-90% based on network control
-                    if (CryptoRandom.GetInt32(0, 100) > nexusChance)
-                    {
-                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
-                        return;
-                    }
+                    int nexusChance = Math.Min(90, 20 + (int)(teamEarthpower * 0.7f));
+                    nexusSuccess = CryptoRandom.GetInt32(0, 100) <= nexusChance;
                 }
 
-                // Healing own nexus always succeeds, attacking requires roll
-                if (biasAmount > 0 && (isFriendly || (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70))
+                // Healing own nexus always succeeds, attacking uses earthpower gate
+                if (biasAmount > 0 && (isFriendly || nexusSuccess))
                 {
                     if (isFriendly)
                     {

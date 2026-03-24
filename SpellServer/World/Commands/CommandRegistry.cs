@@ -51,9 +51,8 @@ namespace SpellServer.Commands
         public static void Initialize()
         {
             Register(new YankCommand());
-            // Add new commands here:
-            // Register(new TeleportCommand());
-            // Register(new KillCommand());
+            Register(new LocCommand());
+            Register(new LeyCommand());
         }
     }
 }
