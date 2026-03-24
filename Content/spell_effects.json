@@ -23,9 +23,9 @@
     {"id": 233, "name": "Bless III Effect",      "type": "effect", "effect_type": "Bless",  "element": "None",   "potency": 15, "duration": 90},
     {"id": 234, "name": "Cure Effect",           "type": "effect", "effect_type": "Healing","element": "None",   "potency": 30, "duration": 1},
 
-    {"id": 243, "name": "Transfer I Caster",     "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 15, "duration": 1, "_note": "Self-damage on caster"},
+    {"id": 243, "name": "Transfer I Caster",     "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 5,  "duration": 1, "_note": "Self-damage on caster"},
     {"id": 244, "name": "Transfer I Target",     "type": "effect", "effect_type": "Healing","element": "None",   "potency": 15, "duration": 1},
-    {"id": 253, "name": "Transfer II Caster",    "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 25, "duration": 1},
+    {"id": 253, "name": "Transfer II Caster",    "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 8,  "duration": 1},
     {"id": 254, "name": "Transfer II Target",    "type": "effect", "effect_type": "Healing","element": "None",   "potency": 25, "duration": 1},
     {"id": 173, "name": "Transfer III Target",   "type": "effect", "effect_type": "Healing","element": "None",   "potency": 35, "duration": 1},
     {"id": 175, "name": "Transfer IV Target",    "type": "effect", "effect_type": "Healing","element": "None",   "potency": 50, "duration": 1}

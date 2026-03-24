@@ -3465,8 +3465,13 @@ namespace SpellServer
                                     SpellDamage selfDmg = new SpellDamage(casterEffect);
                                     if (selfDmg.Damage > 0)
                                     {
-                                        arenaPlayer.CurrentHp -= selfDmg.Damage;
-                                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(arenaPlayer, arenaPlayer, selfDmg));
+                                        // Don't let Transfer kill the caster — leave at 1 HP minimum
+                                        Int16 actualDmg = (Int16)Math.Min(selfDmg.Damage, arenaPlayer.CurrentHp - 1);
+                                        if (actualDmg > 0)
+                                        {
+                                            arenaPlayer.CurrentHp -= actualDmg;
+                                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(arenaPlayer, arenaPlayer, selfDmg));
+                                        }
                                     }
                                 }
                             }
