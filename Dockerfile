@@ -25,7 +25,7 @@ RUN nuget install NUnit -Version 3.14.0 -OutputDirectory packages -Verbosity qui
         /verbosity:minimal /nologo
 
 # Run tests — build fails if tests fail
-RUN mono packages/NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe \
+RUN MONO_IOMAP=all mono packages/NUnit.ConsoleRunner.3.16.3/tools/nunit3-console.exe \
         SpellServer.Tests/bin/Debug/SpellServer.Tests.dll \
         --noresult --noheader
 

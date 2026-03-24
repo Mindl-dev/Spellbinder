@@ -16,7 +16,7 @@ CREDENTIALS_FILE="/app/credentials.txt"
 # Copy game content from mounted volume (not baked into image — copyrighted data)
 if [ -d /app/Content ]; then
     echo "Copying game content from /app/Content..."
-    cp -f Content/Spells.dat Content/Arenas.dat . 2>/dev/null || true
+    cp -f Content/Spells.dat Content/Arenas.dat Content/spell_effects.json . 2>/dev/null || true
     if [ -d Content/Grids ] && [ ! -d Grids ]; then
         cp -r Content/Grids/ Grids/
         # Fix case: C# server expects Grid00/Misc.dat etc, installer has grid00/MISC.DAT
