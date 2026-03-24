@@ -350,7 +350,7 @@ namespace SpellServer
                     if (spell == null) return;
 
                     bool castResult = player.ActiveArena.CastEffect(player.ActiveArenaPlayer, spell);
-                    Program.Log($"[CastEffect RESULT] castResult={castResult} spell={spell.Name}", System.Drawing.Color.Magenta);
+                    Program.Log($"[CastEffect RESULT] castResult={castResult} spell={spell.Name} hp={player.ActiveArenaPlayer.CurrentHp}/{player.ActiveArenaPlayer.MaxHp}", System.Drawing.Color.Magenta);
                     if (castResult)
                     {
                         Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.CastEffect(player.ActiveArenaPlayer, spellId, UDP), false);
@@ -407,7 +407,7 @@ namespace SpellServer
                     else
                     {
                         bool castResult = player.ActiveArena.CastTargeted(player.ActiveArenaPlayer, targetArenaPlayer, spell);
-                        Program.Log($"[CastTargeted RESULT] castResult={castResult} spell={spell.Name} friendly={spell.Friendly} targetAlive={targetArenaPlayer.IsAlive} sameTeam={player.ActiveArenaPlayer.ActiveTeam == targetArenaPlayer.ActiveTeam}", System.Drawing.Color.Magenta);
+                        Program.Log($"[CastTargeted RESULT] castResult={castResult} spell={spell.Name} friendly={spell.Friendly} target={targetArenaPlayer.ActiveCharacter.Name} hp={targetArenaPlayer.CurrentHp}/{targetArenaPlayer.MaxHp}", System.Drawing.Color.Magenta);
                         if (castResult)
                         {
                             Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.CastTargeted(player.ActiveArenaPlayer, relayBuffer, UDP), false);
