@@ -3281,7 +3281,7 @@ namespace SpellServer
             {
                 if (arenaPlayer.IsAlive || (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoTapping) && !arenaPlayer.WorldPlayer.IsAdmin)) return;
                 
-                if (arenaPlayer.ActiveTeam == Team.Neutral || !arenaPlayer.ActiveShrine.IsDead)
+                if (arenaPlayer.ActiveTeam == Team.Neutral || !arenaPlayer.ActiveShrine.IsDamaged)
                 {
                     if (arenaPlayer.OwnerArena.Ruleset.Mode != ArenaRuleset.ArenaMode.FreeForAll)
                     {
