@@ -3117,9 +3117,17 @@ namespace SpellServer
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
-                // Nexus is 5x harder to bias than nodes (enemy attacking only)
-                if (!isFriendly)
-                    biasAmount = Math.Max(1, (Int32)(biasAmount * LeyPowerCalculator.NexusBiasMultiplier));
+                // Nexus bias success scales with network control (0 nodes = 0%, full nodes = 90%)
+                if (!isFriendly && LeyGraph != null)
+                {
+                    int teamEarthpower = LeyPowerCalculator.GetTeamEarthpower(arenaPlayer.ActiveTeam, LeyGraph);
+                    int nexusChance = (int)(teamEarthpower * 0.9f); // 0-90% based on network control
+                    if (CryptoRandom.GetInt32(0, 100) > nexusChance)
+                    {
+                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
+                        return;
+                    }
+                }
 
                 if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70)
                 {
