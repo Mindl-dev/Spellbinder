@@ -486,10 +486,22 @@ namespace SpellServer
                 ActiveTeam = OwnerArena.Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoTeams) ? Team.Neutral : WorldPlayer.ActiveTeam;
                 ActiveCharacter = player.ActiveCharacter;
 
-                _previousLocation = new Vector3(0, 0, 0);
+                // Spawn at team's shrine position
+                Shrine teamShrine = null;
+                switch (ActiveTeam)
+                {
+                    case Team.Dragon: teamShrine = arena.ArenaTeams.Dragon?.Shrine; break;
+                    case Team.Pheonix: teamShrine = arena.ArenaTeams.Pheonix?.Shrine; break;
+                    case Team.Gryphon: teamShrine = arena.ArenaTeams.Gryphon?.Shrine; break;
+                }
+                Vector3 spawnPos = (teamShrine != null && (teamShrine.X != 0 || teamShrine.Y != 0))
+                    ? new Vector3(teamShrine.X, teamShrine.Y, teamShrine.Z)
+                    : new Vector3(0, 0, 0);
+
+                _previousLocation = spawnPos;
                 _previousLocationTick = 0;
 
-                Location = new Vector3(0, 0, 0);
+                Location = spawnPos;
                 Direction = 0;
 
                 CurrentGridBlock = null;
