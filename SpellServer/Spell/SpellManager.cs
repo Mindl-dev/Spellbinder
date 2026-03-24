@@ -258,7 +258,7 @@ namespace SpellServer
                     continue;
                 }
 
-                Spells.Insert(spell.Id, spell);
+                ((System.Collections.Generic.List<Spell>)Spells)[spell.Id] = spell;
 
                 Program.Log(String.Format("Loaded Spell: {0}", spell.Name), Color.Green);
 
@@ -763,7 +763,7 @@ namespace SpellServer
                     while (Spells.Count <= id)
                         Spells.Add(null);
 
-                    Spells.Insert(id, spell);
+                    ((System.Collections.Generic.List<Spell>)Spells)[id] = spell;
                     loaded++;
                 }
 

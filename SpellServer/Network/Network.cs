@@ -346,6 +346,9 @@ namespace SpellServer
                         continue;
                     }
 
+                    if (opcode == 0x27 || opcode == 0x2D)
+                        Program.Log($"[PacketDispatch] opcode=0x{opcode:X2} player={player.Username} arena={player.ActiveArena != null}", System.Drawing.Color.Magenta);
+
                     switch (opcode)
                     {
                         case 0x01:

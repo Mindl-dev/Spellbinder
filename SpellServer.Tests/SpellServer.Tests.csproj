@@ -49,6 +49,7 @@
     <Compile Include="LeyGraphTests.cs" />
     <Compile Include="LeyPowerCalculatorTests.cs" />
     <Compile Include="SpellEffectsTests.cs" />
+    <Compile Include="SpellManagerTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Helper\Helper.csproj">

@@ -346,17 +346,20 @@ namespace SpellServer
                     Int16 spellId = NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0));
 
                     Spell spell = SpellManager.Spells[spellId];
+                    Program.Log($"[CastEffect] {player.Username} spellId={spellId} spell={spell?.Name ?? "NULL"} effect={spell?.Effect}", System.Drawing.Color.Cyan);
                     if (spell == null) return;
 
-                    Program.Log($"[CastEffect] {player.ActiveArenaPlayer.ActiveCharacter.Name} spell={spell.Name} (id={spellId}) effect={spell.Effect}", System.Drawing.Color.Cyan);
-
-                    if (player.ActiveArena.CastEffect(player.ActiveArenaPlayer, spell))
+                    bool castResult = player.ActiveArena.CastEffect(player.ActiveArenaPlayer, spell);
+                    Program.Log($"[CastEffect RESULT] castResult={castResult} spell={spell.Name}", System.Drawing.Color.Magenta);
+                    if (castResult)
                     {
                         Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.CastEffect(player.ActiveArenaPlayer, spellId, UDP), false);
+                        Program.Log($"[CastEffect RELAYED] to arena", System.Drawing.Color.Green);
                     }
                 }
                 public static void CastTargeted(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
+                    Program.Log($"[CastTargeted RAW] player={player.Username} arena={player.ActiveArena != null} arenaPlayer={player.ActiveArenaPlayer != null} len={inStream.Length}", System.Drawing.Color.Magenta);
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
 
                     long streamLen = inStream.Length;
@@ -378,16 +381,17 @@ namespace SpellServer
                         if (resistByte >= 0) isResisted = resistByte != 0;
                     }
 
+                    Spell spell = SpellManager.Spells[spellId];
+                    ArenaPlayer targetArenaPlayer = player.ActiveArena.ArenaPlayers.FindById(targetId);
+
+                    Program.Log($"[CastTargeted PARSE] spellId={spellId} spell={spell?.Name ?? "NULL"} targetId={targetId} target={targetArenaPlayer?.ActiveCharacter?.Name ?? "NULL"} resisted={isResisted}", System.Drawing.Color.Magenta);
+
+                    if (spell == null || targetArenaPlayer == null) return;
+
                     int relayLen = Math.Min(28, (int)(streamLen - 2));
                     Byte[] relayBuffer = new Byte[28];
                     inStream.Seek(2, SeekOrigin.Begin);
                     inStream.Read(relayBuffer, 0, relayLen);
-
-                    Spell spell = SpellManager.Spells[spellId];
-                    if (spell == null) return;
-
-                    ArenaPlayer targetArenaPlayer = player.ActiveArena.ArenaPlayers.FindById(targetId);
-                    if (targetArenaPlayer == null) return;
 
                     Program.Log($"[CastTargeted] {player.ActiveArenaPlayer.ActiveCharacter.Name} -> {targetArenaPlayer.ActiveCharacter.Name} spell={spell.Name} (id={spellId}) resisted={isResisted} len={streamLen}", System.Drawing.Color.Cyan);
 
@@ -402,9 +406,12 @@ namespace SpellServer
                     }
                     else
                     {
-                        if (player.ActiveArena.CastTargeted(player.ActiveArenaPlayer, targetArenaPlayer, spell))
+                        bool castResult = player.ActiveArena.CastTargeted(player.ActiveArenaPlayer, targetArenaPlayer, spell);
+                        Program.Log($"[CastTargeted RESULT] castResult={castResult} spell={spell.Name} friendly={spell.Friendly} targetAlive={targetArenaPlayer.IsAlive} sameTeam={player.ActiveArenaPlayer.ActiveTeam == targetArenaPlayer.ActiveTeam}", System.Drawing.Color.Magenta);
+                        if (castResult)
                         {
                             Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.CastTargeted(player.ActiveArenaPlayer, relayBuffer, UDP), false);
+                            Program.Log($"[CastTargeted RELAYED] to arena", System.Drawing.Color.Green);
                         }
                     }
                 }
