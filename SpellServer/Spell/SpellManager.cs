@@ -703,11 +703,9 @@ namespace SpellServer
             }
             if (!File.Exists(path))
             {
-                Program.Log("spell_effects.json not found — shields, buffs, heals will not work!", Color.Red);
-                return;
+                throw new FileNotFoundException("spell_effects.json not found — shields, buffs, heals will not work!");
             }
 
-            try
             {
                 String json = File.ReadAllText(path);
                 int loaded = 0;
@@ -767,10 +765,6 @@ namespace SpellServer
                 }
 
                 Program.Log(String.Format("Loaded {0} effect spells from spell_effects.json.", loaded), Color.Cyan);
-            }
-            catch (Exception ex)
-            {
-                Program.Log("Error loading spell_effects.json: " + ex.Message, Color.Red);
             }
         }
 
