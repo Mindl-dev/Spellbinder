@@ -781,6 +781,7 @@ namespace SpellServer
                 public static void HasEnteredWorld(SpellServer.Player player, bool UDP = false)
                 {
                     Network.Send(player, Outgoing.Player.HasEnteredWorld());
+
                 }
                 public static void ClientPlayerState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -1568,7 +1569,7 @@ namespace SpellServer
                     outStream.Write(nameBuf, 0, 12);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     outStream.WriteByte(arenaPlayer.OwnerArena.ArenaId);
-                    outStream.WriteByte((Byte) arenaPlayer.ActiveTeam);
+                    outStream.WriteByte((Byte)arenaPlayer.ActiveTeam);
                     outStream.WriteByte((Byte) arenaPlayer.ActiveCharacter.Class);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.OpLevel);
@@ -1917,7 +1918,7 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.BiasedShrine);
                     outStream.WriteByte(shrine.ShrineId);
-                    outStream.WriteByte((Byte) shrine.Team);
+                    outStream.WriteByte((Byte)shrine.Team);
                     outStream.WriteByte((Byte)shrine.CurrentBias);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(biasAmount);
@@ -2950,7 +2951,7 @@ namespace SpellServer
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(player.PlayerId)), 0, 2);
                     outStream.WriteByte(player.TableId > 0 ? player.TableId : player.ActiveArena.ArenaId);
-                    outStream.WriteByte((Byte) player.ActiveTeam);
+                    outStream.WriteByte((Byte)player.ActiveTeam);
                     byte[] nameBuf = new byte[12];
                     byte[] rawName = Encoding.ASCII.GetBytes(player.ActiveCharacter.Name);
                     Array.Copy(rawName, 0, nameBuf, 0, Math.Min(rawName.Length, 11)); // Use 11 to guarantee a null at 12
@@ -2999,7 +3000,7 @@ namespace SpellServer
                     outStream.Write(nameBuf, 0, 12);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(player.PlayerId)), 0, 2);
                     outStream.WriteByte(player.ActiveArena != null ? player.ActiveArena.ArenaId : player.TableId);
-                    outStream.WriteByte((Byte) player.ActiveTeam);
+                    outStream.WriteByte((Byte)player.ActiveTeam);
                     outStream.WriteByte((Byte) player.ActiveCharacter.Class);
                     outStream.WriteByte(player.ActiveCharacter.Level);
                     outStream.WriteByte(player.ActiveCharacter.OpLevel);
