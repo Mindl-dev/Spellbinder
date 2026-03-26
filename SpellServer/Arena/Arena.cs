@@ -103,6 +103,7 @@ namespace SpellServer
         public Byte TableId;
         public Grid Grid;
         public LeyGraph LeyGraph;
+        public Bot.NavGrid NavGrid;
         public bool ProfilingEnabled;
         public TickProfile TickProfile = new TickProfile();
         public void ResetProfiling() { TickProfile.Reset(); }
@@ -206,6 +207,7 @@ namespace SpellServer
                 Tables = grid.Tables.GetById(grid.GridId);
                 ArenaTeams = new ArenaTeamCollection(Grid);
                 LeyGraph = LeyGraph.Build(Grid.Pools, ArenaTeams.Dragon.Shrine, ArenaTeams.Pheonix.Shrine, ArenaTeams.Gryphon.Shrine);
+                NavGrid = new Bot.NavGrid(Grid);
                 ArenaPlayers = new ArenaPlayerCollection();
                 ArenaPlayerHistory = new ArenaPlayerCollection();
                 Runes = new RuneCollection();

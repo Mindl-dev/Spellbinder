@@ -726,6 +726,7 @@ namespace SpellServer
 
         public static void Send(Player player, MemoryStream inStream, bool UDP = false)
         {
+            if (player.IsBot) return;
             try
             {
                 Packet packet = new Packet(inStream);
@@ -766,6 +767,7 @@ namespace SpellServer
 
         public static void Send(Player player, Packet packet, bool UDP = false)
         {
+            if (player.IsBot) return;
             try
             {
                 if (!UDP)
