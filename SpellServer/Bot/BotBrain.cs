@@ -22,9 +22,10 @@ namespace SpellServer.Bot
     {
         private const float MoveSpeed = 300f;     // world units per second
         private const float CastRange = 400f;     // max spell range
-        private const int ThinkIntervalMs = 200;
+        private const float StandoffDist = 200f;  // preferred combat distance (~30 feet)
+        private const int ThinkIntervalMs = 50;    // 20 FPS movement
         private const int RepathIntervalMs = 1000;
-        private const int CastCooldownMs = 15000;  // Slowed 10x for testing
+        private const int CastCooldownMs = 15000;  // Slow for testing — set to 1500 for real play
 
         public readonly ArenaPlayer Bot;
         public readonly Arena Arena;
@@ -84,14 +85,18 @@ namespace SpellServer.Bot
                 TryCast();
             }
 
-            // Always navigate toward target — chase, don't stand still
-            if (State != BotState.Combat)
-                State = BotState.NavigateToTarget;
+            // Navigate toward target unless we're at standoff distance in combat
+            if (dist > StandoffDist)
+            {
+                if (State != BotState.Combat)
+                    State = BotState.NavigateToTarget;
 
-            if (_repathTick.HasElapsed || _path == null)
-                ComputePathTo(_target.Location);
+                if (_repathTick.HasElapsed || _path == null)
+                    ComputePathTo(_target.Location);
 
-            FollowPath();
+                FollowPath();
+            }
+
             BotPlayer.BroadcastPosition(Bot);
         }
 
@@ -142,6 +147,29 @@ namespace SpellServer.Bot
                 bool goalWalkable = Arena.NavGrid.Walkability[goalGX, goalGY] == 0;
                 Program.Log($"[BotPath] {Bot.ActiveCharacter?.Name} from=({startGX},{startGY}) walk={startWalkable} to=({goalGX},{goalGY}) walk={goalWalkable} path={(_path != null ? _path.Count + " nodes" : "NULL")}",
                     System.Drawing.Color.Yellow);
+
+                // Dump detail for the blocking column when path fails
+                if (_path == null)
+                {
+                    // Check the cell between bot and goal
+                    int midGX = (startGX + goalGX) / 2;
+                    int midGY = (startGY + goalGY) / 2;
+                    // Check column 84 specifically (the blocking column from dumps)
+                    for (int checkX = startGX - 1; checkX <= startGX + 1; checkX++)
+                    {
+                        if (checkX < 0 || checkX >= NavGrid.Size) continue;
+                        var block = Arena.Grid.GridBlocks.GetBlockByLocation(checkX * 64, startGY * 64);
+                        if (block == null)
+                        {
+                            Program.Log($"[NavDetail] ({checkX},{startGY}): NULL block", System.Drawing.Color.Red);
+                            continue;
+                        }
+                        int floor = Arena.Grid.GetFloorHeight(checkX * 64 + 32, startGY * 64 + 32, 0, Arena.Grid);
+                        int ceil = Arena.Grid.GetCeilingHeight(checkX * 64 + 32, startGY * 64 + 32, 0, Arena.Grid);
+                        Program.Log($"[NavDetail] ({checkX},{startGY}): specColl={block.SpecialCollision} solidPillar={block.IsSolidPillar} floorZ={block.FloorZ} ceilZ={block.CeilingZ} calcFloor={floor} calcCeil={ceil} headroom={ceil - floor}",
+                            System.Drawing.Color.Red);
+                    }
+                }
             }
         }
 
@@ -181,7 +209,21 @@ namespace SpellServer.Bot
                 dir.Normalize();
                 float step = MoveSpeed * (ThinkIntervalMs / 1000f);
                 Vector3 newPos = Bot.Location + dir * step;
-                newPos.Z = floorZ; // snap to floor
+
+                // Validate destination is walkable
+                int newGX, newGY;
+                NavGrid.WorldToGrid(newPos.X, newPos.Y, out newGX, out newGY);
+                if (newGX >= 0 && newGX < NavGrid.Size && newGY >= 0 && newGY < NavGrid.Size
+                    && Arena.NavGrid.Walkability[newGX, newGY] == 0)
+                {
+                    newPos.Z = Arena.NavGrid.FloorHeight[newGX, newGY];
+                }
+                else
+                {
+                    // Stuck — force repath
+                    _path = null;
+                    return;
+                }
 
                 float direction = (float)Math.Atan2(dir.Y, dir.X);
                 Arena.PlayerMove(Bot, ArenaPlayer.StatusFlag.None, 200, newPos, direction);
@@ -195,6 +237,21 @@ namespace SpellServer.Bot
             dir.Normalize();
             float step = MoveSpeed * (ThinkIntervalMs / 1000f);
             Vector3 newPos = Bot.Location + dir * step;
+
+            // Check if the destination cell is walkable — don't clip through walls
+            int newGX, newGY;
+            NavGrid.WorldToGrid(newPos.X, newPos.Y, out newGX, out newGY);
+            if (newGX < 0 || newGX >= NavGrid.Size || newGY < 0 || newGY >= NavGrid.Size) return;
+            if (Arena.NavGrid.Walkability[newGX, newGY] != 0)
+            {
+                // Blocked — force a repath next tick instead of clipping
+                _path = null;
+                return;
+            }
+
+            // Snap Z to floor height
+            newPos.Z = Arena.NavGrid.FloorHeight[newGX, newGY];
+
             float direction = (float)Math.Atan2(dir.Y, dir.X);
             Arena.PlayerMove(Bot, ArenaPlayer.StatusFlag.None, 200, newPos, direction);
         }

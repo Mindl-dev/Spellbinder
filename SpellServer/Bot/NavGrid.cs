@@ -16,7 +16,7 @@ namespace SpellServer.Bot
         public const int Size = 128;
         public const int CellSize = 64;
         public const int StepHeight = 128;      // max floor height diff for traversal (stairs/ramps)
-        public const int MinHeadroom = 80;       // standing player height
+        public const int MinHeadroom = 48;       // relaxed for doorways (player is 80 tall but can crouch through 48)
         public const float DiagonalCost = 1.41f;
         public const float CardinalCost = 1.0f;
 
@@ -60,6 +60,7 @@ namespace SpellServer.Bot
 
                     if (ceiling - floor < MinHeadroom)
                     {
+                        // Mark as solid for now — doorway pass will fix these
                         Walkability[gX, gY] = 1;
                         continue;
                     }
@@ -102,12 +103,39 @@ namespace SpellServer.Bot
                 }
             }
 
+            // Pass 3: doorway detection — if a solid cell has walkable neighbors on
+            // opposite sides, it's a passage (doorway), not a wall. The GetCeilingHeight
+            // mesh sampling returns bad values at doorway lintels.
+            int doorways = 0;
+            for (int gX = 1; gX < Size - 1; gX++)
+            {
+                for (int gY = 1; gY < Size - 1; gY++)
+                {
+                    if (Walkability[gX, gY] != 1) continue; // skip already walkable
+
+                    var block = grid.GridBlocks.GetBlockByLocation(gX * CellSize, gY * CellSize);
+                    if (block != null && block.SpecialCollision == 1) continue; // truly solid
+                    if (block != null && block.IsSolidPillar) continue;
+
+                    // Check if walkable neighbors exist on opposite sides (N-S or E-W)
+                    bool nsPassage = Walkability[gX, gY - 1] == 0 && Walkability[gX, gY + 1] == 0;
+                    bool ewPassage = Walkability[gX - 1, gY] == 0 && Walkability[gX + 1, gY] == 0;
+
+                    if (nsPassage || ewPassage)
+                    {
+                        Walkability[gX, gY] = 0; // mark as walkable doorway
+                        FloorHeight[gX, gY] = (short)grid.GetFloorHeight(gX * CellSize + CellSize / 2, gY * CellSize + CellSize / 2, 0, grid);
+                        doorways++;
+                    }
+                }
+            }
+
             int walkable = 0, solid = 0;
             for (int x = 0; x < Size; x++)
                 for (int y = 0; y < Size; y++)
                     if (Walkability[x, y] == 0) walkable++; else solid++;
 
-            Program.Log($"[NavGrid] Built: {walkable} walkable, {solid} solid, {_blockedEdges.Count} blocked edges",
+            Program.Log($"[NavGrid] Built: {walkable} walkable, {solid} solid, {doorways} doorways opened, {_blockedEdges.Count} blocked edges",
                 System.Drawing.Color.Green);
         }
 
