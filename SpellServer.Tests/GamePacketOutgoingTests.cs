@@ -333,10 +333,10 @@ namespace SpellServer.Tests
             byte[] data = GamePacket.Outgoing.Arena.UpdateExperience(ap).ToArray();
             Assert.AreEqual(8, data.Length);
             AssertPacketHeader(data, PacketOutFunction.UpdateExperience);
-            Assert.AreEqual(7, ReadBE16(data, 2), "kills");
-            // SessionKillExp defaults to 0 (auto-property on uninitialized object)
-            Assert.AreEqual(0, ReadBE16(data, 4), "killExp (default 0)");
-            Assert.AreEqual(2, ReadBE16(data, 6), "deaths");
+            // Field order: [sessionXP, bonusXP, kills] per client IDA (slot 106/133/132)
+            Assert.AreEqual(0, ReadBE16(data, 2), "sessionXP (default 0)");
+            Assert.AreEqual(0, ReadBE16(data, 4), "bonusXP (default 0)");
+            Assert.AreEqual(7, ReadBE16(data, 6), "kills");
         }
 
         // --- PlayerHit (4 bytes) ---

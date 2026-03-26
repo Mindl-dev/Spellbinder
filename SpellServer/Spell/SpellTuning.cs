@@ -100,7 +100,7 @@ namespace SpellServer
         /// real accuracy is ~13-25% for vel 600 projectiles. This scales damage so TTK at
         /// realistic accuracy matches the arena shooter sweet spot (5-10s focused fire).
         /// </summary>
-        public const float ProjectileDamageMultiplier = 2.0f;
+        public const float ProjectileDamageMultiplier = 1.3f;
 
         /// <summary>
         /// When true, projectiles deal fixed average damage (no dice variance).
@@ -109,7 +109,7 @@ namespace SpellServer
         /// </summary>
         public static readonly bool FixedProjectileDamage = true;
 
-        public const float HitscanDamageMultiplier = 2.0f;
+        public const float HitscanDamageMultiplier = 1.3f;
         public static float GetDamageMultiplier(Spell spell)
         {
             if (spell == null) return 1.0f;

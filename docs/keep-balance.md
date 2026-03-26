@@ -55,3 +55,8 @@ Earthnode positions are server-side only. Edit fixture x/y in NIFS.DAT, restart 
 - Map bounds: (640, 640) to (6656, 6656) — from `[map]` section
 - Grid center: ~3648, 3648
 - Each grid tile = 64 world units (world coord >> 6 = grid coord)
+
+100%:
+arcane dagger: 10s
+arcane star: 15s
+light erruption: 20 at like 18seconds

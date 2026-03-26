@@ -179,13 +179,13 @@ namespace SpellServer.Tests
                 Assert.AreEqual(SpellType.Effect, resistHeatEffect.Type);
                 Assert.AreEqual(SpellEffectType.Resist, resistHeatEffect.Effect);
                 Assert.AreEqual(SpellElementType.Fire, resistHeatEffect.Element);
-                Assert.AreEqual(20, resistHeatEffect.Potency);
-                Assert.AreEqual(120, resistHeatEffect.Duration);
+                Assert.AreEqual(45, resistHeatEffect.Potency);
+                Assert.AreEqual(3600, resistHeatEffect.Duration);
 
                 var blessIEffect = SpellManager.Spells[231];
                 Assert.AreEqual(SpellEffectType.Bless, blessIEffect.Effect);
-                Assert.AreEqual(5, blessIEffect.Potency);
-                Assert.AreEqual(60, blessIEffect.Duration);
+                Assert.AreEqual(12, blessIEffect.Potency);
+                Assert.AreEqual(3600, blessIEffect.Duration);
 
                 var cureEffect = SpellManager.Spells[234];
                 Assert.AreEqual(SpellEffectType.Healing, cureEffect.Effect);
@@ -232,21 +232,21 @@ namespace SpellServer.Tests
                 float cureHealLv10 = SpellTuning.ComputeEffectValue(SpellEffectType.Healing, SpellTuning.GetPotency(cureEffect), 10);
                 Assert.AreEqual(35f, cureHealLv10, 0.1f, "Cure should heal 35 HP at level 10");
 
-                // Resist Heat Effect: potency=20 → 20% reduction
+                // Resist Heat Effect: potency=45 → 45% reduction
                 float resistVal = SpellTuning.ComputeEffectValue(SpellEffectType.Resist, SpellTuning.GetPotency(resistHeatEffect), 0);
-                Assert.AreEqual(20f, resistVal, 0.1f, "Resist Heat should reduce 20%");
+                Assert.AreEqual(45f, resistVal, 0.1f, "Resist Heat should reduce 45%");
 
-                // Bless I Effect: potency=5, casterLevel=0 → 5%
+                // Bless I Effect: potency=12, casterLevel=0 → 12%
                 float blessVal = SpellTuning.ComputeEffectValue(SpellEffectType.Bless, SpellTuning.GetPotency(blessEffect), 0);
-                Assert.AreEqual(5f, blessVal, 0.1f, "Bless I should reduce 5% at level 0");
+                Assert.AreEqual(12f, blessVal, 0.1f, "Bless I should reduce 12% at level 0");
 
-                // Bless I Effect: potency=5, casterLevel=10 → 8%
+                // Bless I Effect: potency=12, casterLevel=10 → 15%
                 float blessValLv10 = SpellTuning.ComputeEffectValue(SpellEffectType.Bless, SpellTuning.GetPotency(blessEffect), 10);
-                Assert.AreEqual(8f, blessValLv10, 0.1f, "Bless I should reduce 8% at level 10");
+                Assert.AreEqual(15f, blessValLv10, 0.1f, "Bless I should reduce 15% at level 10");
 
                 // GetPotency prefers Potency field over Level
                 Assert.AreEqual(30, SpellTuning.GetPotency(cureEffect), "GetPotency should return Potency field");
-                Assert.AreEqual(20, SpellTuning.GetPotency(resistHeatEffect), "GetPotency should return Potency field");
+                Assert.AreEqual(45, SpellTuning.GetPotency(resistHeatEffect), "GetPotency should return Potency field");
             }
             finally
             {
