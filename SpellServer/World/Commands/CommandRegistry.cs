@@ -55,6 +55,7 @@ namespace SpellServer.Commands
             Register(new LeyCommand());
             Register(new PerfCommand());
             Register(new TpCommand());
+            Register(new AddBotCommand());
         }
     }
 }
