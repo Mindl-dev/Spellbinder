@@ -91,6 +91,33 @@ namespace SpellServer
         }
 
         /// <summary>
+        /// Damage multiplier for projectile spells. Adjusts base dice damage to hit
+        /// target TTK at realistic accuracy rates.
+        /// Default 1.0 = use Spells.dat values as-is.
+        /// </summary>
+        /// <summary>
+        /// Global projectile damage multiplier. Spells.dat base values assume 100% accuracy;
+        /// real accuracy is ~13-25% for vel 600 projectiles. This scales damage so TTK at
+        /// realistic accuracy matches the arena shooter sweet spot (5-10s focused fire).
+        /// </summary>
+        public const float ProjectileDamageMultiplier = 2.0f;
+
+        /// <summary>
+        /// When true, projectiles deal fixed average damage (no dice variance).
+        /// Consistent TTK — competitive/esport style.
+        /// When false, projectiles roll dice per Spells.dat (original SpellBinder behavior).
+        /// </summary>
+        public static readonly bool FixedProjectileDamage = true;
+
+        public const float HitscanDamageMultiplier = 2.0f;
+        public static float GetDamageMultiplier(Spell spell)
+        {
+            if (spell == null) return 1.0f;
+            if (spell.Type != SpellType.Projectile) return 1.0f;
+            return spell.Velocity >= 2000 ? HitscanDamageMultiplier : ProjectileDamageMultiplier;
+        }
+
+        /// <summary>
         /// Read the potency value from a spell.
         /// JSON-loaded spells set Potency directly.
         /// Spells.dat-loaded spells have "effect=" cast to SpellEffectType (losing the raw int)

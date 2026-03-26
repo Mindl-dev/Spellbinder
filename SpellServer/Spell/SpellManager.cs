@@ -662,6 +662,14 @@ namespace SpellServer
                 return new SpellCheatInfo(false); 
             }
 
+            // Spells loaded from spell_effects.json (shields, buffs, bleeds, hinders) have no
+            // SpellTreeLevels because they don't exist in Spells.dat — they're the "death effect"
+            // spells referenced by death_spell_effect/target_spell_effect fields. If the client
+            // sends one of these IDs directly (e.g. from a relay echo), reject it gracefully
+            // instead of crashing on the null SpellTreeLevels list.
+            if (spell.SpellTreeLevels == null)
+                return new SpellCheatInfo(spell, false, 0, 0, "None", "Effect spell (no tree)");
+
             foreach (SpellTreeLevel spellTreeLevel in spell.SpellTreeLevels)
             {
                 foreach (SpellTree spellTree in player.ActiveCharacter.SpellTrees)
@@ -728,16 +736,33 @@ namespace SpellServer
                     int id = ParseJsonInt(obj, "id");
                     if (id <= 0) continue;
 
-                    // Skip if spell already exists
-                    if (id < Spells.Count && Spells[id] != null) continue;
-
                     String name = ParseJsonString(obj, "name") ?? "Effect " + id;
                     String effectType = ParseJsonString(obj, "effect_type") ?? "None";
                     String element = ParseJsonString(obj, "element") ?? "None";
-                    // "potency" in JSON = effect strength. Renamed from "effect=" in Spells.dat
-                    // to avoid confusion with SpellEffectType enum. NOT character level.
                     int potency = ParseJsonInt(obj, "potency");
                     int duration = ParseJsonInt(obj, "duration");
+
+                    // If spell already exists (from Spells.dat), merge effect fields
+                    if (id < Spells.Count && Spells[id] != null)
+                    {
+                        Spell existing = Spells[id];
+                        // Only merge if the existing spell has no effect set
+                        if (existing.Effect == SpellEffectType.None || existing.Potency == 0)
+                        {
+                            SpellEffectType mergeEff;
+                            if (Enum.TryParse(effectType, true, out mergeEff))
+                                existing.Effect = mergeEff;
+                            SpellElementType mergeElem;
+                            if (Enum.TryParse(element, true, out mergeElem))
+                                existing.Element = mergeElem;
+                            existing.Potency = potency;
+                            // Always override duration from JSON — Spells.dat values are often wrong
+                            if (duration > 0)
+                                existing.Duration = duration;
+                            loaded++;
+                        }
+                        continue;
+                    }
 
                     Spell spell = new Spell
                     {
