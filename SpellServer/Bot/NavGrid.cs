@@ -15,7 +15,7 @@ namespace SpellServer.Bot
     {
         public const int Size = 128;
         public const int CellSize = 64;
-        public const int StepHeight = 32;       // max floor height diff for traversal (stairs)
+        public const int StepHeight = 128;      // max floor height diff for traversal (stairs/ramps)
         public const int MinHeadroom = 80;       // standing player height
         public const float DiagonalCost = 1.41f;
         public const float CardinalCost = 1.0f;

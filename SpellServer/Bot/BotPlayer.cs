@@ -73,6 +73,9 @@ namespace SpellServer.Bot
             // Send initial position so the client renders the bot model
             BroadcastPosition(arenaPlayer);
 
+            // Register with BotManager for AI ticking
+            BotManager.RegisterBot(arena, arenaPlayer);
+
             Program.Log($"[Bot] Created {name} ({botClass} Lv{level}) on {team}, ArenaPlayerId={arenaPlayer.ArenaPlayerId}",
                 System.Drawing.Color.Green);
 

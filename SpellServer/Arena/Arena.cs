@@ -430,6 +430,7 @@ namespace SpellServer
 
                                 TickProfile.ProcessMisc.Start();
                                 ProcessMisc();
+                                Bot.BotManager.ProcessBots(this);
                                 TickProfile.ProcessMisc.Stop();
 
                                 TickProfile.TotalTick.Stop();
@@ -445,6 +446,7 @@ namespace SpellServer
                                 ProcessWalls();
                                 ProcessTriggers();
                                 ProcessMisc();
+                                Bot.BotManager.ProcessBots(this);
                             }
 
                             elapsedTime = DateTime.UtcNow - StartTime;

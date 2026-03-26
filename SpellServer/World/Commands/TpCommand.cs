@@ -27,14 +27,6 @@ namespace SpellServer.Commands
                             shrine.Team, shrine.X, shrine.Y, shrine.Z));
                 }
 
-                // Print pool positions
-                foreach (var pool in arena.Grid.Pools)
-                {
-                    if (pool == null || pool.Power <= 0) continue;
-                    World.SendSystemMessage(player,
-                        String.Format("[TP] Pool {0}: {1} {2} {3} (power={4})",
-                            pool.PoolId, pool.X, pool.Y, pool.Z, pool.Power));
-                }
                 return;
             }
 
