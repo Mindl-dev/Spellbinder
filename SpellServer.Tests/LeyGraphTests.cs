@@ -171,10 +171,9 @@ namespace SpellServer.Tests
         {
             var graph = BuildGrid00Graph();
             Assume.That(graph, Is.Not.Null);
-            // All pools start neutral — BFS from Dragon shrine should traverse through neutral nodes
+            // All pools start neutral — only the shrine itself is in the team network
             var network = graph.GetTeamNetwork(Team.Dragon);
-            // Shrine + all reachable neutral nodes
-            Assert.That(network.Count, Is.GreaterThan(1), "Should reach neutral nodes from shrine");
+            Assert.AreEqual(1, network.Count, "Only shrine, neutral nodes don't count as team network");
             Assert.IsTrue(network.Any(n => n.Type == LeyNodeType.Shrine));
         }
 
