@@ -825,10 +825,11 @@ namespace SpellServer
                 {
                     if (player.ActiveArena != null && player.ActiveArenaPlayer != null)
                     {
-                        if (player.ActiveArenaPlayer.ObjectiveExp > player.ActiveArenaPlayer.CombatExp)
-                        {
-                            player.ActiveArenaPlayer.ObjectiveExp = player.ActiveArenaPlayer.CombatExp;
-                        }
+                        //Let's see if players turtle too much and we have to reenable this TODO
+                        // if (player.ActiveArenaPlayer.ObjectiveExp > player.ActiveArenaPlayer.CombatExp)
+                        // {
+                        //     player.ActiveArenaPlayer.ObjectiveExp = player.ActiveArenaPlayer.CombatExp;
+                        // }
 
                         tCharacter.Experience += (UInt64)player.ActiveArenaPlayer.CombatExp;
                         tCharacter.Experience += (UInt64)player.ActiveArenaPlayer.ObjectiveExp;
@@ -851,10 +852,7 @@ namespace SpellServer
 
                     for (Int32 i = 0; i < MaxLevel; i++)
                     {
-                        UInt64 nextLevel = LevelExp[tCharacter.Level] + (LevelExp[tCharacter.Level] * 4);
-
-                        nextLevel += (nextLevel * 4);
-                        nextLevel = nextLevel << 2;
+                        UInt64 nextLevel = LevelExp[tCharacter.Level] * 100;
 
                         if (tCharacter.Experience >= nextLevel && tCharacter.Level < MaxLevel)
                         {
@@ -862,7 +860,7 @@ namespace SpellServer
                         }
                         else break;
                     }
-
+                    //Max level 25
                     if (tCharacter.Experience > 2330000) tCharacter.Experience = 2330000;
 
                     if (clientCharacter != null)

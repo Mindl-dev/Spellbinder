@@ -163,15 +163,21 @@ namespace SpellServer
                 //case SpellType.Bolt:
                 case SpellType.Projectile:
                 {
-                    Damage += spell.DamageBase;
-
-                    if (spell.DamageNumDice > 0)
+                    if (SpellTuning.FixedProjectileDamage)
                     {
-                        for (Int32 i = 0; i < spell.DamageNumDice; i++)
+                        Damage += (Int16)(spell.DamageBase + spell.DamageNumDice * (spell.DamageDice + 1) / 2);
+                    }
+                    else
+                    {
+                        Damage += spell.DamageBase;
+                        if (spell.DamageNumDice > 0)
                         {
-                            Damage += CryptoRandom.GetInt16(1, spell.DamageDice);
+                            for (Int32 i = 0; i < spell.DamageNumDice; i++)
+                                Damage += CryptoRandom.GetInt16(1, spell.DamageDice);
                         }
                     }
+
+                    Damage = (Int16)(Damage * SpellTuning.GetDamageMultiplier(spell));
 
                     Power = CryptoRandom.GetInt16(spell.MinPowerDrain, spell.MaxPowerDrain);
 

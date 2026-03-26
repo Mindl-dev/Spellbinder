@@ -181,7 +181,8 @@ namespace SpellServer
 
             foreach (var ap in arena.ArenaPlayers)
             {
-                int finalExp = (int)(ap.SessionKillExp * timeBonusMultiplier);
+                int sessionTotal = ap.CombatExp + ap.ObjectiveExp + ap.BonusExp;
+                int finalExp = (int)(sessionTotal * timeBonusMultiplier);
 
                 ap.WorldPlayer.ActiveCharacter.AwardExp = finalExp;
 

@@ -85,7 +85,6 @@ namespace SpellServer
         {
             _inputQueue.Enqueue(packet);
         }
-
         private void ProcessInput()
         {
             while (_inputQueue.TryDequeue(out var packet))
@@ -158,6 +157,7 @@ namespace SpellServer
         public bool AFFromClients = false;
 
         public Interval CleanupTick;
+        public Interval XpSaveTick;
 
         private bool statsProcessed = false;
 
@@ -249,6 +249,7 @@ namespace SpellServer
                 PlayerTrackingTick = new Interval(10, true);
                 ThinTrackingTick = new Interval(3000, true);
                 CleanupTick = new Interval(5000, false);
+                XpSaveTick = new Interval(120000, true); // Save XP to DB every 2 minutes
 
                 GameName = String.Format("[{0}] {1}", ruleset.ModeString, Grid.GameName);
 
@@ -487,74 +488,34 @@ namespace SpellServer
                         ArenaPlayer arenaPlayer = ArenaPlayers[i];
                         if (arenaPlayer == null) continue;
 
-                        if (arenaPlayer.ActiveTeam == winningTeam)
-                        {
-                            if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.ExpEvent) && arenaPlayer.SecondsPlayed >= 120)
-                            {
-                                Int32 awardedExp;
+                        // Bonus XP: 40% of combat+objective, prorated by time played, 1.5x for winners
+                        int earnedXp = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                        float timeRatio = Math.Min(1.0f, (float)arenaPlayer.SecondsPlayed / (TimeLimit));
+                        float winMultiplier = (arenaPlayer.ActiveTeam == winningTeam && winningTeam != Team.Neutral) ? 1.5f : 1.0f;
+                        int bonusExp = (int)(earnedXp * 0.40f * timeRatio * winMultiplier);
 
-                                if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus))
-                                {
-                                    awardedExp = EventExp*2;
-                                }
-                                else
-                                {
-                                    awardedExp = EventExp;
-                                }
-
-                                arenaPlayer.ActiveCharacter.AwardExp += awardedExp;
-
-                                Program.Log(String.Format("[Event] ({0}){1} -> Has been awarded {2} EXP by {3}.", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.ActiveCharacter.Name, awardedExp, arenaPlayer.WorldPlayer.ActiveArena.Founder), Color.Blue, "Admin");
-                            }
-
-                            Int32 pointsPlace = top10Points.FindIndex(indexPlayer => indexPlayer == arenaPlayer);
-
-                            switch (pointsPlace)
-                            {
-                                case 0:
-                                {
-                                    pointsPlace = 10;
-                                    break;
-                                }
-                                case 1:
-                                {
-                                    pointsPlace = 8;
-                                    break;
-                                }
-                                case 2:
-                                {
-                                    pointsPlace = 7;
-                                    break;
-                                }
-                                default:
-                                {
-                                    pointsPlace = 5;
-                                    break;
-                                }
-                            }
-
-                            Single pointsBonus = pointsPlace * ((arenaPlayer.ActiveCharacter.Level * (25 + (arenaPlayer.KillCount * 2.2f))) + (arenaPlayer.ActiveCharacter.Level * (10 + (arenaPlayer.RaiseCount * 1.3f))));
-                            
-                            Single bonusTime = (((Single)DateTime.Now.Subtract(arenaPlayer.JoinTime).TotalSeconds / (TimeLimit / 100f)) * 0.006f) + 1f;
-                            Int32 bonusExp = (Int32)(((arenaPlayer.CombatExp * bonusTime) - arenaPlayer.CombatExp) + ((arenaPlayer.ObjectiveExp * bonusTime) - arenaPlayer.ObjectiveExp) + pointsBonus);
-
+                        if (bonusExp > 0)
                             GivePlayerExperience(arenaPlayer, bonusExp, ArenaPlayer.ExperienceType.Bonus);
 
-                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.ArenaState(this, arenaPlayer.WorldPlayer, false));
+                        // Event XP (special events only)
+                        if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.ExpEvent) && arenaPlayer.SecondsPlayed >= 120)
+                        {
+                            Int32 eventExp = arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? EventExp * 2 : EventExp;
+                            arenaPlayer.ActiveCharacter.AwardExp += eventExp;
+                        }
 
-                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.ArenaState(this, arenaPlayer.WorldPlayer, false));
+                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
 
+                        if (arenaPlayer.ActiveTeam == winningTeam && winningTeam != Team.Neutral)
+                        {
                             if (arenaPlayer.SecondsPlayed >= 300 && ArenaPlayers.Count >= 3)
-                            {
                                 arenaPlayer.ActiveCharacter.Statistics.Wins++;
-                            }
                         }
                         else
                         {
                             if (ArenaPlayers.Count >= 3)
-                            {
                                 arenaPlayer.ActiveCharacter.Statistics.Losses++;
-                            }
                         }
                     }
 
@@ -607,6 +568,27 @@ namespace SpellServer
                         if (thin == null || thin.BoundingBox == null) continue;
 
                         GamePacket.Outgoing.System.DrawBoundingBox(sendArenaPlayer, thin.BoundingBox);
+                    }
+                }
+            }
+
+            // Periodic XP save — prevents XP loss on crash
+            if (XpSaveTick != null && XpSaveTick.HasElapsed)
+            {
+                for (Int32 i = 0; i < ArenaPlayers.Count; i++)
+                {
+                    ArenaPlayer ap = ArenaPlayers[i];
+                    if (ap == null) continue;
+
+                    int sessionTotal = ap.CombatExp + ap.ObjectiveExp + ap.BonusExp;
+                    if (sessionTotal > 0)
+                    {
+                        ap.WorldPlayer.ActiveCharacter.AwardExp = sessionTotal;
+                        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            try { Character.Save(ap.WorldPlayer, null); }
+                            catch { }
+                        });
                     }
                 }
             }
@@ -2327,17 +2309,12 @@ namespace SpellServer
                     }
                 }
 
-                if (effectType == EffectType.Area || effectType == EffectType.AuraCaster || effectType == EffectType.AuraTarget)
+                // Relay effect to all clients via CastTargeted (0x2D).
+                // CastEffect (0xB3) is for self-cast. For enemy-applied effects like
+                // Cramp/Bleed, the client needs CastTargeted with source + target + spell.
+                if (spell.DeathSpellEffect > 0)
                 {
                     Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, (short)spell.DeathSpellEffect, UDP), true);
-                    //Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastTargetedEx(targetPlayer, sourcePlayer, arenaEffect.OwnerSpell, UDP), true);
-                    return true;
-                }
-
-                if (spell.Type == SpellType.Rune)
-                {
-                    Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, (short)spell.DeathSpellEffect, UDP), true);
-                    return true;
                 }
             }
 
@@ -2690,8 +2667,7 @@ namespace SpellServer
 
                     Single experience = (Single) (spellDamage.Damage + Math.Ceiling(spellDamage.Power*0.75));
 
-                    GivePlayerExperience(sourcePlayer, experience*1.80f, ArenaPlayer.ExperienceType.Combat);
-                    GivePlayerExperience(targetPlayer, experience*0.70f, ArenaPlayer.ExperienceType.Combat);
+                    GivePlayerExperience(sourcePlayer, experience, ArenaPlayer.ExperienceType.Combat);
                 }
 
                 if (showHitToSource)
@@ -3023,14 +2999,19 @@ namespace SpellServer
 
                 }
                 
-                arenaPlayer.ExpPenalty = (Int32) targetPenalty;
+                // Death penalty: 10% of session XP (levels 1-2 exempt per game manual)
+                if (arenaPlayer.ActiveCharacter.Level >= 3)
+                {
+                    int sessionXp = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                    int deathPenalty = (int)(sessionXp * 0.10f);
+                    if (deathPenalty > 0)
+                    {
+                        arenaPlayer.CombatExp = Math.Max(0, arenaPlayer.CombatExp - deathPenalty);
+                    }
+                }
 
                 if (targetArenaPlayer != null)
                 {
-                    if (killerPenalty > 0)
-                    {
-                        targetArenaPlayer.ExpPenalty = (Int32)killerPenalty;
-                    }
 
                     if (targetArenaPlayer != arenaPlayer)
                     {
@@ -3392,7 +3373,17 @@ namespace SpellServer
                 {
                     if (arenaPlayer.OwnerArena.Ruleset.Mode != ArenaRuleset.ArenaMode.FreeForAll)
                     {
-                        arenaPlayer.ExpPenalty = arenaPlayer.ActiveCharacter.Level*(TeamHasHealer(arenaPlayer.ActiveTeam) ? 13 : 4);
+                        // Node/nexus res penalty: 20% of session XP (on top of 10% death penalty)
+                        // Healer Spirit Gate res has no additional penalty (handled in DoPlayerResurrect)
+                        if (arenaPlayer.ActiveCharacter.Level >= 3)
+                        {
+                            int sessionXp = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                            int resPenalty = (int)(sessionXp * 0.20f);
+                            if (resPenalty > 0)
+                            {
+                                arenaPlayer.CombatExp = Math.Max(0, arenaPlayer.CombatExp - resPenalty);
+                            }
+                        }
                         Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer, UDP));
                     }
 
@@ -3489,19 +3480,26 @@ namespace SpellServer
             {
                 if (!arenaPlayer.IsAlive) return false;
 
-                SpellCheatInfo cheatInfo = SpellManager.DoesPlayerHaveSpell(arenaPlayer.WorldPlayer, spell);
-
-                if (!cheatInfo.HasSpell)
+                // Effect spells (from spell_effects.json) have no SpellTreeLevels — the client
+                // legitimately sends these for self-cast shields (e.g. Heat Shield sends spell 104
+                // = Resist Heat Effect). Skip cheat check for these; the server already validated
+                // the parent spell when the shield was first cast.
+                if (spell.SpellTreeLevels != null)
                 {
-					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
+                    SpellCheatInfo cheatInfo = SpellManager.DoesPlayerHaveSpell(arenaPlayer.WorldPlayer, spell);
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
-                    return false;
+                    if (!cheatInfo.HasSpell)
+                    {
+                        Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
+
+                        // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                        // arenaPlayer.WorldPlayer.Disconnect = true;
+                        return false;
+                    }
                 }
 
                 arenaPlayer.IsAwayFromKeyboard = false;
-     
+
                 DoPlayerEffect(arenaPlayer, arenaPlayer, spell, EffectType.Default);
 
                 return true;

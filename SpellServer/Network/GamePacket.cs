@@ -1,4 +1,4 @@
-using Google.Protobuf.WellKnownTypes;
+﻿using Google.Protobuf.WellKnownTypes;
 using Helper;
 using Helper.Math;
 using Helper.Network;
@@ -2024,12 +2024,25 @@ namespace SpellServer
                 }
                 public static MemoryStream UpdateExperience(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
+                    int inArenaXP = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                    int bonusXP = arenaPlayer.BonusExp;
+                    Int16 inArenaXPToSend = (Int16)Math.Min(inArenaXP, Int16.MaxValue);
+                    Int16 bonusXPToSend = (Int16)Math.Min(bonusXP, Int16.MaxValue);
+
+                    Program.Log(String.Format("[UpdateExperience] {0} kills={1} deaths={2} combat={3} obj={4} bonus={5} total={6} sending={7}",
+                        arenaPlayer.ActiveCharacter?.Name, arenaPlayer.KillCount, arenaPlayer.DeathCount,
+                        arenaPlayer.CombatExp, arenaPlayer.ObjectiveExp, arenaPlayer.BonusExp, inArenaXP, bonusXP), Color.Yellow);
+
+                    // Client reads 3 Int16 fields (6 bytes):
+                    //   [0] slot 106 "Temp"  = in-arena session XP
+                    //   [1] slot 133 "Bonus" = bonus XP
+                    //   [2] slot 132 "Temp2" = kill count
                     MemoryStream outStream = new MemoryStream();
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.UpdateExperience);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(inArenaXPToSend)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(bonusXPToSend)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.KillCount)), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.SessionKillExp)), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.DeathCount)), 0, 2);
                     return outStream;
                 }
                 public static MemoryStream UpdateHealth(ArenaPlayer arenaPlayer, bool UDP = false)
