@@ -5,6 +5,7 @@ using Mysqlx.Crud;
 using Mysqlx.Expr;
 using MySqlX.XDevAPI.Relational;
 using SharpDX;
+using SpellServer.Commands;
 using SpellServer.Properties;
 using System;
 using System.Collections.Concurrent;
@@ -103,6 +104,9 @@ namespace SpellServer
         public Byte TableId;
         public Grid Grid;
         public LeyGraph LeyGraph;
+        public bool ProfilingEnabled;
+        public TickProfile TickProfile = new TickProfile();
+        public void ResetProfiling() { TickProfile.Reset(); }
         public Interval Duration;
 	    public Interval IdleDuration;
         public State CurrentState;
@@ -389,14 +393,56 @@ namespace SpellServer
                     {                                              
                         try
                         {
-                            ProcessInput();
-                            ProcessArenaPlayers();
-                            ProcessProjectiles(FrameTime);
-                            ProcessRunes();
-                            ProcessBolts();
-                            ProcessWalls();
-                            ProcessTriggers();
-                            ProcessMisc();
+                            if (ProfilingEnabled)
+                            {
+                                TickProfile.TotalTick.Start();
+
+                                TickProfile.ProcessInput.Start();
+                                ProcessInput();
+                                TickProfile.ProcessInput.Stop();
+
+                                TickProfile.ProcessPlayers.Start();
+                                ProcessArenaPlayers();
+                                TickProfile.ProcessPlayers.Stop();
+
+                                TickProfile.ProcessProjectiles.Start();
+                                ProcessProjectiles(FrameTime);
+                                TickProfile.ProcessProjectiles.Stop();
+
+                                TickProfile.ProcessRunes.Start();
+                                ProcessRunes();
+                                TickProfile.ProcessRunes.Stop();
+
+                                TickProfile.ProcessBolts.Start();
+                                ProcessBolts();
+                                TickProfile.ProcessBolts.Stop();
+
+                                TickProfile.ProcessWalls.Start();
+                                ProcessWalls();
+                                TickProfile.ProcessWalls.Stop();
+
+                                TickProfile.ProcessTriggers.Start();
+                                ProcessTriggers();
+                                TickProfile.ProcessTriggers.Stop();
+
+                                TickProfile.ProcessMisc.Start();
+                                ProcessMisc();
+                                TickProfile.ProcessMisc.Stop();
+
+                                TickProfile.TotalTick.Stop();
+                                TickProfile.SampleCount++;
+                            }
+                            else
+                            {
+                                ProcessInput();
+                                ProcessArenaPlayers();
+                                ProcessProjectiles(FrameTime);
+                                ProcessRunes();
+                                ProcessBolts();
+                                ProcessWalls();
+                                ProcessTriggers();
+                                ProcessMisc();
+                            }
 
                             elapsedTime = DateTime.UtcNow - StartTime;
                             elapsedSeconds = (int)elapsedTime.TotalSeconds;
@@ -3002,8 +3048,22 @@ namespace SpellServer
 
         public void PlayerMove(ArenaPlayer arenaPlayer, ArenaPlayer.StatusFlag statusFlags, Byte mSpeed, Vector3 location, Single direction)
         {
+            if (ProfilingEnabled)
+            {
+                TickProfile.MoveWait.Start();
+                if (!Monitor.TryEnter(SyncRoot, 0))
+                {
+                    TickProfile.MoveWait.RecordContention();
+                    Monitor.Enter(SyncRoot);
+                }
+                TickProfile.MoveWait.Stop();
+            }
+            else
+            {
+                Monitor.Enter(SyncRoot);
+            }
 
-            lock (SyncRoot)
+            try
             {
                 if (DebugFlags.HasFlag(ArenaSpecialFlag.PlayerTracking))
                 {
@@ -3028,6 +3088,10 @@ namespace SpellServer
                     arenaPlayer.CurrentHp = 0;
                     PlayerDeath(arenaPlayer, null);
                 }
+            }
+            finally
+            {
+                Monitor.Exit(SyncRoot);
             }
         }
 

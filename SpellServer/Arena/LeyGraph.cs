@@ -126,8 +126,8 @@ namespace SpellServer
                     if (visited.Contains(neighbor.Id)) continue;
                     visited.Add(neighbor.Id);
 
-                    // Can traverse through own team's nodes or neutral nodes
-                    if (neighbor.Team == team || neighbor.Team == Team.Neutral)
+                    // Only traverse through team-owned nodes — network must be contiguous
+                    if (neighbor.Team == team)
                     {
                         queue.Enqueue(neighbor);
                         network.Add(neighbor);
