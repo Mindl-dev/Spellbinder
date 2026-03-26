@@ -499,12 +499,9 @@ namespace SpellServer
 
             if (!IsInArena || IsAdmin) return;
 
-            if (IsPingSpiking)
-            {
-                DisconnectReason = String.Format(Resources.Strings_Disconnect.PingSpiking, Ping);
-                Disconnect = true;
-                return;
-            }
+            // Ping kick disabled — heartbeat-based ping measurement is unreliable
+            // due to server-side lock contention inflating apparent latency.
+            // Re-enable once the arena tick refactor removes SyncRoot contention.
 
             Int64 elapsedActiveTime = ActiveArenaPlayer.ActiveTime.ElapsedSeconds;
 
