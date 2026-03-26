@@ -371,7 +371,7 @@ namespace SpellServer
                 if (value < 0) value = 0;
                 if (value > 999999) value = 999999;
 
-                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 4)
+                if (WorldPlayer.ActiveArena != null)
                 {
                     _combatExp = value;
 
@@ -389,7 +389,7 @@ namespace SpellServer
                 if (value < 0) value = 0;
                 if (value > 999999) value = 999999;
 
-                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 4)
+                if (WorldPlayer.ActiveArena != null)
                 {
                     _objectiveExp = value;
 
