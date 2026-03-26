@@ -650,29 +650,37 @@ namespace SpellServer
                     Effect arenaEffect = arenaPlayer.Effects[j];
                     if (arenaEffect == null) continue;
 
-                    Boolean hasElapsed = arenaEffect.Duration.HasElapsed;
-
-                    if (!arenaPlayer.IsAlive || (hasElapsed && !arenaEffect.Duration.CanReset))
+                    if (!arenaPlayer.IsAlive)
                     {
                         arenaPlayer.Effects[j] = null;
                         continue;
                     }
 
-                    SpellEffectType tickEffect = (int)arenaEffect.EffectSpell.Effect > (int)SpellEffectType.Expulse
-                        ? SpellEffectType.Healing : arenaEffect.EffectSpell.Effect;
+                    Boolean hasElapsed = arenaEffect.Duration.HasElapsed;
 
-                    switch (tickEffect)
+                    // Process ticking effects BEFORE removal so the last tick fires
+                    if (hasElapsed)
                     {
-                        case SpellEffectType.Bleed:
+                        SpellEffectType tickEffect = (int)arenaEffect.EffectSpell.Effect > (int)SpellEffectType.Expulse
+                            ? SpellEffectType.Healing : arenaEffect.EffectSpell.Effect;
+
+                        switch (tickEffect)
                         {
-                            if (hasElapsed) DoPlayerDamage(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell, null, false);
-                            break;
+                            case SpellEffectType.Bleed:
+                                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                                    Program.Log($"[BleedTick] {arenaPlayer.ActiveCharacter?.Name} spell={arenaEffect.EffectSpell?.Name} canReset={arenaEffect.Duration.CanReset}", System.Drawing.Color.Red);
+                                DoPlayerDamage(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell, null, false);
+                                break;
+                            case SpellEffectType.Healing:
+                                DoPlayerHealing(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell);
+                                break;
                         }
-                        case SpellEffectType.Healing:
-                        {
-                            if (hasElapsed) DoPlayerHealing(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell);
-                            break;
-                        }
+                    }
+
+                    // Remove expired effects after ticking
+                    if (hasElapsed && !arenaEffect.Duration.CanReset)
+                    {
+                        arenaPlayer.Effects[j] = null;
                     }
                 }
 
@@ -2204,6 +2212,16 @@ namespace SpellServer
         {
             Effect arenaEffect = new Effect(spell, sourcePlayer, effectType);
 
+            if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+            {
+                Program.Log($"[DoPlayerEffect] spell={spell?.Name}(id={spell?.Id}) type={spell?.Type} effectType={effectType} " +
+                    $"effectSpell={arenaEffect.EffectSpell?.Name}(id={arenaEffect.EffectSpell?.Id}) " +
+                    $"effect={arenaEffect.EffectSpell?.Effect} deathSpellEffect={spell?.DeathSpellEffect} " +
+                    $"targetSpellEffect={spell?.TargetSpellEffect} " +
+                    $"target={targetPlayer?.ActiveCharacter?.Name} source={sourcePlayer?.ActiveCharacter?.Name}",
+                    System.Drawing.Color.Cyan);
+            }
+
             if (arenaEffect.EffectSpell != null)
             {
                 SpellEffectType arenaEffectType = arenaEffect.EffectSpell.Effect;
@@ -3496,17 +3514,14 @@ namespace SpellServer
             {
                 if (targetArenaPlayer == null || !arenaPlayer.IsAlive) return false;
 
+                // Cheat check disabled — DoesPlayerHaveSpell returns false positives
+                // (Wrong Class for legitimate spells, missing SpellTreeLevels for effect spells).
+                // TODO: Fix spell tree validation and re-enable as log-only.
                 SpellCheatInfo cheatInfo = SpellManager.DoesPlayerHaveSpell(arenaPlayer.WorldPlayer, spell);
-
                 if (!cheatInfo.HasSpell)
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
-
-                    arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
-                    return false;
                 }
-
 
                 switch (spell.Friendly)
                 {
@@ -3584,8 +3599,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3680,8 +3696,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3709,8 +3726,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3734,8 +3752,9 @@ namespace SpellServer
                 {
                     Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3767,8 +3786,8 @@ namespace SpellServer
                 {
                     Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-                    arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return;
                 }
 
@@ -3794,8 +3813,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return;
                 }
 

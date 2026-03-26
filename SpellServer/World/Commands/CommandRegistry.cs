@@ -54,6 +54,7 @@ namespace SpellServer.Commands
             Register(new LocCommand());
             Register(new LeyCommand());
             Register(new PerfCommand());
+            Register(new TpCommand());
         }
     }
 }
