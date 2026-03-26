@@ -88,7 +88,11 @@ namespace SpellServer.Bot
         /// </summary>
         public static void BroadcastPosition(ArenaPlayer bot)
         {
-            byte[] payload = EncodePosition(bot.Location, 0, 0);
+            // Convert direction (radians) to 12-bit angle (0-4095)
+            int heading = (int)(bot.Direction * 4096.0 / (2.0 * Math.PI)) & 0xFFF;
+            // Use move speed > 0 to trigger walk animation on client
+            byte speed = bot.MoveSpeed;
+            byte[] payload = EncodePosition(bot.Location, heading, speed);
             Network.SendToArena(bot,
                 GamePacket.Outgoing.Arena.PlayerMoveState(bot, payload), true);
         }
