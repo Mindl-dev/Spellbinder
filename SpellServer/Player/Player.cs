@@ -62,6 +62,7 @@ namespace SpellServer
         public Boolean PingInitialized;
         public Boolean Disconnect;
         public String DisconnectReason;
+        public Boolean IsBot;
 
         public Int16 PlayerId;
         public Int32 AccountId;

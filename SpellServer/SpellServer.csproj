@@ -253,6 +253,12 @@
     <Compile Include="World\Commands\LeyCommand.cs" />
     <Compile Include="World\Commands\PerfCommand.cs" />
     <Compile Include="World\Commands\TpCommand.cs" />
+    <Compile Include="Bot\NavGrid.cs" />
+    <Compile Include="Bot\Pathfinder.cs" />
+    <Compile Include="Bot\BotPlayer.cs" />
+    <Compile Include="Bot\BotBrain.cs" />
+    <Compile Include="Bot\BotManager.cs" />
+    <Compile Include="World\Commands\AddBotCommand.cs" />
     <Compile Include="Player\Character.cs" />
     <Compile Include="Player\Player.cs" />
     <Compile Include="Player\PlayerManager.cs" />

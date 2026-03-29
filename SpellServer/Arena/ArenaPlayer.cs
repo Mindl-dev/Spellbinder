@@ -1,4 +1,4 @@
-﻿using Helper;
+using Helper;
 using Helper.Timing;
 using SharpDX;
 using System;

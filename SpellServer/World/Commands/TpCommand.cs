@@ -27,20 +27,45 @@ namespace SpellServer.Commands
                             shrine.Team, shrine.X, shrine.Y, shrine.Z));
                 }
 
-                // Print pool positions
-                foreach (var pool in arena.Grid.Pools)
+                return;
+            }
+
+            // Shorthand: !tp d/p/g for nexus, !tp c for center
+            if (cmd.Arguments.Count == 1)
+            {
+                Vector3 dest;
+                switch (cmd.Arguments[0].ToLower())
                 {
-                    if (pool == null || pool.Power <= 0) continue;
-                    World.SendSystemMessage(player,
-                        String.Format("[TP] Pool {0}: {1} {2} {3} (power={4})",
-                            pool.PoolId, pool.X, pool.Y, pool.Z, pool.Power));
+                    case "d": case "dragon":
+                        var ds = arena.ArenaTeams.Dragon?.Shrine;
+                        if (ds == null) { World.SendSystemMessage(player, "[TP] No Dragon shrine"); return; }
+                        dest = new Vector3(ds.X, ds.Y, ds.Z);
+                        break;
+                    case "p": case "phoenix":
+                        var ps = arena.ArenaTeams.Pheonix?.Shrine;
+                        if (ps == null) { World.SendSystemMessage(player, "[TP] No Phoenix shrine"); return; }
+                        dest = new Vector3(ps.X, ps.Y, ps.Z);
+                        break;
+                    case "g": case "gryphon":
+                        var gs = arena.ArenaTeams.Gryphon?.Shrine;
+                        if (gs == null) { World.SendSystemMessage(player, "[TP] No Gryphon shrine"); return; }
+                        dest = new Vector3(gs.X, gs.Y, gs.Z);
+                        break;
+                    case "c": case "center":
+                        dest = new Vector3(3950, 4087, 64);
+                        break;
+                    default:
+                        World.SendSystemMessage(player, "[TP] Usage: !tp d/p/g/c or !tp <x> <y> <z>");
+                        return;
                 }
+                arena.PlayerYank(player, ap, ap.ArenaPlayerId, dest);
+                World.SendSystemMessage(player, String.Format("[TP] Teleported to {0:F0} {1:F0} {2:F0}", dest.X, dest.Y, dest.Z));
                 return;
             }
 
             if (cmd.Arguments.Count < 3)
             {
-                World.SendSystemMessage(player, "[TP] Usage: !tp <x> <y> <z> — or !tp with no args for locations");
+                World.SendSystemMessage(player, "[TP] Usage: !tp d/p/g/c or !tp <x> <y> <z>");
                 return;
             }
 
