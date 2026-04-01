@@ -118,7 +118,8 @@ namespace SpellServer
         /// <summary>Check if another player with the same hardware serial is already connected.</summary>
         public static ErrorType CheckMultibox(string serial, AdminLevel newPlayerAdmin, PlayerManager players)
         {
-            if (serial == "Not_Found" || serial == "VMWare" || serial == "VirtualPC")
+            if (serial == "Not_Found" || serial == "VMWare" || serial == "VirtualPC"
+                || serial.Length <= 2)
                 return ErrorType.None;
 
             Player connectedPlayer = players.FindBySerial(serial);
@@ -173,9 +174,8 @@ namespace SpellServer
             // 3. Kick ghost sessions (removes from player list before serial check)
             KickGhostSessions(player, creds.AccountId, PlayerManager.Players);
 
-            // 4. Multibox check (same hardware serial)
-            ErrorType multiboxError = CheckMultibox(serial, creds.Admin, PlayerManager.Players);
-            if (multiboxError != ErrorType.None) { RejectLogin(player, multiboxError, serial, username); return; }
+            // Multibox check removed — serial is unreliable (patched clients send "?\")
+            // and it blocks legitimate logins. Use IP bans if needed.
 
             // 5. Ban check
             if (MySQL.BannedSerials.IsBanned(serial)) { RejectLogin(player, ErrorType.BannedComputer, serial, username); return; }
