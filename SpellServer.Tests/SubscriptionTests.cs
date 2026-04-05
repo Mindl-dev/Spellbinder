@@ -37,8 +37,9 @@ namespace SpellServer.Tests
         }
 
         [Test]
-        public void KickGhost_RemovesGhostFromList()
+        public void KickGhost_FlagsDisconnectButDoesNotRemove()
         {
+            // Ghost stays in list — ProcessReceive cleans up when socket close triggers
             var ghost = MakePlayer(100, "Ghost");
             var newPlayer = MakePlayer(0, "NewLogin");
             var players = new PlayerManager();
@@ -46,7 +47,8 @@ namespace SpellServer.Tests
 
             Subscription.KickGhostSessions(newPlayer, 100, players);
 
-            Assert.IsNull(players.FindByAccountId(100), "Ghost should be removed from player list");
+            Assert.IsTrue(ghost.Disconnect, "Ghost should be flagged for disconnect");
+            Assert.IsNotNull(players.FindByAccountId(100), "Ghost stays in list until ProcessReceive cleans up");
         }
 
         [Test]
@@ -140,23 +142,21 @@ namespace SpellServer.Tests
         // ================================================================
 
         [Test]
-        public void KickGhost_ThenMultibox_DoesNotBlock()
+        public void KickGhost_ThenMultibox_GhostStillInList()
         {
-            // The bug: ghost gets kicked but stays in list, serial check blocks new login
-            // After fix: ghost is removed, serial check finds nothing
+            // Multibox check is no longer called in auth flow, but CheckMultibox
+            // still exists. Ghost stays in list until ProcessReceive cleans up.
             var ghost = MakePlayer(100, "Ghost", serial: "SAME_SERIAL");
             var newPlayer = MakePlayer(0, "NewLogin", serial: "SAME_SERIAL");
             var players = new PlayerManager();
             players.Add(ghost);
 
-            // Step 1: kick ghost
             Subscription.KickGhostSessions(newPlayer, 100, players);
 
-            // Step 2: multibox check should NOT find the ghost anymore
-            var error = Subscription.CheckMultibox("SAME_SERIAL", AdminLevel.None, players);
-
-            Assert.AreEqual(Subscription.ErrorType.None, error,
-                "After ghost is kicked and removed, serial check should pass");
+            // Ghost is flagged but not removed — multibox would still find it,
+            // which is why we removed the multibox check from the auth flow
+            Assert.IsTrue(ghost.Disconnect);
+            Assert.IsNotNull(players.FindByAccountId(100));
         }
 
         // ================================================================
