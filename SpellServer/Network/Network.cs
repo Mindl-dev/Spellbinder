@@ -963,9 +963,9 @@ namespace SpellServer
             {
                 result.Player.TcpClient.Client.EndSend(ar);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                result.Player.DisconnectReason = "SendCallback Error";
+                result.Player.DisconnectReason = $"SendCallback Error: {ex.GetType().Name}: {ex.Message}";
                 result.Player.Disconnect = true;
             }
         }
@@ -978,9 +978,9 @@ namespace SpellServer
             {
                 _gameUDPListener.EndSend(ar);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                result.Player.DisconnectReason = "SendCallback Error";
+                result.Player.DisconnectReason = $"SendCallback UDP Error: {ex.GetType().Name}: {ex.Message}";
                 result.Player.Disconnect = true;
             }
         }
