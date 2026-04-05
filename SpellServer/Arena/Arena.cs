@@ -3398,8 +3398,12 @@ namespace SpellServer
                     arenaPlayer.ValhallaProtection.Reset();
                     arenaPlayer.CurrentHp = arenaPlayer.MaxHp;
 
-                    // Spawn at ghost's current position (the node/nexus the player walked to)
-                    var spawnPacket = new Packets.PlayerYankPacket(arenaPlayer.ArenaPlayerId, arenaPlayer.Location).ToBytes();
+                    // Spawn at team nexus, not the earthnode the ghost walked to
+                    Shrine teamShrine = arenaPlayer.ActiveShrine;
+                    Vector3 spawnPos = (teamShrine != null)
+                        ? new Vector3(teamShrine.X, teamShrine.Y, teamShrine.Z)
+                        : arenaPlayer.Location;
+                    var spawnPacket = new Packets.PlayerYankPacket(arenaPlayer.ArenaPlayerId, spawnPos).ToBytes();
                     Network.Send(arenaPlayer.WorldPlayer, spawnPacket);
                 }
                 else

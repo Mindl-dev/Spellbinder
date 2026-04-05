@@ -35,16 +35,16 @@
     {"id": 173, "name": "Transfer III Target",   "type": "effect", "effect_type": "Healing","element": "None",   "potency": 35, "duration": 1},
     {"id": 175, "name": "Transfer IV Target",    "type": "effect", "effect_type": "Healing","element": "None",   "potency": 50, "duration": 1},
 
-    {"id": 193, "name": "Lesser Bleeding Effect","type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 3,  "duration": 5},
-    {"id": 194, "name": "Minor Bleeding Effect", "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 5,  "duration": 5},
+    {"id": 193, "name": "Lesser Bleeding Effect","type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 2,  "duration": 5},
+    {"id": 194, "name": "Minor Bleeding Effect", "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 3,  "duration": 5},
     {"id": 196, "name": "Cramp Effect",          "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 30, "duration": 8},
     {"id": 197, "name": "Fracture Effect",       "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 50, "duration": 10},
-    {"id": 199, "name": "Bleeding Effect",       "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 8,  "duration": 8},
-    {"id": 221, "name": "Major Bleeding Effect", "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 12, "duration": 10},
+    {"id": 199, "name": "Bleeding Effect",       "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 4,  "duration": 6},
+    {"id": 221, "name": "Major Bleeding Effect", "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 5,  "duration": 8},
 
     {"id": 273, "name": "Slow I Rune Effect",    "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 20, "duration": 6},
     {"id": 281, "name": "Slow II Rune Effect",   "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 30, "duration": 8},
-    {"id": 285, "name": "Bleeding Rune Effect",  "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 5,  "duration": 6},
+    {"id": 285, "name": "Bleeding Rune Effect",  "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 3,  "duration": 5},
     {"id": 293, "name": "Slow III Rune Effect",  "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 40, "duration": 10}
   ]
 }

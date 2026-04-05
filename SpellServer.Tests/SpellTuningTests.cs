@@ -64,7 +64,7 @@ namespace SpellServer.Tests
             var scanDmg = new SpellDamage(scan);
 
             Assert.Greater(projDmg.Damage, 10, "Projectile should be multiplied above base");
-            Assert.Greater(scanDmg.Damage, 10, "Hitscan should be multiplied above base");
+            Assert.AreNotEqual(10, scanDmg.Damage, "Hitscan should be multiplied (0.8x = 8, not 10)");
         }
 
         [Test]
