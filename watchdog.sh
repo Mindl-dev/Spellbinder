@@ -41,11 +41,19 @@ while true; do
 
         if [ $fails -ge $FAIL_THRESHOLD ]; then
             echo "[watchdog] $(date '+%H:%M:%S') Server hung — dumping thread stacks"
+
+            # Capture log size before SIGQUIT so we can grab only the new output
+            PRE_LINES=$(podman logs "$CONTAINER" 2>&1 | wc -l)
             podman exec "$CONTAINER" kill -QUIT 1 2>/dev/null
-            sleep 2
+            sleep 5  # give mono time to dump stacks
+
             echo "=== THREAD DUMP ===" >> watchdog_dumps.log
             echo "$(date)" >> watchdog_dumps.log
-            podman logs --tail 200 "$CONTAINER" >> watchdog_dumps.log 2>&1
+            # Grab only lines after the SIGQUIT (the stack dump)
+            podman logs "$CONTAINER" 2>&1 | tail -n +$((PRE_LINES + 1)) >> watchdog_dumps.log 2>&1
+            # Also grab the last 50 lines before for context
+            echo "--- PRE-HANG CONTEXT ---" >> watchdog_dumps.log
+            podman logs "$CONTAINER" 2>&1 | head -n "$PRE_LINES" | tail -50 >> watchdog_dumps.log 2>&1
             echo "===================" >> watchdog_dumps.log
 
             echo "[watchdog] $(date '+%H:%M:%S') Restarting container"
