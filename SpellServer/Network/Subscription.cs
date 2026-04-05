@@ -93,26 +93,23 @@ namespace SpellServer
             return result;
         }
 
-        /// <summary>Kick any existing session with the same account ID and remove from player list.</summary>
+        /// <summary>Kick any existing session with the same account ID.
+        /// Only closes the socket and flags for disconnect — all cleanup
+        /// (DB, arena, player list removal) happens in Network.Disconnect
+        /// from the ghost's own ProcessReceive thread.</summary>
         public static void KickGhostSessions(Player newPlayer, int accountId, PlayerManager players)
         {
             Player ghost = players.FindByAccountId(accountId);
-            if (ghost != null && ghost != newPlayer)
-            {
-                // Clean up DB state before removing — prevents "Duplicate entry" on reconnect
-                try { MySQL.OnlineAccounts.SetOffline(ghost.AccountId); } catch { }
-                if (ghost.ActiveCharacter != null)
-                    try { MySQL.OnlineCharacters.SetOffline(ghost.ActiveCharacter.CharacterId); } catch { }
+            if (ghost == null || ghost == newPlayer) return;
 
-                // Flag for disconnect and close socket — don't call Network.Disconnect
-                // as it calls Arena.PlayerLeft which acquires lock(SyncRoot),
-                // deadlocking if the arena thread holds it. Socket close will cause
-                // the ghost's ProcessReceive to error out and clean up arena state.
-                ghost.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
-                ghost.Disconnect = true;
-                try { ghost.TcpClient.Client.Close(); } catch { }
-                players.Remove(ghost);
-            }
+            Program.Log($"[Ghost] Kicking ghost session for {ghost.Username} (AID {accountId})", System.Drawing.Color.Orange);
+
+            ghost.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
+            ghost.Disconnect = true;
+
+            // Close socket to unblock ghost's ProcessReceive → triggers Network.Disconnect
+            try { ghost.TcpClient?.Client?.Close(); } catch { }
+            try { ghost.TcpClient?.Close(); } catch { }
         }
 
         /// <summary>Check if another player with the same hardware serial is already connected.</summary>

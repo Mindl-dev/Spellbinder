@@ -279,6 +279,7 @@ namespace SpellServer
             Players[client] = this;
 
             TcpClient.NoDelay = true;
+            TcpClient.Client.ReceiveTimeout = 30000; // 30s — forces Receive() to throw on idle connections
 
             ProcessReceiveThread = new Thread(ProcessReceive);
             _receiveBuffer = new Byte[TcpClient.ReceiveBufferSize];

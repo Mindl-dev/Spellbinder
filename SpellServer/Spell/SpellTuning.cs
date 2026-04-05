@@ -109,7 +109,7 @@ namespace SpellServer
         /// </summary>
         public static readonly bool FixedProjectileDamage = true;
 
-        public const float HitscanDamageMultiplier = 0.8f;  // Lower than projectiles — compensated by near-100% accuracy + blind utility
+        public const float HitscanDamageMultiplier = 0.95f;
         public static float GetDamageMultiplier(Spell spell)
         {
             if (spell == null) return 1.0f;

@@ -189,37 +189,37 @@ namespace SpellServer
         }
         public static void Disconnect(Player player)
         {
-            try { player.TcpClient.Client.DisconnectAsync(new SocketAsyncEventArgs()); }
-            catch (ObjectDisposedException) { } // Socket already closed by KickGhostSessions
-            catch (SocketException) { }
+            // Idempotent — safe to call multiple times
+            if (!PlayerManager.Players.Contains(player)) return;
+
+            try { player.TcpClient?.Client?.Close(); } catch { }
+            try { player.TcpClient?.Close(); } catch { }
 
             Program.Log(String.Format("{0} has disconnected. ({1})", player.IsLoggedIn ? player.Username : player.IpAddress, player.DisconnectReason), Color.BlueViolet);
 
-            //player.UDPDisconnect();
-
-            if (PlayerManager.Players.Contains(player))
+            if (player.IsLoggedIn)
             {
-                if (player.IsLoggedIn)
+                if (player.ActiveArena != null && player.ActiveArenaPlayer != null)
                 {
-                    if (player.ActiveArena != null)
+                    try
                     {
-                        if (player.ActiveArenaPlayer != null)
-                        {
-                            Program.Log($"[Network Disconnect] Player Left", Color.Red);
-                            player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
-                        }
+                        player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
                     }
-
-                    if (player.ActiveCharacter != null)
+                    catch (Exception ex)
                     {
-	                    MySQL.OnlineCharacters.SetOffline(player.ActiveCharacter.CharacterId);
+                        Program.Log($"[Disconnect] PlayerLeft error: {ex.Message}", Color.Red);
                     }
-
-                    SendTo(player, GamePacket.Outgoing.World.PlayerLeave(player), SendToType.Tavern, false);
                 }
 
-				MySQL.OnlineAccounts.SetOffline(player.AccountId);
+                if (player.ActiveCharacter != null)
+                {
+                    try { MySQL.OnlineCharacters.SetOffline(player.ActiveCharacter.CharacterId); } catch { }
+                }
+
+                try { SendTo(player, GamePacket.Outgoing.World.PlayerLeave(player), SendToType.Tavern, false); } catch { }
             }
+
+            try { MySQL.OnlineAccounts.SetOffline(player.AccountId); } catch { }
 
             PlayerManager.Players.Remove(player);
         }
