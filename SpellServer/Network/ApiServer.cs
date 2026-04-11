@@ -229,8 +229,11 @@ namespace SpellServer
                 else if (key == "password") password = val;
             }
 
+            Program.Log($"[API] Register attempt: '{username}' from {ip}", Color.Blue);
+
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
             {
+                Program.Log($"[API] Register rejected: empty username or password", Color.DarkOrange);
                 Respond(context, 400, "{\"error\":\"username and password required\"}");
                 return;
             }
@@ -251,6 +254,7 @@ namespace SpellServer
             var existing = MySQL.Accounts.GetAccountData(username);
             if (existing != null && existing.Rows.Count > 0)
             {
+                Program.Log($"[API] Register rejected: '{username}' already exists", Color.DarkOrange);
                 Respond(context, 409, "{\"error\":\"account already exists\"}");
                 return;
             }
@@ -266,6 +270,7 @@ namespace SpellServer
             }
             else
             {
+                Program.Log($"[API] Register failed: '{username}' DB error", Color.Red);
                 Respond(context, 500, "{\"error\":\"failed to create account\"}");
             }
         }
