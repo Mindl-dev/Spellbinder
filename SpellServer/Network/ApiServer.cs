@@ -107,6 +107,9 @@ namespace SpellServer
                     case "/api/register":
                         HandleRegister(context);
                         break;
+                    case "/api/health":
+                        HandleHealth(context);
+                        break;
                     default:
                         Respond(context, 404, "{\"error\":\"not found\"}");
                         break;
@@ -166,6 +169,8 @@ namespace SpellServer
                     sb.AppendFormat(",\"level\":{0}", c.Level);
                     sb.AppendFormat(",\"class\":\"{0}\"", c.Class);
                 }
+
+                sb.AppendFormat(",\"ping\":{0}", player.Ping);
 
                 if (player.ActiveArena != null)
                 {
@@ -263,6 +268,21 @@ namespace SpellServer
             {
                 Respond(context, 500, "{\"error\":\"failed to create account\"}");
             }
+        }
+
+        private static void HandleHealth(HttpListenerContext context)
+        {
+            long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            long lastTick = Arena.LastTickTimestamp;
+            long staleMs = now - lastTick;
+            int arenaCount = ArenaManager.Arenas.Count;
+            bool healthy = arenaCount == 0 || staleMs < 5000;
+
+            string json = String.Format(
+                "{{\"healthy\":{0},\"tick_stale_ms\":{1},\"arenas\":{2}}}",
+                healthy ? "true" : "false", staleMs, arenaCount);
+
+            Respond(context, healthy ? 200 : 503, json);
         }
 
         private static void Respond(HttpListenerContext context, int statusCode, string json)

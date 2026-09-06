@@ -1,7 +1,8 @@
-﻿using Google.Protobuf.WellKnownTypes;
+using Google.Protobuf.WellKnownTypes;
 using Helper;
 using Helper.Math;
 using Helper.Network;
+using Helper.Timing;
 using MySqlX.XDevAPI.Relational;
 using Org.BouncyCastle.Security.Certificates;
 using Org.BouncyCastle.Tls;
@@ -44,32 +45,6 @@ namespace SpellServer
                 public static void ArenaClientEndState(SpellServer.Player player, MemoryStream inStream)
                 {
                     player.ActiveArena.AFFromClients = true;
-                }
-                public static void ScoreRegistered(SpellServer.Player player, MemoryStream inStream)
-                {
-                    inStream.Seek(2, SeekOrigin.Begin);
-
-                    byte[] data = new byte[4];
-                    inStream.Read(data, 0, 4);
-                    int timestamp = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    inStream.Read(data, 0, 4);
-                    int charLevel = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    inStream.Read(data, 0, 4);
-                    int experience = NetHelper.FlipBytes(BitConverter.ToInt32(data, 0));
-
-                    byte[] rawPayload = new byte[110];
-                    inStream.Read(rawPayload, 0, 110);
-
-                    string fullText = Encoding.ASCII.GetString(rawPayload);
-
-                    string[] clumps = fullText.Split(new[] { '\0', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    string accountName = clumps[0];
-                    int slot = (int.TryParse(clumps[1], out int s)) ? s : 0;
-                    string charName = clumps[2];
-
                 }
                 public static void PlayerInit(SpellServer.Player player, MemoryStream inStream)
                 {
@@ -135,46 +110,109 @@ namespace SpellServer
 
                     Network.Send(player, Outgoing.Arena.PlayerGod(player.ActiveArenaPlayer, godStatus, UDP));
                 }
-                public static void Yank(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
-                {
-                    if (player.ActiveArena == null || player.ActiveArenaPlayer == null || !player.IsAdmin) return;
-
-                    inStream.Seek(3, SeekOrigin.Begin);
-                    Byte targetId = (Byte)inStream.ReadByte();
-
-                    ArenaPlayer targetArenaPlayer = player.ActiveArena.ArenaPlayers.FindById(targetId);
-
-                    if (targetArenaPlayer != null)
-                    {
-                        player.ActiveArena.PlayerYank(player, targetArenaPlayer, player.ActiveArenaPlayer.ArenaPlayerId, player.ActiveArenaPlayer.Location);
-                    }
-                }
                 public static void PlayerMoveState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
 
+                    // PlayerMoveState packet layout (12 bytes payload after 2-byte skip)
+                    //
+                    // Wire order (big-endian, as seen in Wireshark):
+                    //   Byte:   00   01   02   03   04   05   06   07   08   09   10   11
+                    //   Word:  [  w0   ] [  w1   ] [  w2   ] [  w3   ] [  w4?  ] [  ??  ]
+                    //
+                    // Memory order (little-endian, as seen in IDA/x86 debugger):
+                    //   Byte:   01   00   03   02   05   04   07   06   09   08   11   10
+                    //
+                    // Field extraction (from wire order):
+                    //   w0 = (data[0] << 8) | data[1]
+                    //     bits 0-4:   Unknown
+                    //     bits 9-10:  elementId?           (>> 9) & 0x03
+                    //     bits 12-15: flags                (>> 12) & 0x0F
+                    //
+                    //   w1 = (data[2] << 8) | data[3]
+                    //     bits 0-15:  X E/W position        (& 0x1FFF)
+                    //
+                    //   w2 = (data[4] << 8) | data[5]
+                    //     bits 0-15:  Y N/S position        (& 0x1FFF)
+                    //
+                    //   w3 = (data[6] << 8) | data[7]
+                    //     bits 0-12:  heading              (& 0x0FFF)
+                    //
+                    //   data[8] likely vertical velocity. bit 7 sign 0 up 1 down. bits 0-6 are magnitude.
+                    //   data[9]: 0x00 always so far
+                    //   data[10]:  possibly pitch (signed 8-bit)
+                    //   data[11]:  class/element encoding?
+                    //
+                    // KNOWN ISSUES (from pcap analysis — 2026-03-21):
+                    //   - w1 (server's "Z") = 1820, barely changes during N/S movement → might not be Z
+
+                    //When we say 1st, 2nd, 3rd bit etc. We are talking in wire order, we're 0 indexed.
+
+
+                    //-------------------------------------
+                    //Old
+
+                    //remove the first 16 bits of the stream which seem to always be 0x0000
                     inStream.Seek(2, SeekOrigin.Begin);
 
+                    // take the next 96 bits (12 bytes) of the stream which is the payload
                     byte[] data = new byte[12];
                     inStream.Read(data, 0, 12);
 
+                    //convert first 16 bits (0th-15th) of payload to a ushort
                     ushort rawWord = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 0)); // Note: check endianness
+
+                    // take the 10th and 11th bit of the payload, TODO, why would it be clobbered by the walking angle?
                     int elementId = (rawWord >> 9) & 0x03;
+
+                    //-------------------------------------
+                    //New
+
+                    // PacketReader reader = new PacketReader(inStream);
+                    // //skip the first 16 bits of the stream which seem to always be 0x0000
+                    // reader.Skip(2); // data[-2] and data[-1]
+
+                    // //convert first 16 bits (0th-15th) of payload to a ushort
+                    // byte firstByte = reader.ReadByte(); // data[0]
+
+                    // // take the 2and and 3rd bit ? of the payload, and store it as the elementId TODO this seems wrong
+                    // int elementId = firstByte & 0x03;
+
+                    //-------------------------------------
+
+                    // take bits 0-11 of the payload, and store it as the walkingAngle. Is non zero if moving.
+                    //Walking angle is the angle the player is walking in, is non zero if moving.
                     int rawAngle = rawWord & 0x0FFF;
                     
+                    //TODO We should probably not be doing this calc in the reciever fn, but see if this cascades through the code.
                     float direction = MathHelper.DirectionToRadians(rawAngle);
 
                     ushort rawZ = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 2));
                     int zPos = rawZ & 0x7FF;
+                    
+                    // float direction = MathHelper.DirectionToRadians(rawAngle); // convert the rawAngle to a direction in radians 
+                    // (2pi/4096) = 0.0015339807871618527 radians per bit
+
+                    //TODO We're missing 4 bits? maybe flags?
+                    
+                    // ushort second16bits = (ushort)((data[2] << 8) | data[3]); //convert second 16 bits (16-31) of payload to a ushort 
+
+                    //z is bits 17-32 of the payload
+                    // int zPos = second16bits & 0x7FF; // bits 17-28 are the z position
+                    // if ((second16bits & 0x800) != 0) zPos = -zPos; // bit 29 is the sign bit, if it's set, then the z position is negative
+
                     if ((rawZ & 0x800) != 0) zPos = -zPos; // Sign bit at 0x800
 
+                    // bits 29-32 are the speed scalar
                     int speedScalar = (rawZ >> 12) & 0x0F;
 
                     byte mSpeed = (byte)((speedScalar / 15.0f) * 255);
+                    int xPos = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 4)) & 0x1FFF; //Verified
+                    int yRaw = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 6));//Verified
+                    int yPos = yRaw & 0x1FFF; //Verified
 
-                    int xPos = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 4)) & 0x1FFF;
-                    int yRaw = NetHelper.FlipBytes(BitConverter.ToUInt16(data, 6));
-                    int yPos = yRaw & 0x1FFF;
+                    // Heading is 0-4096 . With 0 being South, 2048 being North, and 3072 East, and 1024 West.
+                    int heading_raw = (data[6] << 8 | data[7]) & 0x0FFF; //bits 48-59 of the payload is heading
 
                     bool isSpecialState = (yRaw & 0x8000) != 0;
 
@@ -449,7 +487,8 @@ namespace SpellServer
                     Single fDirection = MathHelper.DirectionToRadians(NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0)));
                     ushort Direction = NetHelper.FlipBytes(BitConverter.ToUInt16(tBuffer, 0));
 
-                    Program.Log($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
+                    if (player.ActiveArena.DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        Program.Log($"fDirection: {fDirection.ToString()}, Direction: {Direction.ToString()}", Color.Blue);
 
                     // Read angle as byte (0–255)
                     inStream.Seek(2, SeekOrigin.Current);
@@ -457,7 +496,8 @@ namespace SpellServer
                     Int32 angle = rawangle > 0x7F ? (rawangle & 0x7F) ^ 0x7F : -rawangle;
                     Single fAngle = angle;
 
-                    Program.Log($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
+                    if (player.ActiveArena.DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                        Program.Log($"angleraw: {rawangle.ToString()}, angle > 0x7F ? (angle & 0x7F) ^ 0x7F : -angle;: {angle.ToString()}", Color.Blue);
 
                     Byte[] relayBuffer = new Byte[16];
                     inStream.Seek(2, SeekOrigin.Begin);
@@ -722,6 +762,15 @@ namespace SpellServer
                 public static void HasEnteredWorld(SpellServer.Player player, bool UDP = false)
                 {
                     Network.Send(player, Outgoing.Player.HasEnteredWorld());
+                }
+                public static void ClientPlayerState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
+                {
+                    // Client sends 0x18 with 8 bytes, byte 6 = ping
+                    var reader = new PacketReader(inStream);
+                    if (reader.Length < 10) return;
+                    reader.Skip(6);  // skip to byte 6 of payload
+                    int clientPing = reader.ReadByte() * 10;
+                    player.Ping = clientPing;
                 }
                 public static void EnterWorld(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -1263,7 +1312,7 @@ namespace SpellServer
 
                     if (player.ActiveCharacter.AvailableStatPoints > 0)
                     {
-                        SpellServer.World.SendSystemMessage(player, "You have unspent stat points.  Go to the website to spend them.");
+                        SpellServer.World.SendSystemMessage(player, "You have unspent stat points. Go to the character select to spend them.");
                     }
                     
                     if (player.Flags.HasFlag(PlayerFlag.ChatDisabled))
@@ -1531,19 +1580,6 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     return outStream;
                 }
-                public static MemoryStream PlayerYank(ArenaPlayer arenaPlayer, Byte playerId, SharpDX.Vector3 location, bool UDP = false)
-                {
-                    MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)PacketOutFunction.PlayerYank);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(playerId)), 0, 2);
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte(0x00);
-                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.X))), 0, 2);
-                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Y))), 0, 2);
-                    //outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(Convert.ToInt16(location.Z))), 0, 2);
-                    return outStream;
-                }
                 public static MemoryStream PlayerGod(ArenaPlayer arenaPlayer, Boolean godStatus, bool UDP = false)
                 {
                     MemoryStream outStream = new MemoryStream();
@@ -1650,11 +1686,19 @@ namespace SpellServer
                 }
                 public static MemoryStream PlayerMoveState(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
-                    MemoryStream outStream = new MemoryStream();
-                    outStream.WriteByte(0x00);
-                    outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveState);
-                    outStream.Write(relayBuffer, 0, 12);
-                    return outStream;
+                    try
+                    {
+                        MemoryStream outStream = new MemoryStream();
+                        outStream.WriteByte(0x00);
+                        outStream.WriteByte((Byte)PacketOutFunction.PlayerMoveState);
+                        outStream.Write(relayBuffer, 0, 12);
+                        return outStream;
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.Log("Outgoing.PlayerMoveState error: " + ex.Message, Color.Red);
+                        return new MemoryStream();
+                    }
                 }
                 public static MemoryStream PlayerMoveStateShort(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
@@ -1738,8 +1782,26 @@ namespace SpellServer
                     outStream.Write(relayBuffer, 0, 34);
                     return outStream;
                 }
+                private static byte[] _lastRelayBuffer;
+                private static byte[] _lastProjBuffer;
+
                 public static MemoryStream CastProjectile(ArenaPlayer arenaPlayer, Byte[] relayBuffer, bool UDP = false)
                 {
+                    // DEBUG: detect duplicate relay
+                    if (_lastRelayBuffer != null && relayBuffer.Length == _lastRelayBuffer.Length)
+                    {
+                        bool same = true;
+                        for (int i = 0; i < relayBuffer.Length; i++)
+                        {
+                            if (relayBuffer[i] != _lastRelayBuffer[i]) { same = false; break; }
+                        }
+                        if (same)
+                        {
+                            Program.Log("[CastProjectile DUPLICATE RELAY] " + BitConverter.ToString(relayBuffer), Color.Red);
+                        }
+                    }
+                    _lastRelayBuffer = (byte[])relayBuffer.Clone();
+
                     MemoryStream outStream = new MemoryStream();
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.CastProjectile);
@@ -1757,8 +1819,26 @@ namespace SpellServer
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Location.Z)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Direction)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes((Int16)newProj.Angle)), 0, 2);
+
+                    // DEBUG: detect duplicate proj
+                    byte[] projBuf = outStream.ToArray();
+                    if (_lastProjBuffer != null && projBuf.Length == _lastProjBuffer.Length)
+                    {
+                        bool same = true;
+                        for (int i = 0; i < projBuf.Length; i++)
+                        {
+                            if (projBuf[i] != _lastProjBuffer[i]) { same = false; break; }
+                        }
+                        if (same)
+                        {
+                            Program.Log("[CastProjectile DUPLICATE PROJ] spell=" + newProj.Spell.Name + " at " + newProj.Location, Color.Red);
+                        }
+                    }
+                    _lastProjBuffer = projBuf;
+                    outStream.Position = 0;
+
                     return outStream;
-                    
+
                 }
                 public static MemoryStream CastWall(Byte[] relayBuffer, bool UDP = false)
                 {
@@ -1866,9 +1946,14 @@ namespace SpellServer
                             {
                                 outStream.Write(BitConverter.GetBytes(arenaPlayer.ArenaPlayerId), 0, 2);
                             }
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[0])); 
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[1])); // PlayerId if needed
-                            //outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[2])); // PlayerId if needed
+                            // TODO: Shrine links (pool IDs for ley network topology)
+                            // Commented out — needs testing on dev server first, may change packet size
+                            //for (int l = 0; l < 3; l++)
+                            //{
+                            //    outStream.WriteByte(l < arena.ArenaTeams[i].Shrine.Links.Count
+                            //        ? Convert.ToByte(arena.ArenaTeams[i].Shrine.Links[l])
+                            //        : (Byte)0xFF);
+                            //}
                         }
                         else
                         {

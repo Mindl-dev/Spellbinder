@@ -4,7 +4,94 @@ export PATH="/usr/local/bin:/opt/homebrew/bin:/opt/X11/bin:$PATH"
 DIR="$(cd "$(dirname "$0")/.." && pwd)"
 GAME_DIR="$DIR/Resources/game"
 SERVERS_FILE="$DIR/Resources/servers.txt"
+VERSION_FILE="$DIR/Resources/version.txt"
 CX="/Applications/CrossOver.app/Contents/SharedSupport/CrossOver"
+GITHUB_API="https://api.github.com/repos/Mindl-dev/Spellbinder/releases/latest"
+
+# ================================================================
+# Auto-update check
+# ================================================================
+check_update() {
+    LOCAL_VERSION="0.3.0"
+    [ -f "$VERSION_FILE" ] && LOCAL_VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+    LOCAL_CLEAN="${LOCAL_VERSION#v}"
+
+    # Fetch latest release (fail silently)
+    RELEASE_JSON=$(curl -sf -H "User-Agent: SpellBinder-Launcher" "$GITHUB_API" 2>/dev/null) || return
+    REMOTE_TAG=$(python3 -c "
+import json,sys
+try:
+    d=json.loads(sys.stdin.read())
+    print(d.get('tag_name',''))
+except: pass
+" <<< "$RELEASE_JSON" 2>/dev/null)
+    [ -z "$REMOTE_TAG" ] && return
+    REMOTE_CLEAN="${REMOTE_TAG#v}"
+
+    [ "$LOCAL_CLEAN" = "$REMOTE_CLEAN" ] && return
+
+    # Find mac zip URL
+    DOWNLOAD_URL=$(python3 -c "
+import json,sys
+try:
+    d=json.loads(sys.stdin.read())
+    for a in d.get('assets',[]):
+        if 'mac' in a['name'].lower():
+            print(a['browser_download_url'])
+            break
+except: pass
+" <<< "$RELEASE_JSON" 2>/dev/null)
+    [ -z "$DOWNLOAD_URL" ] && return
+
+    # Prompt user
+    CHOICE=$(osascript -e "display alert \"Update Available\" message \"${LOCAL_CLEAN} -> ${REMOTE_CLEAN}\n\nDownload and install?\" buttons {\"Skip\", \"Update\"} default button \"Update\"" 2>/dev/null)
+    echo "$CHOICE" | grep -q "Skip" && return
+
+    # Backup user config
+    [ -f "$GAME_DIR/main.dat" ] && cp "$GAME_DIR/main.dat" "$GAME_DIR/main.dat.bak"
+    [ -f "$GAME_DIR/user.dat" ] && cp "$GAME_DIR/user.dat" "$GAME_DIR/user.dat.bak"
+    [ -f "$GAME_DIR/keyboard.dat" ] && cp "$GAME_DIR/keyboard.dat" "$GAME_DIR/keyboard.dat.bak"
+    [ -f "$SERVERS_FILE" ] && cp "$SERVERS_FILE" "$SERVERS_FILE.bak"
+
+    # Download and extract
+    TEMP_ZIP="/tmp/SpellBinder-mac-update.zip"
+    TEMP_DIR="/tmp/SpellBinder-mac-update"
+    curl -sL -o "$TEMP_ZIP" "$DOWNLOAD_URL" || { osascript -e 'display alert "Update Failed" message "Download failed."'; return; }
+
+    rm -rf "$TEMP_DIR"
+    unzip -qo "$TEMP_ZIP" -d "$TEMP_DIR" || { osascript -e 'display alert "Update Failed" message "Extract failed."'; return; }
+
+    # Find extracted .app
+    EXTRACTED_APP=$(find "$TEMP_DIR" -maxdepth 2 -name "*.app" -type d | head -1)
+    if [ -z "$EXTRACTED_APP" ]; then
+        osascript -e 'display alert "Update Failed" message "Could not find app in update."'
+        return
+    fi
+
+    # Copy new files over current app (preserve the bundle location)
+    cp -rf "$EXTRACTED_APP/Contents/MacOS/"* "$DIR/MacOS/" 2>/dev/null
+    cp -rf "$EXTRACTED_APP/Contents/Resources/game/"* "$GAME_DIR/" 2>/dev/null
+    [ -f "$EXTRACTED_APP/Contents/Resources/servers.txt" ] && cp "$EXTRACTED_APP/Contents/Resources/servers.txt" "$SERVERS_FILE.new"
+    cp "$EXTRACTED_APP/Contents/Info.plist" "$DIR/Info.plist" 2>/dev/null
+
+    # Restore user config
+    [ -f "$GAME_DIR/main.dat.bak" ] && mv "$GAME_DIR/main.dat.bak" "$GAME_DIR/main.dat"
+    [ -f "$GAME_DIR/user.dat.bak" ] && mv "$GAME_DIR/user.dat.bak" "$GAME_DIR/user.dat"
+    [ -f "$GAME_DIR/keyboard.dat.bak" ] && mv "$GAME_DIR/keyboard.dat.bak" "$GAME_DIR/keyboard.dat"
+    [ -f "$SERVERS_FILE.bak" ] && mv "$SERVERS_FILE.bak" "$SERVERS_FILE"
+
+    # Write version
+    echo "$REMOTE_TAG" > "$VERSION_FILE"
+
+    # Cleanup
+    rm -rf "$TEMP_ZIP" "$TEMP_DIR"
+
+    osascript -e 'display alert "Update Complete" message "SpellBinder has been updated. Restarting." buttons {"OK"} default button "OK"'
+    exec "$DIR/MacOS/launch.sh"
+    exit 0
+}
+
+check_update
 
 # Server picker
 declare -a SERVER_NAMES
@@ -75,7 +162,9 @@ for i in "${!SERVER_NAMES[@]}"; do
 done
 [ -z "$ADDRESS" ] && exit 1
 
-[ -f "$GAME_DIR/main.dat" ] && sed -i "" "s/^address=.*/address=${ADDRESS}/" "$GAME_DIR/main.dat"
+# Resolve DNS to IP (main.dat doesn't support hostnames)
+RESOLVED_IP=$(python3 -c "import socket; print(socket.gethostbyname('$ADDRESS'))" 2>/dev/null || echo "$ADDRESS")
+[ -f "$GAME_DIR/main.dat" ] && sed -i "" "s/^address=.*/address=${RESOLVED_IP}/" "$GAME_DIR/main.dat"
 
 # Try CrossOver first (best rendering)
 if [ -d "$CX" ]; then

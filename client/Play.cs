@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.IO;
+using System.IO.Compression;
+using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -12,15 +14,22 @@ namespace SpellBinder
 {
     public class PlayForm : Form
     {
+        private const string VERSION = "0.4.2";
+        private const string GITHUB_RELEASE_API = "https://api.github.com/repos/Mindl-dev/Spellbinder/releases/latest";
+        private const string GITHUB_ASSET_WIN = "SpellBinder-win.zip";
+
         private ComboBox serverBox;
         private Button playButton;
         private Label statusLabel;
         private ListBox playerList;
         private Label playerLabel;
         private Process gameProcess;
+        private DateTime gameStartTime;
+        private StringBuilder gameStderr = new StringBuilder();
+        private StringBuilder gameStdout = new StringBuilder();
         private System.Windows.Forms.Timer watchdog;
         private System.Windows.Forms.Timer playerRefresh;
-        private static readonly HttpClient http = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        private static readonly HttpClient http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         private string gameDir;
 
         // Parsed player data — parallel to playerList.Items
@@ -39,9 +48,11 @@ namespace SpellBinder
 
         private static readonly string[][] Servers = new string[][]
         {
-            new[] { "Community Server", "45.33.60.131" },
+            new[] { "Community Server", "spellbinder.blackeon.net" },
             new[] { "Localhost", "127.0.0.1" },
         };
+
+        // TODO: Auto-update — check GitHub releases on startup, download + extract if newer
 
         // Team colors for orbs
         private static Color TeamColor(string team)
@@ -49,10 +60,10 @@ namespace SpellBinder
             if (team == null) return Color.FromArgb(160, 150, 190);
             switch (team.ToLower())
             {
-                case "dragon":  return Color.FromArgb(255, 100, 80);  // red-orange
-                case "phoenix": return Color.FromArgb(255, 200, 60);  // gold
-                case "griffin":  return Color.FromArgb(80, 180, 255);  // blue
-                case "griffon": return Color.FromArgb(80, 180, 255);  // blue (alt spelling)
+                case "dragon":  return Color.FromArgb(255, 100, 80);  // red
+                case "phoenix": return Color.FromArgb(80, 180, 255);  // blue
+                case "griffin":  return Color.FromArgb(255, 200, 60);  // gold
+                case "griffon": return Color.FromArgb(255, 200, 60);  // gold (alt spelling)
                 default:        return Color.FromArgb(160, 120, 255); // purple fallback
             }
         }
@@ -69,6 +80,7 @@ namespace SpellBinder
             gameDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "game");
 
             Text = "SpellBinder: The Nexus Conflict";
+            try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             ClientSize = new Size(400, 480);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
@@ -211,7 +223,7 @@ namespace SpellBinder
 
             Controls.AddRange(new Control[] { title, subtitle, sep, serverLabel, serverBox, registerButton, playButton, statusLabel, sep2, playerLabel, playerList });
 
-            watchdog = new System.Windows.Forms.Timer { Interval = 3000 };
+            watchdog = new System.Windows.Forms.Timer { Interval = 25000 };
             watchdog.Tick += OnWatchdog;
 
             playerRefresh = new System.Windows.Forms.Timer { Interval = 30000 };
@@ -237,6 +249,26 @@ namespace SpellBinder
             return text.Trim();
         }
 
+        /// <summary>Resolve a hostname to an IP address. Returns the input unchanged if it's already an IP.</summary>
+        private string ResolveToIP(string hostOrIP)
+        {
+            IPAddress ip;
+            if (IPAddress.TryParse(hostOrIP, out ip))
+                return hostOrIP; // already an IP
+
+            try
+            {
+                var addresses = Dns.GetHostAddresses(hostOrIP);
+                foreach (var addr in addresses)
+                {
+                    if (addr.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                        return addr.ToString(); // first IPv4 address
+                }
+            }
+            catch { }
+            return hostOrIP; // fallback to original if resolution fails
+        }
+
         private void WriteMainDat(string address)
         {
             string mainDat = Path.Combine(gameDir, "main.dat");
@@ -245,7 +277,9 @@ namespace SpellBinder
                 SetStatus("main.dat not found!", true);
                 return;
             }
-            WritePrivateProfileString("socket", "address", address, mainDat);
+            // main.dat doesn't support DNS — resolve to IP
+            string ip = ResolveToIP(address);
+            WritePrivateProfileString("socket", "address", ip, mainDat);
         }
 
         private void SetStatus(string msg, bool error)
@@ -292,17 +326,43 @@ namespace SpellBinder
                 {
                     FileName = gameExe,
                     WorkingDirectory = gameDir,
-                    UseShellExecute = false
+                    UseShellExecute = false,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
                 };
                 gameProcess = Process.Start(psi);
-                SetStatus("Connecting to " + address + "...", false);
+                gameStderr.Clear();
+                gameStdout.Clear();
+                gameProcess.ErrorDataReceived += (s2, e2) => { if (e2.Data != null) gameStderr.AppendLine(e2.Data); };
+                gameProcess.OutputDataReceived += (s2, e2) => { if (e2.Data != null) gameStdout.AppendLine(e2.Data); };
+                gameProcess.BeginErrorReadLine();
+                gameProcess.BeginOutputReadLine();
+                gameStartTime = DateTime.Now;
+                SetStatus("Hint: press G in-game to use your mouse", false);
                 playButton.Enabled = false;
                 playButton.Text = "RUNNING...";
                 watchdog.Start();
             }
             catch (Exception ex)
             {
-                SetStatus("Launch failed: " + ex.Message, true);
+                SetStatus("Launch failed! See crash.log", true);
+                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log");
+                try
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("=== SpellBinder Launch Failure ===");
+                    sb.AppendLine("Time: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                    sb.AppendLine("Error: " + ex.GetType().Name + ": " + ex.Message);
+                    sb.AppendLine("Stack: " + ex.StackTrace);
+                    sb.AppendLine("Game exe: " + gameExe);
+                    sb.AppendLine("Game dir: " + gameDir);
+                    sb.AppendLine("Exists: " + File.Exists(gameExe));
+                    sb.AppendLine();
+                    File.AppendAllText(logPath, sb.ToString() + "\n\n");
+                }
+                catch { }
+                MessageBox.Show("Could not launch game:\n" + ex.Message + "\n\nSee crash.log for details.",
+                    "Launch Failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -311,10 +371,19 @@ namespace SpellBinder
             if (gameProcess == null || gameProcess.HasExited)
             {
                 watchdog.Stop();
-                SetStatus("Game exited.", false);
                 playButton.Enabled = true;
                 playButton.Text = "PLAY";
+
+                int exitCode = 0;
+                try { exitCode = gameProcess.ExitCode; } catch { }
+                double secondsRan = (DateTime.Now - gameStartTime).TotalSeconds;
+
+                if (secondsRan < 5 || exitCode != 0)
+                {
+                    DiagnoseCrash(exitCode, secondsRan);
+                }
                 gameProcess = null;
+                SetStatus("Game exited.", false);
                 return;
             }
 
@@ -491,7 +560,7 @@ namespace SpellBinder
         }
 
         // Minimal JSON helpers — avoids dependency on System.Text.Json / Newtonsoft
-        private static System.Collections.Generic.List<string> SplitJsonArray(string json)
+        internal static System.Collections.Generic.List<string> SplitJsonArray(string json)
         {
             var items = new System.Collections.Generic.List<string>();
             json = json.Trim();
@@ -518,7 +587,7 @@ namespace SpellBinder
             return items;
         }
 
-        private static string StripQuotes(string s)
+        internal static string StripQuotes(string s)
         {
             s = s.Trim();
             if (s.Length >= 2 && s[0] == '"' && s[s.Length - 1] == '"')
@@ -526,7 +595,7 @@ namespace SpellBinder
             return s;
         }
 
-        private static string ExtractJsonField(string json, string field)
+        internal static string ExtractJsonField(string json, string field)
         {
             string key = "\"" + field + "\"";
             int idx = json.IndexOf(key);
@@ -692,11 +761,302 @@ namespace SpellBinder
             playerRefresh.Stop();
         }
 
+        // ================================================================
+        // Auto-update
+        // ================================================================
+
+        private static string GetLocalVersion()
+        {
+            string versionFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "version.txt");
+            if (File.Exists(versionFile))
+                return File.ReadAllText(versionFile).Trim();
+            return VERSION;
+        }
+
+        private static void CheckForUpdate()
+        {
+            // Cleanup from previous update
+            string oldExe = Application.ExecutablePath + ".old";
+            try { if (File.Exists(oldExe)) File.Delete(oldExe); } catch { }
+
+            string localVersion = GetLocalVersion();
+
+            try
+            {
+                // Enable TLS 1.2 — GitHub requires it, .NET 4.8 doesn't default to it
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+
+                var webReq = (HttpWebRequest)WebRequest.Create(GITHUB_RELEASE_API);
+                webReq.UserAgent = "SpellBinder-Launcher";
+                webReq.Timeout = 5000;
+                string json;
+                using (var response = (HttpWebResponse)webReq.GetResponse())
+                using (var reader = new StreamReader(response.GetResponseStream()))
+                    json = reader.ReadToEnd();
+                string remoteTag = ExtractJsonField(json, "tag_name");
+                if (remoteTag == null) return;
+
+                // Strip leading 'v' for comparison
+                string remoteVersion = remoteTag.TrimStart('v');
+                string localClean = localVersion.TrimStart('v');
+
+                if (remoteVersion == localClean) return;
+
+                // Find download URL for Windows zip
+                string assetsJson = ExtractJsonField(json, "assets");
+                if (assetsJson == null) return;
+
+                string downloadUrl = null;
+                foreach (string asset in SplitJsonArray(assetsJson))
+                {
+                    string name = ExtractJsonField(asset, "name");
+                    if (name != null && name.Contains("win"))
+                    {
+                        downloadUrl = ExtractJsonField(asset, "browser_download_url");
+                        break;
+                    }
+                }
+                if (downloadUrl == null) return;
+
+                var result = MessageBox.Show(
+                    "Update available: " + localClean + " \u2192 " + remoteVersion + "\n\nDownload and install?",
+                    "SpellBinder Update",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+
+                if (result != DialogResult.Yes) return;
+
+                ApplyUpdate(downloadUrl, remoteTag);
+            }
+            catch
+            {
+                // Silently continue if update check fails — don't block gameplay
+            }
+        }
+
+        private static void ApplyUpdate(string downloadUrl, string newVersion)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string gameDir = Path.Combine(baseDir, "game");
+            string tempZip = Path.Combine(Path.GetTempPath(), "SpellBinder-update.zip");
+            string tempDir = Path.Combine(Path.GetTempPath(), "SpellBinder-update");
+
+            try
+            {
+                // Backup user files
+                string mainDatBackup = null, userDatBackup = null, keyboardDatBackup = null;
+                string mainDat = Path.Combine(gameDir, "main.dat");
+                string userDat = Path.Combine(gameDir, "user.dat");
+                string keyboardDat = Path.Combine(gameDir, "keyboard.dat");
+
+                if (File.Exists(mainDat))
+                {
+                    mainDatBackup = mainDat + ".bak";
+                    File.Copy(mainDat, mainDatBackup, true);
+                }
+                if (File.Exists(userDat))
+                {
+                    userDatBackup = userDat + ".bak";
+                    File.Copy(userDat, userDatBackup, true);
+                }
+                if (File.Exists(keyboardDat))
+                {
+                    keyboardDatBackup = keyboardDat + ".bak";
+                    File.Copy(keyboardDat, keyboardDatBackup, true);
+                }
+
+                // Download
+                using (var wc = new System.Net.WebClient())
+                    wc.DownloadFile(downloadUrl, tempZip);
+
+                // Extract to temp
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+                ZipFile.ExtractToDirectory(tempZip, tempDir);
+
+                // Find the extracted root (might be SpellBinder-win/ inside the zip)
+                string extractedRoot = tempDir;
+                string[] subdirs = Directory.GetDirectories(tempDir);
+                if (subdirs.Length == 1 && Directory.Exists(Path.Combine(subdirs[0], "game")))
+                    extractedRoot = subdirs[0];
+
+                // Self-update: rename current Play.exe so we can overwrite it
+                string currentExe = Application.ExecutablePath;
+                string oldExe = currentExe + ".old";
+                try { if (File.Exists(oldExe)) File.Delete(oldExe); } catch { }
+                File.Move(currentExe, oldExe);
+
+                // Copy new files over
+                CopyDirectory(extractedRoot, baseDir);
+
+                // Restore user files
+                if (mainDatBackup != null && File.Exists(mainDatBackup))
+                {
+                    File.Copy(mainDatBackup, mainDat, true);
+                    File.Delete(mainDatBackup);
+                }
+                if (userDatBackup != null && File.Exists(userDatBackup))
+                {
+                    File.Copy(userDatBackup, userDat, true);
+                    File.Delete(userDatBackup);
+                }
+                if (keyboardDatBackup != null && File.Exists(keyboardDatBackup))
+                {
+                    File.Copy(keyboardDatBackup, keyboardDat, true);
+                    File.Delete(keyboardDatBackup);
+                }
+
+                // Write version file
+                File.WriteAllText(Path.Combine(baseDir, "version.txt"), newVersion);
+
+                // Cleanup temp
+                try { File.Delete(tempZip); } catch { }
+                try { Directory.Delete(tempDir, true); } catch { }
+
+                // Restart
+                MessageBox.Show("Update complete! Restarting.", "SpellBinder", MessageBoxButtons.OK);
+                Process.Start(Application.ExecutablePath);
+                Environment.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Update failed: " + ex.Message + "\n\nYou can continue with the current version.",
+                    "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                // Try to restore Play.exe if it was renamed
+                string oldExe = Application.ExecutablePath + ".old";
+                if (!File.Exists(Application.ExecutablePath) && File.Exists(oldExe))
+                    File.Move(oldExe, Application.ExecutablePath);
+            }
+        }
+
+        private string DiagnoseCrash(int exitCode, double secondsRan)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("=== SpellBinder Crash Report ===");
+            sb.AppendLine("Time: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            uint uExitCode = unchecked((uint)exitCode);
+            sb.AppendLine("Exit code: " + exitCode + " (0x" + uExitCode.ToString("X8") + ")");
+            switch (uExitCode)
+            {
+                case 0xC0000005: sb.AppendLine("Meaning: ACCESS_VIOLATION — crash due to invalid memory access"); break;
+                case 0xC000001D: sb.AppendLine("Meaning: ILLEGAL_INSTRUCTION"); break;
+                case 0xC0000135: sb.AppendLine("Meaning: DLL_NOT_FOUND — a required DLL is missing"); break;
+                case 0xC0000142: sb.AppendLine("Meaning: DLL_INIT_FAILED — a DLL failed to initialize"); break;
+                case 0xC00000FD: sb.AppendLine("Meaning: STACK_OVERFLOW"); break;
+                case 0x80000003: sb.AppendLine("Meaning: BREAKPOINT — debugger breakpoint hit"); break;
+            }
+            sb.AppendLine("Ran for: " + secondsRan.ToString("F1") + " seconds");
+            sb.AppendLine("Launcher version: " + VERSION);
+            sb.AppendLine();
+
+            // Check Windows Event Log for crash details
+            sb.AppendLine("--- Windows crash info ---");
+            try
+            {
+                var eventLog = new System.Diagnostics.EventLog("Application");
+                DateTime cutoff = gameStartTime.AddSeconds(-1);
+                for (int i = eventLog.Entries.Count - 1; i >= Math.Max(0, eventLog.Entries.Count - 20); i--)
+                {
+                    var entry = eventLog.Entries[i];
+                    if (entry.TimeGenerated < cutoff) break;
+                    if (entry.Source == "Application Error" || entry.Source == "Windows Error Reporting")
+                    {
+                        sb.AppendLine(entry.Source + ": " + entry.Message.Replace("\r\n", " | ").Replace("\n", " | "));
+                        break;
+                    }
+                }
+            }
+            catch { sb.AppendLine("(could not read event log)"); }
+            sb.AppendLine();
+
+            // Capture stderr/stdout from the process
+            sb.AppendLine("--- Process output ---");
+            string stdout = gameStdout.ToString().Trim();
+            string stderr = gameStderr.ToString().Trim();
+            if (stdout.Length > 0)
+                sb.AppendLine("stdout: " + stdout);
+            if (stderr.Length > 0)
+                sb.AppendLine("stderr: " + stderr);
+            if (stdout.Length == 0 && stderr.Length == 0)
+                sb.AppendLine("(no output captured)");
+            sb.AppendLine();
+
+            // File inventory
+            sb.AppendLine("--- File check ---");
+            string[] expectedFiles = { "game.dll", "main.dat", "arena.dat", "spell.bin", "gspell.bin",
+                                        "DDraw.dll", "D3DImm.dll", "D3D8.dll", "D3D9.dll", "dgVoodoo.conf" };
+            foreach (string f in expectedFiles)
+            {
+                string path = Path.Combine(gameDir, f);
+                if (File.Exists(path))
+                {
+                    var fi = new FileInfo(path);
+                    sb.AppendLine("  OK   " + f + " (" + fi.Length + " bytes)");
+                }
+                else
+                {
+                    sb.AppendLine("  MISS " + f);
+                }
+            }
+            sb.AppendLine();
+
+            // System info
+            sb.AppendLine("--- System ---");
+            sb.AppendLine("OS: " + Environment.OSVersion);
+            sb.AppendLine("64-bit OS: " + Environment.Is64BitOperatingSystem);
+            sb.AppendLine("CLR: " + Environment.Version);
+            sb.AppendLine("Game dir: " + gameDir);
+            sb.AppendLine();
+
+            // Diagnosis
+            sb.AppendLine("--- Diagnosis ---");
+            bool missingDgv = false;
+            foreach (string dll in new[] { "DDraw.dll", "D3DImm.dll" })
+            {
+                if (!File.Exists(Path.Combine(gameDir, dll))) missingDgv = true;
+            }
+            if (!File.Exists(Path.Combine(gameDir, "game.dll")))
+                sb.AppendLine("game.dll is missing — reinstall from releases page.");
+            else if (missingDgv)
+                sb.AppendLine("dgVoodoo DLLs missing — needed for graphics on modern GPUs. Reinstall from releases page.");
+            else if (!File.Exists(Path.Combine(gameDir, "dgVoodoo.conf")))
+                sb.AppendLine("dgVoodoo.conf missing — reinstall from releases page.");
+            else
+                sb.AppendLine("All files present. Possible causes: antivirus, missing DirectX runtimes, GPU driver issue.");
+
+            // Write to log file
+            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "crash.log");
+            try
+            {
+                File.AppendAllText(logPath, sb.ToString() + "\n\n");
+            }
+            catch { }
+
+            return "Game crashed after " + secondsRan.ToString("F1") + "s.\n\n"
+                + "A crash report has been saved to:\n" + logPath + "\n\n"
+                + "Please send this file when reporting the issue.";
+        }
+
+        private static void CopyDirectory(string source, string dest)
+        {
+            Directory.CreateDirectory(dest);
+            foreach (string file in Directory.GetFiles(source))
+            {
+                string destFile = Path.Combine(dest, Path.GetFileName(file));
+                try { File.Copy(file, destFile, true); } catch { }
+            }
+            foreach (string dir in Directory.GetDirectories(source))
+            {
+                CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
+            }
+        }
+
         [STAThread]
         public static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            CheckForUpdate();
             Application.Run(new PlayForm());
         }
     }

@@ -62,6 +62,38 @@ namespace SpellServer
         public Vector3 Location;
         public Single Direction;
 
+        // Lag compensation — ring buffer of recent positions
+        private const int PositionHistorySize = 30;  // ~500ms at 60Hz
+        private Vector3[] _positionHistory = new Vector3[PositionHistorySize];
+        private Int64[] _positionTimestamps = new Int64[PositionHistorySize];
+        private int _positionHistoryIndex = 0;
+
+        public void RecordPosition(Int64 timestamp)
+        {
+            _positionHistory[_positionHistoryIndex] = Location;
+            _positionTimestamps[_positionHistoryIndex] = timestamp;
+            _positionHistoryIndex = (_positionHistoryIndex + 1) % PositionHistorySize;
+        }
+
+        /// <summary>Get the player's position at a past time for lag compensation.</summary>
+        public Vector3 GetPositionAtTime(Int64 targetTimestamp)
+        {
+            // Find the two samples bracketing the target time
+            int best = -1;
+            Int64 bestDelta = Int64.MaxValue;
+            for (int i = 0; i < PositionHistorySize; i++)
+            {
+                if (_positionTimestamps[i] == 0) continue;
+                Int64 delta = Math.Abs(_positionTimestamps[i] - targetTimestamp);
+                if (delta < bestDelta)
+                {
+                    bestDelta = delta;
+                    best = i;
+                }
+            }
+            return best >= 0 ? _positionHistory[best] : Location;
+        }
+
         public GridBlock CurrentGridBlock;
         public GridBlockFlagData CurrentGridBlockFlagData;
 
@@ -69,11 +101,13 @@ namespace SpellServer
         public Byte MoveSpeed;
         public Effect[] Effects;
         public Int64 LastStateReceived;
+        public Int64 LastStateRelayed;
         public Int16 StateReceivedCount;
         public Player WorldPlayer;
         public Boolean HasFliedSinceHackDetect;
 
         public Interval ValhallaProtection;
+        public Interval BiasCooldown;
 
         private Vector3 _previousLocation;
         private Int16 _previousLocationTick;
@@ -465,6 +499,7 @@ namespace SpellServer
                 NonFriendlyWallTime = new Interval(1000, false);
                 FriendlyWallTime = new Interval(1000, false);
                 ValhallaProtection = new Interval(2000, false);
+                BiasCooldown = new Interval(2000, true); // 2 seconds between bias attempts
                 ActiveTime = new Interval(0, false);
                 BoundingBox = new OrientedBoundingBox(Location, PlayerStandingSize, 0.0f);
 
@@ -476,6 +511,7 @@ namespace SpellServer
                 MoveSpeed = 0;
                 StateReceivedCount = 0;
                 LastStateReceived = NativeMethods.PerformanceCount;
+                LastStateRelayed = 0;
 
                 LastAttacker = null;
 

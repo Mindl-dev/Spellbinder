@@ -53,7 +53,7 @@ namespace SpellServer
         LoginError = 0x84,
         HasEnteredWorld = 0x85,
         HighScores = 0xA2,
-        PlayerYank = 0xA4,
+        PlayerYank = 0xA7, // 0xA4 is client→server, 0xA7 is server→client (case 167 in client dispatch)
         KillPlayer = 0xA9,
         UnBan = 0xA9,
         PlayerJump = 0xAC,

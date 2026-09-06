@@ -133,7 +133,7 @@ namespace SpellServer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Have fun playing Magestorm!")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Have fun playing SpellBinder!")]
         public string MessageOfTheDay {
             get {
                 return ((string)(this["MessageOfTheDay"]));
@@ -181,7 +181,7 @@ namespace SpellServer.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("15")]
         public float ExpMultiplier {
             get {
                 return ((float)(this["ExpMultiplier"]));
@@ -200,6 +200,18 @@ namespace SpellServer.Properties {
             }
             set {
                 this["UDPPort"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool MultiboxAllowed {
+            get {
+                return ((bool)(this["MultiboxAllowed"]));
+            }
+            set {
+                this["MultiboxAllowed"] = value;
             }
         }
     }

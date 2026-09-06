@@ -950,11 +950,8 @@ namespace SpellServer
 
                     if ((clientCharacter.ListLevel1 < tCharacter.ListLevel1 || clientCharacter.ListLevel2 < tCharacter.ListLevel2 || clientCharacter.ListLevel3 < tCharacter.ListLevel3 || clientCharacter.ListLevel4 < tCharacter.ListLevel4 || clientCharacter.ListLevel5 < tCharacter.ListLevel5 || clientCharacter.ListLevel6 < tCharacter.ListLevel6 || clientCharacter.ListLevel7 < tCharacter.ListLevel7 || clientCharacter.ListLevel8 < tCharacter.ListLevel8 || clientCharacter.ListLevel9 < tCharacter.ListLevel9 || clientCharacter.ListLevel10 < tCharacter.ListLevel10) && !player.IsAdmin)
                     {
-                        Program.Log(String.Format("[List Hack] AID: {0}, {1} ({2}), {3}, {4}, {5}, {6}", player.AccountId, player.Username, tCharacter.Name, clientCharacter.ListLevel1, tCharacter.ListLevel1, clientCharacter.ListLevel2, tCharacter.ListLevel2), Color.Red, "Cheat");
-                        
-                        player.DisconnectReason = Resources.Strings_Disconnect.ListHack;
-                        player.Disconnect = true;
-                        return SaveError.ListHack;
+                        // Log only — disabled kick while !level is available to all players
+                        Program.Log(String.Format("[List Warning] AID: {0}, {1} ({2}), {3}, {4}, {5}, {6}", player.AccountId, player.Username, tCharacter.Name, clientCharacter.ListLevel1, tCharacter.ListLevel1, clientCharacter.ListLevel2, tCharacter.ListLevel2), Color.Orange, "Cheat");
                     }
 
                     tCharacter.ListLevel1 = clientCharacter.ListLevel1 < tCharacter.ListLevel1 && !player.IsAdmin ? tCharacter.ListLevel1 : clientCharacter.ListLevel1;
@@ -992,18 +989,14 @@ namespace SpellServer
                 Int32 numPicks = tCharacter.ListLevel1 + tCharacter.ListLevel2 + tCharacter.ListLevel3 + tCharacter.ListLevel4 + tCharacter.ListLevel5 + tCharacter.ListLevel6 + tCharacter.ListLevel7 + tCharacter.ListLevel8 + tCharacter.ListLevel9 + tCharacter.ListLevel10;
                 numPicks = (numPicks - SpellManager.GetNumLists(tCharacter.Class));
                                 
-                if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks) && !(player.IsAdmin || player.Admin >= AdminLevel.Tester))
+                if ((numPicks < 0 || (tCharacter.Level * 2) < numPicks))
                 {
-                    Program.Log(String.Format("[Infinite Picks Hack] AID: {0}, {1} ({2})", player.AccountId, player.Username, tCharacter.Name), Color.Red, "Cheat");
-
-                    Program.Log("Pick", Color.Red, "Cheat");
-
-                    player.DisconnectReason = Resources.Strings_Disconnect.PickHack;
-                    player.Disconnect = true;
-                    return SaveError.PickHack;
+                    // Log only — disabled kick while !level is available to all players
+                    Program.Log(String.Format("[Picks Warning] AID: {0}, {1} ({2}) picks={3} max={4}", player.AccountId, player.Username, tCharacter.Name, numPicks, tCharacter.Level * 2), Color.Orange, "Cheat");
                 }
 
-                tCharacter.SpellPicks = (Byte)(((tCharacter.Level * 2) - numPicks) / 2);
+                int picksRemaining = ((tCharacter.Level * 2) - numPicks) / 2;
+                tCharacter.SpellPicks = (Byte)Math.Max(0, picksRemaining);
 
                 PlayerFlag tempFlag = player.Flags;
                 tempFlag &= ~PlayerFlag.MagestormPlus;

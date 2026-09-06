@@ -17,6 +17,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --server) SERVER="$2"; shift 2 ;;
         --release) RELEASE=1; shift ;;
+        --version) VERSION_TAG="$2"; shift 2 ;;
         *) GAME_DIR="$1"; shift ;;
     esac
 done
@@ -39,7 +40,7 @@ echo "Copying game files..."
 for f in "$GAME_DIR"/*; do
     base="$(basename "$f")"
     case "$base" in
-        DDraw.dll|D3DImm.dll|D3D8.dll|D3D9.dll|dgVoodoo*|UNWISE.EXE|spell.exe|Play.exe|play.exe)
+        DDraw.dll|D3DImm.dll|D3D8.dll|D3D9.dll|dgVoodoo*|UNWISE.EXE|spell.exe|game.exe|Play.exe|play.exe)
             echo "  Skipping $base (not needed on Mac)"
             ;;
         *)
@@ -48,16 +49,14 @@ for f in "$GAME_DIR"/*; do
     esac
 done
 
-# Ensure game.exe exists (the game binary is game.dll but Wine needs .exe)
-if [ ! -f "$APP_BUNDLE/Contents/Resources/game/game.exe" ]; then
-    cp "$APP_BUNDLE/Contents/Resources/game/game.dll" "$APP_BUNDLE/Contents/Resources/game/game.exe"
-fi
+# CrossOver/Wine needs .exe extension — copy patched game.dll as game.exe
+cp "$APP_BUNDLE/Contents/Resources/game/game.dll" "$APP_BUNDLE/Contents/Resources/game/game.exe"
 
 # Server config
 cat > "$APP_BUNDLE/Contents/Resources/servers.txt" << 'SERVERS'
 # SpellBinder server list — one per line: name|address
 # Edit this file to add/remove servers
-Community Server|45.33.60.131
+Community Server|spellbinder.blackeon.net
 Localhost|127.0.0.1
 SERVERS
 
@@ -65,6 +64,15 @@ SERVERS
 if [ -d "$SCRIPT_DIR/defaults" ]; then
     cp "$SCRIPT_DIR/defaults/"* "$APP_BUNDLE/Contents/Resources/game/" 2>/dev/null
 fi
+
+# Version file — --version is required
+if [ -z "$VERSION_TAG" ]; then
+    echo "ERROR: --version required. Usage: ./client/build_mac.sh --version v0.4.1 [--release]"
+    exit 1
+fi
+GIT_TAG="$VERSION_TAG"
+echo "$GIT_TAG" > "$APP_BUNDLE/Contents/Resources/version.txt"
+echo "Version: $GIT_TAG"
 
 # Launch script
 cp "$SCRIPT_DIR/launch_mac.sh" "$APP_BUNDLE/Contents/MacOS/launch.sh"

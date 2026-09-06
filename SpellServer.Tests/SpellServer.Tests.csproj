@@ -26,12 +26,17 @@
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="PacketTests.cs" />
     <Compile Include="PacketReaderWriterTests.cs" />
     <Compile Include="TestHelpers.cs" />
     <Compile Include="GamePacketOutgoingTests.cs" />
+    <Compile Include="GamePacketIncomingTests.cs" />
+    <Compile Include="LauncherTests.cs" />
+    <Compile Include="SubscriptionTests.cs" />
     <Compile Include="IniCacheTests.cs" />
     <Compile Include="ArenaPlayerTests.cs" />
     <Compile Include="LoggingTests.cs" />

@@ -1,12 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40302.0
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11612.150
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpellHook", "SpellHook\SpellHook.vcxproj", "{4867D185-F170-4B36-8D17-C6FEC4C8A256}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpellLauncher", "SpellLauncher\SpellLauncher.csproj", "{50406A7C-311B-40CD-B779-3E9CDCEF2313}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpellServer", "SpellServer\SpellServer.csproj", "{D36802FD-9C66-4996-B1E9-22F0329B191F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Content", "Content\Content.csproj", "{3A45C89B-3DF0-47E3-918B-76AE2104BED7}"
@@ -27,22 +23,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Debug|Any CPU.Build.0 = Debug|Win32
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Debug|x86.ActiveCfg = Debug|Win32
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Debug|x86.Build.0 = Debug|Win32
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Release|Any CPU.ActiveCfg = Release|Win32
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Release|Any CPU.Build.0 = Release|Win32
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Release|x86.ActiveCfg = Release|Win32
-		{4867D185-F170-4B36-8D17-C6FEC4C8A256}.Release|x86.Build.0 = Release|Win32
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Debug|x86.ActiveCfg = Debug|x86
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Debug|x86.Build.0 = Debug|x86
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Release|Any CPU.Build.0 = Release|Any CPU
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Release|x86.ActiveCfg = Release|x86
-		{50406A7C-311B-40CD-B779-3E9CDCEF2313}.Release|x86.Build.0 = Release|x86
 		{D36802FD-9C66-4996-B1E9-22F0329B191F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D36802FD-9C66-4996-B1E9-22F0329B191F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D36802FD-9C66-4996-B1E9-22F0329B191F}.Debug|x86.ActiveCfg = Debug|x86
@@ -83,8 +63,19 @@ Global
 		{4071D462-6324-42D7-9974-16C2A8E89B11}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4071D462-6324-42D7-9974-16C2A8E89B11}.Release|x86.ActiveCfg = Release|x86
 		{4071D462-6324-42D7-9974-16C2A8E89B11}.Release|x86.Build.0 = Release|x86
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Debug|x86.Build.0 = Debug|Any CPU
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Release|x86.ActiveCfg = Debug|Any CPU
+		{576D4738-0379-430B-BECF-DEBF70D588BC}.Release|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {84FEAFE8-804D-4225-A91F-E0EE3E7F0433}
 	EndGlobalSection
 EndGlobal
