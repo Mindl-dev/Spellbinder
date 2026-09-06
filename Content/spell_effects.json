@@ -1,0 +1,50 @@
+{
+  "_comment": "Missing effect spells referenced by target_spell_effect/caster_spell_effect in Spells.dat. These spell IDs have no [spellNN] section in Spells.dat but are needed for shields, buffs, heals, and transfers to work. Loaded by SpellManager after Spells.dat. The 'potency' field corresponds to the 'effect=' field from Spells.dat, renamed for clarity. It is NOT spell level — it's effect strength (heal amount, damage reduction %, etc).",
+
+  "effects": [
+    {"id": 51, "name": "Light Shield Effect",    "type": "effect", "effect_type": "Resist", "element": "Light",  "potency": 47, "duration": 3600},
+    {"id": 52, "name": "Cold Shield Effect",     "type": "effect", "effect_type": "Resist", "element": "Nature", "potency": 47, "duration": 3600},
+    {"id": 54, "name": "Heat Shield Effect",     "type": "effect", "effect_type": "Resist", "element": "Fire",   "potency": 47, "duration": 3600},
+    {"id": 61, "name": "Light Armor Effect",     "type": "effect", "effect_type": "Resist", "element": "Light",  "potency": 50, "duration": 3600},
+    {"id": 62, "name": "Cold Armor Effect",      "type": "effect", "effect_type": "Resist", "element": "Nature", "potency": 50, "duration": 3600},
+    {"id": 64, "name": "Heat Armor Effect",      "type": "effect", "effect_type": "Resist", "element": "Fire",   "potency": 50, "duration": 3600},
+
+    {"id": 101, "name": "Resist Light Effect",   "type": "effect", "effect_type": "Resist", "element": "Light",  "potency": 45, "duration": 3600},
+    {"id": 102, "name": "Resist Cold Effect",    "type": "effect", "effect_type": "Resist", "element": "Nature", "potency": 45, "duration": 3600},
+    {"id": 104, "name": "Resist Heat Effect",    "type": "effect", "effect_type": "Resist", "element": "Fire",   "potency": 45, "duration": 3600},
+
+    {"id": 288, "name": "Lesser Arcane Shld",    "type": "shield", "effect_type": "Resist", "element": "None",   "potency": 15, "duration": 3600},
+    {"id": 289, "name": "Minor Arcane Shield",   "type": "shield", "effect_type": "Resist", "element": "None",   "potency": 17, "duration": 3600},
+    {"id": 108, "name": "Arcane Shield",          "type": "shield", "effect_type": "Resist", "element": "None",   "potency": 19, "duration": 3600},
+    {"id": 156, "name": "Great Arcane Shld",      "type": "shield", "effect_type": "Resist", "element": "None",   "potency": 20, "duration": 3600},
+
+    {"id": 169, "name": "Bless IV Effect",       "type": "effect", "effect_type": "Bless",  "element": "None",   "potency": 20, "duration": 3600},
+    {"id": 225, "name": "Prayer IV Effect",      "type": "effect", "effect_type": "Prayer", "element": "None",   "potency": 20, "duration": 3600},
+    {"id": 226, "name": "Prayer I Effect",       "type": "effect", "effect_type": "Prayer", "element": "None",   "potency": 12, "duration": 3600},
+    {"id": 227, "name": "Prayer II Effect",      "type": "effect", "effect_type": "Prayer", "element": "None",   "potency": 15, "duration": 3600},
+    {"id": 228, "name": "Prayer III Effect",     "type": "effect", "effect_type": "Prayer", "element": "None",   "potency": 17, "duration": 3600},
+    {"id": 231, "name": "Bless I Effect",        "type": "effect", "effect_type": "Bless",  "element": "None",   "potency": 12, "duration": 3600},
+    {"id": 232, "name": "Bless II Effect",       "type": "effect", "effect_type": "Bless",  "element": "None",   "potency": 15, "duration": 3600},
+    {"id": 233, "name": "Bless III Effect",      "type": "effect", "effect_type": "Bless",  "element": "None",   "potency": 17, "duration": 3600},
+    {"id": 234, "name": "Cure Effect",           "type": "effect", "effect_type": "Healing","element": "None",   "potency": 30, "duration": 1},
+
+    {"id": 243, "name": "Transfer I Caster",     "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 5,  "duration": 1, "_note": "Self-damage on caster"},
+    {"id": 244, "name": "Transfer I Target",     "type": "effect", "effect_type": "Healing","element": "None",   "potency": 15, "duration": 1},
+    {"id": 253, "name": "Transfer II Caster",    "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 8,  "duration": 1},
+    {"id": 254, "name": "Transfer II Target",    "type": "effect", "effect_type": "Healing","element": "None",   "potency": 25, "duration": 1},
+    {"id": 173, "name": "Transfer III Target",   "type": "effect", "effect_type": "Healing","element": "None",   "potency": 35, "duration": 1},
+    {"id": 175, "name": "Transfer IV Target",    "type": "effect", "effect_type": "Healing","element": "None",   "potency": 50, "duration": 1},
+
+    {"id": 193, "name": "Lesser Bleeding Effect","type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 2,  "duration": 4},
+    {"id": 194, "name": "Minor Bleeding Effect", "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 3,  "duration": 4},
+    {"id": 196, "name": "Cramp Effect",          "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 30, "duration": 8},
+    {"id": 197, "name": "Fracture Effect",       "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 50, "duration": 10},
+    {"id": 199, "name": "Bleeding Effect",       "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 3,  "duration": 5},
+    {"id": 221, "name": "Major Bleeding Effect", "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 4,  "duration": 7},
+
+    {"id": 273, "name": "Slow I Rune Effect",    "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 20, "duration": 6},
+    {"id": 281, "name": "Slow II Rune Effect",   "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 30, "duration": 8},
+    {"id": 285, "name": "Bleeding Rune Effect",  "type": "effect", "effect_type": "Bleed",  "element": "None",   "potency": 2,  "duration": 4},
+    {"id": 293, "name": "Slow III Rune Effect",  "type": "effect", "effect_type": "Hinder", "element": "None",   "potency": 40, "duration": 10}
+  ]
+}

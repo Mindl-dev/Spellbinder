@@ -189,35 +189,37 @@ namespace SpellServer
         }
         public static void Disconnect(Player player)
         {
-            player.TcpClient.Client.DisconnectAsync(new SocketAsyncEventArgs());
+            // Idempotent — safe to call multiple times
+            if (!PlayerManager.Players.Contains(player)) return;
+
+            try { player.TcpClient?.Client?.Close(); } catch { }
+            try { player.TcpClient?.Close(); } catch { }
 
             Program.Log(String.Format("{0} has disconnected. ({1})", player.IsLoggedIn ? player.Username : player.IpAddress, player.DisconnectReason), Color.BlueViolet);
 
-            //player.UDPDisconnect();
-
-            if (PlayerManager.Players.Contains(player))
+            if (player.IsLoggedIn)
             {
-                if (player.IsLoggedIn)
+                if (player.ActiveArena != null && player.ActiveArenaPlayer != null)
                 {
-                    if (player.ActiveArena != null)
+                    try
                     {
-                        if (player.ActiveArenaPlayer != null)
-                        {
-                            Program.Log($"[Network Disconnect] Player Left", Color.Red);
-                            player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
-                        }
+                        player.ActiveArena.PlayerLeft(player.ActiveArenaPlayer);
                     }
-
-                    if (player.ActiveCharacter != null)
+                    catch (Exception ex)
                     {
-	                    MySQL.OnlineCharacters.SetOffline(player.ActiveCharacter.CharacterId);
+                        Program.Log($"[Disconnect] PlayerLeft error: {ex.Message}", Color.Red);
                     }
-
-                    SendTo(player, GamePacket.Outgoing.World.PlayerLeave(player), SendToType.Tavern, false);
                 }
 
-				MySQL.OnlineAccounts.SetOffline(player.AccountId);
+                if (player.ActiveCharacter != null)
+                {
+                    try { MySQL.OnlineCharacters.SetOffline(player.ActiveCharacter.CharacterId); } catch { }
+                }
+
+                try { SendTo(player, GamePacket.Outgoing.World.PlayerLeave(player), SendToType.Tavern, false); } catch { }
             }
+
+            try { MySQL.OnlineAccounts.SetOffline(player.AccountId); } catch { }
 
             PlayerManager.Players.Remove(player);
         }
@@ -346,6 +348,9 @@ namespace SpellServer
                         continue;
                     }
 
+                    if (opcode == 0x27 || opcode == 0x2D)
+                        Program.Log($"[PacketDispatch] opcode=0x{opcode:X2} player={player.Username} arena={player.ActiveArena != null}", System.Drawing.Color.Magenta);
+
                     switch (opcode)
                     {
                         case 0x01:
@@ -422,6 +427,11 @@ namespace SpellServer
                         case 0x26:
                         {
                             GamePacket.Incoming.World.RequestedPlayer(player, inStream);
+                            break;
+                        }
+                        case 0x27: // CastEffect (self-cast shields, heals, buffs)
+                        {
+                            GamePacket.Incoming.Arena.CastEffect(player, inStream);
                             break;
                         }
                         case 0x28:
@@ -716,6 +726,7 @@ namespace SpellServer
 
         public static void Send(Player player, MemoryStream inStream, bool UDP = false)
         {
+            if (player.IsBot) return;
             try
             {
                 Packet packet = new Packet(inStream);
@@ -756,6 +767,7 @@ namespace SpellServer
 
         public static void Send(Player player, Packet packet, bool UDP = false)
         {
+            if (player.IsBot) return;
             try
             {
                 if (!UDP)
@@ -951,9 +963,9 @@ namespace SpellServer
             {
                 result.Player.TcpClient.Client.EndSend(ar);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                result.Player.DisconnectReason = "SendCallback Error";
+                result.Player.DisconnectReason = $"SendCallback Error: {ex.GetType().Name}: {ex.Message}";
                 result.Player.Disconnect = true;
             }
         }
@@ -966,9 +978,9 @@ namespace SpellServer
             {
                 _gameUDPListener.EndSend(ar);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                result.Player.DisconnectReason = "SendCallback Error";
+                result.Player.DisconnectReason = $"SendCallback UDP Error: {ex.GetType().Name}: {ex.Message}";
                 result.Player.Disconnect = true;
             }
         }

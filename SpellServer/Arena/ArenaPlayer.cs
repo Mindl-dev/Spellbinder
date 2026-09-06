@@ -1,4 +1,4 @@
-﻿using Helper;
+using Helper;
 using Helper.Timing;
 using SharpDX;
 using System;
@@ -181,7 +181,8 @@ namespace SpellServer
 
             foreach (var ap in arena.ArenaPlayers)
             {
-                int finalExp = (int)(ap.SessionKillExp * timeBonusMultiplier);
+                int sessionTotal = ap.CombatExp + ap.ObjectiveExp + ap.BonusExp;
+                int finalExp = (int)(sessionTotal * timeBonusMultiplier);
 
                 ap.WorldPlayer.ActiveCharacter.AwardExp = finalExp;
 
@@ -371,7 +372,7 @@ namespace SpellServer
                 if (value < 0) value = 0;
                 if (value > 999999) value = 999999;
 
-                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 4)
+                if (WorldPlayer.ActiveArena != null)
                 {
                     _combatExp = value;
 
@@ -389,7 +390,7 @@ namespace SpellServer
                 if (value < 0) value = 0;
                 if (value > 999999) value = 999999;
 
-                if (WorldPlayer.ActiveArena != null && WorldPlayer.ActiveArena.ArenaPlayers.Count >= 4)
+                if (WorldPlayer.ActiveArena != null)
                 {
                     _objectiveExp = value;
 
@@ -486,10 +487,22 @@ namespace SpellServer
                 ActiveTeam = OwnerArena.Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoTeams) ? Team.Neutral : WorldPlayer.ActiveTeam;
                 ActiveCharacter = player.ActiveCharacter;
 
-                _previousLocation = new Vector3(0, 0, 0);
+                // Spawn at team's shrine position
+                Shrine teamShrine = null;
+                switch (ActiveTeam)
+                {
+                    case Team.Dragon: teamShrine = arena.ArenaTeams.Dragon?.Shrine; break;
+                    case Team.Pheonix: teamShrine = arena.ArenaTeams.Pheonix?.Shrine; break;
+                    case Team.Gryphon: teamShrine = arena.ArenaTeams.Gryphon?.Shrine; break;
+                }
+                Vector3 spawnPos = (teamShrine != null && (teamShrine.X != 0 || teamShrine.Y != 0))
+                    ? new Vector3(teamShrine.X, teamShrine.Y, teamShrine.Z)
+                    : new Vector3(0, 0, 0);
+
+                _previousLocation = spawnPos;
                 _previousLocationTick = 0;
 
-                Location = new Vector3(0, 0, 0);
+                Location = spawnPos;
                 Direction = 0;
 
                 CurrentGridBlock = null;
@@ -630,6 +643,13 @@ namespace SpellServer
 
             Program.Log($"[ArenaJoin] Total: {sw.ElapsedMilliseconds}ms", System.Drawing.Color.Blue);
             sw.Stop();
+
+            // Yank player to their team's shrine on first entry
+            if (Location.X != 0 || Location.Y != 0)
+            {
+                var spawnYank = new Packets.PlayerYankPacket(ArenaPlayerId, Location).ToBytes();
+                Network.Send(WorldPlayer, spawnYank);
+            }
 
             //Network.Send(WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(WorldPlayer, String.Format("This arena currently has an EXP bonus of {0}%.", ((arena.Grid.ExpBonus + (Properties.Settings.Default.ExpMultiplier - 1.0f) + (WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? 0.2f : 0.0f)) * 100))));
         }

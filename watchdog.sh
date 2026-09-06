@@ -41,11 +41,20 @@ while true; do
 
         if [ $fails -ge $FAIL_THRESHOLD ]; then
             echo "[watchdog] $(date '+%H:%M:%S') Server hung — dumping thread stacks"
-            podman exec "$CONTAINER" kill -QUIT 1 2>/dev/null
-            sleep 2
+
             echo "=== THREAD DUMP ===" >> watchdog_dumps.log
             echo "$(date)" >> watchdog_dumps.log
-            podman logs --tail 200 "$CONTAINER" >> watchdog_dumps.log 2>&1
+
+            # SIGQUIT makes Mono dump all thread stacks to container logs
+            podman exec "$CONTAINER" kill -QUIT 1 2>/dev/null
+            sleep 3
+
+            # Capture the thread dump BEFORE restarting
+            podman logs --since 8s "$CONTAINER" >> watchdog_dumps.log 2>&1
+
+            # Also grab recent game logs for context
+            echo "--- GAME LOG CONTEXT ---" >> watchdog_dumps.log
+            cat Logs/Main/$(date '+%b.%d.%Y').txt 2>/dev/null | tail -50 >> watchdog_dumps.log
             echo "===================" >> watchdog_dumps.log
 
             echo "[watchdog] $(date '+%H:%M:%S') Restarting container"

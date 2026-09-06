@@ -175,6 +175,8 @@
     <Compile Include="Arena\ArenaPlayer.cs" />
     <Compile Include="Arena\ArenaPlayerCollection.cs" />
     <Compile Include="Arena\GridBlockFlagData.cs" />
+    <Compile Include="Arena\LeyGraph.cs" />
+    <Compile Include="Arena\LeyPowerCalculator.cs" />
     <Compile Include="Arena\Projectile.cs" />
     <Compile Include="Arena\ProjectileGroup.cs" />
     <Compile Include="Arena\ArenaRuleset.cs" />
@@ -247,6 +249,16 @@
     <Compile Include="World\Commands\IChatCommand.cs" />
     <Compile Include="World\Commands\CommandRegistry.cs" />
     <Compile Include="World\Commands\YankCommand.cs" />
+    <Compile Include="World\Commands\LocCommand.cs" />
+    <Compile Include="World\Commands\LeyCommand.cs" />
+    <Compile Include="World\Commands\PerfCommand.cs" />
+    <Compile Include="World\Commands\TpCommand.cs" />
+    <Compile Include="Bot\NavGrid.cs" />
+    <Compile Include="Bot\Pathfinder.cs" />
+    <Compile Include="Bot\BotPlayer.cs" />
+    <Compile Include="Bot\BotBrain.cs" />
+    <Compile Include="Bot\BotManager.cs" />
+    <Compile Include="World\Commands\AddBotCommand.cs" />
     <Compile Include="Player\Character.cs" />
     <Compile Include="Player\Player.cs" />
     <Compile Include="Player\PlayerManager.cs" />
@@ -264,6 +276,7 @@
     <Compile Include="Spell\Spell.cs" />
     <Compile Include="Spell\SpellCollection.cs" />
     <Compile Include="Spell\SpellDamage.cs" />
+    <Compile Include="Spell\SpellTuning.cs" />
     <Compile Include="Spell\SpellTree.cs" />
     <Compile Include="Spell\SpellTreeCollection.cs" />
     <Compile Include="Statistics\StatisticSheet.cs" />

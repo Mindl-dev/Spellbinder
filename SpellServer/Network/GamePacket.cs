@@ -1,4 +1,4 @@
-using Google.Protobuf.WellKnownTypes;
+﻿using Google.Protobuf.WellKnownTypes;
 using Helper;
 using Helper.Math;
 using Helper.Network;
@@ -346,17 +346,23 @@ namespace SpellServer
                     Int16 spellId = NetHelper.FlipBytes(BitConverter.ToInt16(tBuffer, 0));
 
                     Spell spell = SpellManager.Spells[spellId];
+                    Program.Log($"[CastEffect] {player.Username} spellId={spellId} spell={spell?.Name ?? "NULL"} effect={spell?.Effect}", System.Drawing.Color.Cyan);
                     if (spell == null) return;
 
-                    if (player.ActiveArena.CastEffect(player.ActiveArenaPlayer, spell))
+                    bool castResult = player.ActiveArena.CastEffect(player.ActiveArenaPlayer, spell);
+                    Program.Log($"[CastEffect RESULT] castResult={castResult} spell={spell.Name} hp={player.ActiveArenaPlayer.CurrentHp}/{player.ActiveArenaPlayer.MaxHp}", System.Drawing.Color.Magenta);
+                    if (castResult)
                     {
                         Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.CastEffect(player.ActiveArenaPlayer, spellId, UDP), false);
+                        Program.Log($"[CastEffect RELAYED] to arena", System.Drawing.Color.Green);
                     }
                 }
                 public static void CastTargeted(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
+                    Program.Log($"[CastTargeted RAW] player={player.Username} arena={player.ActiveArena != null} arenaPlayer={player.ActiveArenaPlayer != null} len={inStream.Length}", System.Drawing.Color.Magenta);
                     if (player.ActiveArena == null || player.ActiveArenaPlayer == null) return;
 
+                    long streamLen = inStream.Length;
                     Byte[] tBuffer = new Byte[2];
                     inStream.Seek(2, SeekOrigin.Begin);
 
@@ -366,18 +372,28 @@ namespace SpellServer
                     inStream.Seek(5, SeekOrigin.Current);
                     Byte targetId = (Byte)inStream.ReadByte();
 
-                    inStream.Seek(8, SeekOrigin.Current);
-                    Boolean isResisted = Convert.ToBoolean((Byte)inStream.ReadByte());
-
-                    Byte[] relayBuffer = new Byte[28];
-                    inStream.Seek(2, SeekOrigin.Begin);
-                    inStream.Read(relayBuffer, 0, 28);
+                    // isResisted is at offset 18 from start — only read if stream is long enough
+                    Boolean isResisted = false;
+                    if (streamLen >= 20)
+                    {
+                        inStream.Seek(8, SeekOrigin.Current);
+                        int resistByte = inStream.ReadByte();
+                        if (resistByte >= 0) isResisted = resistByte != 0;
+                    }
 
                     Spell spell = SpellManager.Spells[spellId];
-                    if (spell == null) return;
-
                     ArenaPlayer targetArenaPlayer = player.ActiveArena.ArenaPlayers.FindById(targetId);
-                    if (targetArenaPlayer == null) return;
+
+                    Program.Log($"[CastTargeted PARSE] spellId={spellId} spell={spell?.Name ?? "NULL"} targetId={targetId} target={targetArenaPlayer?.ActiveCharacter?.Name ?? "NULL"} resisted={isResisted}", System.Drawing.Color.Magenta);
+
+                    if (spell == null || targetArenaPlayer == null) return;
+
+                    int relayLen = Math.Min(28, (int)(streamLen - 2));
+                    Byte[] relayBuffer = new Byte[28];
+                    inStream.Seek(2, SeekOrigin.Begin);
+                    inStream.Read(relayBuffer, 0, relayLen);
+
+                    Program.Log($"[CastTargeted] {player.ActiveArenaPlayer.ActiveCharacter.Name} -> {targetArenaPlayer.ActiveCharacter.Name} spell={spell.Name} (id={spellId}) resisted={isResisted} len={streamLen}", System.Drawing.Color.Cyan);
 
                     if (isResisted)
                     {
@@ -390,9 +406,12 @@ namespace SpellServer
                     }
                     else
                     {
-                        if (player.ActiveArena.CastTargeted(player.ActiveArenaPlayer, targetArenaPlayer, spell))
+                        bool castResult = player.ActiveArena.CastTargeted(player.ActiveArenaPlayer, targetArenaPlayer, spell);
+                        Program.Log($"[CastTargeted RESULT] castResult={castResult} spell={spell.Name} friendly={spell.Friendly} target={targetArenaPlayer.ActiveCharacter.Name} hp={targetArenaPlayer.CurrentHp}/{targetArenaPlayer.MaxHp}", System.Drawing.Color.Magenta);
+                        if (castResult)
                         {
                             Network.SendToArena(player.ActiveArenaPlayer, Outgoing.Arena.CastTargeted(player.ActiveArenaPlayer, relayBuffer, UDP), false);
+                            Program.Log($"[CastTargeted RELAYED] to arena", System.Drawing.Color.Green);
                         }
                     }
                 }
@@ -762,6 +781,7 @@ namespace SpellServer
                 public static void HasEnteredWorld(SpellServer.Player player, bool UDP = false)
                 {
                     Network.Send(player, Outgoing.Player.HasEnteredWorld());
+
                 }
                 public static void ClientPlayerState(SpellServer.Player player, MemoryStream inStream, bool UDP = false)
                 {
@@ -1549,7 +1569,7 @@ namespace SpellServer
                     outStream.Write(nameBuf, 0, 12);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     outStream.WriteByte(arenaPlayer.OwnerArena.ArenaId);
-                    outStream.WriteByte((Byte) arenaPlayer.ActiveTeam);
+                    outStream.WriteByte((Byte)arenaPlayer.ActiveTeam);
                     outStream.WriteByte((Byte) arenaPlayer.ActiveCharacter.Class);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.Level);
                     outStream.WriteByte(arenaPlayer.ActiveCharacter.OpLevel);
@@ -1898,11 +1918,11 @@ namespace SpellServer
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.BiasedShrine);
                     outStream.WriteByte(shrine.ShrineId);
-                    outStream.WriteByte((Byte) shrine.Team);
+                    outStream.WriteByte((Byte)shrine.Team);
                     outStream.WriteByte((Byte)shrine.CurrentBias);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(biasAmount);
-                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((Byte)shrine.Power);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     return outStream;
                 }
@@ -1916,7 +1936,7 @@ namespace SpellServer
                     outStream.WriteByte((Byte)pool.CurrentBias);
                     outStream.WriteByte(0x00);
                     outStream.WriteByte(biasAmount);
-                    outStream.WriteByte(0x00);
+                    outStream.WriteByte((Byte)pool.Power);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.ArenaPlayerId)), 0, 2);
                     return outStream;
                 }
@@ -1934,9 +1954,9 @@ namespace SpellServer
                             outStream.WriteByte(arena.ArenaTeams[i].Shrine.ShrineId);
                             outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Team));
                             outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.CurrentBias));
-                            outStream.WriteByte(0x00);
+                            outStream.WriteByte(0x00); // padding
+                            outStream.WriteByte(0x00); // amount (no delta on initial load)
                             outStream.WriteByte(Convert.ToByte(arena.ArenaTeams[i].Shrine.Power));
-                            outStream.WriteByte(0x00); // Bias Amount //Figure out bias amount if needed
                             if (JustLoaded)
                             {
                                 outStream.WriteByte(0x00);
@@ -1974,10 +1994,9 @@ namespace SpellServer
                             outStream.WriteByte(arena.Grid.Pools[i].PoolId);
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].Team);
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].CurrentBias);
-                            outStream.WriteByte(0x00);
-                            outStream.WriteByte(0x00);
+                            outStream.WriteByte(0x00); // padding
+                            outStream.WriteByte(0x00); // amount (no delta on initial load)
                             outStream.WriteByte((Byte)arena.Grid.Pools[i].Power);
-                            outStream.WriteByte(0x00);
                             if (JustLoaded)
                             {
                                 outStream.WriteByte(0x00);
@@ -2005,12 +2024,25 @@ namespace SpellServer
                 }
                 public static MemoryStream UpdateExperience(ArenaPlayer arenaPlayer, bool UDP = false)
                 {
+                    int inArenaXP = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                    int bonusXP = arenaPlayer.BonusExp;
+                    Int16 inArenaXPToSend = (Int16)Math.Min(inArenaXP, Int16.MaxValue);
+                    Int16 bonusXPToSend = (Int16)Math.Min(bonusXP, Int16.MaxValue);
+
+                    Program.Log(String.Format("[UpdateExperience] {0} kills={1} deaths={2} combat={3} obj={4} bonus={5} total={6} sending={7}",
+                        arenaPlayer.ActiveCharacter?.Name, arenaPlayer.KillCount, arenaPlayer.DeathCount,
+                        arenaPlayer.CombatExp, arenaPlayer.ObjectiveExp, arenaPlayer.BonusExp, inArenaXP, bonusXP), Color.Yellow);
+
+                    // Client reads 3 Int16 fields (6 bytes):
+                    //   [0] slot 106 "Temp"  = in-arena session XP
+                    //   [1] slot 133 "Bonus" = bonus XP
+                    //   [2] slot 132 "Temp2" = kill count
                     MemoryStream outStream = new MemoryStream();
                     outStream.WriteByte(0x00);
                     outStream.WriteByte((Byte)PacketOutFunction.UpdateExperience);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(inArenaXPToSend)), 0, 2);
+                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(bonusXPToSend)), 0, 2);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.KillCount)), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.SessionKillExp)), 0, 2);
-                    outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(arenaPlayer.DeathCount)), 0, 2);
                     return outStream;
                 }
                 public static MemoryStream UpdateHealth(ArenaPlayer arenaPlayer, bool UDP = false)
@@ -2932,7 +2964,7 @@ namespace SpellServer
                     outStream.WriteByte((Byte)PacketOutFunction.PlayerJoin);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(player.PlayerId)), 0, 2);
                     outStream.WriteByte(player.TableId > 0 ? player.TableId : player.ActiveArena.ArenaId);
-                    outStream.WriteByte((Byte) player.ActiveTeam);
+                    outStream.WriteByte((Byte)player.ActiveTeam);
                     byte[] nameBuf = new byte[12];
                     byte[] rawName = Encoding.ASCII.GetBytes(player.ActiveCharacter.Name);
                     Array.Copy(rawName, 0, nameBuf, 0, Math.Min(rawName.Length, 11)); // Use 11 to guarantee a null at 12
@@ -2981,7 +3013,7 @@ namespace SpellServer
                     outStream.Write(nameBuf, 0, 12);
                     outStream.Write(BitConverter.GetBytes(NetHelper.FlipBytes(player.PlayerId)), 0, 2);
                     outStream.WriteByte(player.ActiveArena != null ? player.ActiveArena.ArenaId : player.TableId);
-                    outStream.WriteByte((Byte) player.ActiveTeam);
+                    outStream.WriteByte((Byte)player.ActiveTeam);
                     outStream.WriteByte((Byte) player.ActiveCharacter.Class);
                     outStream.WriteByte(player.ActiveCharacter.Level);
                     outStream.WriteByte(player.ActiveCharacter.OpLevel);

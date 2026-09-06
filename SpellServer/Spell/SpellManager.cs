@@ -61,7 +61,7 @@ namespace SpellServer
         private const String BOLT_DEATH_EFFECT_CHANCE = "bolt_death_effect_chance";
         private const String BOLT_DEATH_EFFECT_RANGE = "bolt_death_effect_range";
         private const String BOUNCE = "bounce";
-        private const String CASTER_SPELL_EFFECT = "caster_spell_effect";
+        private const String CASTER_SPELL_EFFECT = "caster_spell_effect";
         private const String CAST_ANGLE = "cast_angle";
         private const String CAST_DISTANCE = "cast_distance";
         private const String CAST_SOUND = "cast_sound";
@@ -258,7 +258,7 @@ namespace SpellServer
                     continue;
                 }
 
-                Spells.Insert(spell.Id, spell);
+                ((System.Collections.Generic.List<Spell>)Spells)[spell.Id] = spell;
 
                 Program.Log(String.Format("Loaded Spell: {0}", spell.Name), Color.Green);
 
@@ -266,6 +266,8 @@ namespace SpellServer
             }
 
             Program.Log(String.Format("{0} Spells loaded.", spellCount), Color.Blue);
+
+            LoadSpellEffects();
 
             Program.Log("Loading Spell Lists...", Color.Blue);
 
@@ -660,6 +662,14 @@ namespace SpellServer
                 return new SpellCheatInfo(false); 
             }
 
+            // Spells loaded from spell_effects.json (shields, buffs, bleeds, hinders) have no
+            // SpellTreeLevels because they don't exist in Spells.dat — they're the "death effect"
+            // spells referenced by death_spell_effect/target_spell_effect fields. If the client
+            // sends one of these IDs directly (e.g. from a relay echo), reject it gracefully
+            // instead of crashing on the null SpellTreeLevels list.
+            if (spell.SpellTreeLevels == null)
+                return new SpellCheatInfo(spell, false, 0, 0, "None", "Effect spell (no tree)");
+
             foreach (SpellTreeLevel spellTreeLevel in spell.SpellTreeLevels)
             {
                 foreach (SpellTree spellTree in player.ActiveCharacter.SpellTrees)
@@ -688,6 +698,132 @@ namespace SpellServer
         {
             SpellTree spellTree = SpellTrees.FindBySlotAndClass(listNum, playerClass);
             return spellTree == null ? (Byte)0 : (Byte)spellTree.Id;
+        }
+
+        /// <summary>Load missing effect spells from spell_effects.json (shields, buffs, heals, transfers).</summary>
+        private static void LoadSpellEffects()
+        {
+            String path = Path.Combine(Directory.GetCurrentDirectory(), "spell_effects.json");
+            if (!File.Exists(path))
+            {
+                // Try Content/ path
+                path = Path.Combine(Directory.GetCurrentDirectory(), "..", "Content", "spell_effects.json");
+            }
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("spell_effects.json not found — shields, buffs, heals will not work!");
+            }
+
+            {
+                String json = File.ReadAllText(path);
+                int loaded = 0;
+
+                // Minimal JSON parsing — no dependency on System.Text.Json
+                int searchFrom = 0;
+                while (true)
+                {
+                    int objStart = json.IndexOf('{', searchFrom);
+                    if (objStart < 0) break;
+                    int objEnd = json.IndexOf('}', objStart);
+                    if (objEnd < 0) break;
+                    searchFrom = objEnd + 1;
+
+                    String obj = json.Substring(objStart, objEnd - objStart + 1);
+
+                    // Skip the root object and comment fields
+                    if (obj.Contains("\"effects\"") || obj.Contains("\"_comment\"")) continue;
+
+                    int id = ParseJsonInt(obj, "id");
+                    if (id <= 0) continue;
+
+                    String name = ParseJsonString(obj, "name") ?? "Effect " + id;
+                    String effectType = ParseJsonString(obj, "effect_type") ?? "None";
+                    String element = ParseJsonString(obj, "element") ?? "None";
+                    int potency = ParseJsonInt(obj, "potency");
+                    int duration = ParseJsonInt(obj, "duration");
+
+                    // If spell already exists (from Spells.dat), merge effect fields
+                    if (id < Spells.Count && Spells[id] != null)
+                    {
+                        Spell existing = Spells[id];
+                        // Only merge if the existing spell has no effect set
+                        if (existing.Effect == SpellEffectType.None || existing.Potency == 0)
+                        {
+                            SpellEffectType mergeEff;
+                            if (Enum.TryParse(effectType, true, out mergeEff))
+                                existing.Effect = mergeEff;
+                            SpellElementType mergeElem;
+                            if (Enum.TryParse(element, true, out mergeElem))
+                                existing.Element = mergeElem;
+                            existing.Potency = potency;
+                            // Always override duration from JSON — Spells.dat values are often wrong
+                            if (duration > 0)
+                                existing.Duration = duration;
+                            loaded++;
+                        }
+                        continue;
+                    }
+
+                    Spell spell = new Spell
+                    {
+                        Id = (Int16)id,
+                        Name = name,
+                        Type = SpellType.Effect,
+                        Potency = potency,
+                        Level = (Int16)potency, // Legacy: existing formulas read Level. Will migrate to Potency.
+                        Duration = duration,
+                    };
+
+                    // Map effect_type string to enum
+                    SpellEffectType eff;
+                    if (Enum.TryParse(effectType, true, out eff))
+                        spell.Effect = eff;
+
+                    // Map element string to enum
+                    SpellElementType elem;
+                    if (Enum.TryParse(element, true, out elem))
+                        spell.Element = elem;
+
+                    // Ensure Spells list is large enough
+                    while (Spells.Count <= id)
+                        Spells.Add(null);
+
+                    ((System.Collections.Generic.List<Spell>)Spells)[id] = spell;
+                    loaded++;
+                }
+
+                Program.Log(String.Format("Loaded {0} effect spells from spell_effects.json.", loaded), Color.Cyan);
+            }
+        }
+
+        private static String ParseJsonString(String json, String key)
+        {
+            String search = "\"" + key + "\"";
+            int idx = json.IndexOf(search);
+            if (idx < 0) return null;
+            int colon = json.IndexOf(':', idx + search.Length);
+            if (colon < 0) return null;
+            int qStart = json.IndexOf('"', colon + 1);
+            if (qStart < 0) return null;
+            int qEnd = json.IndexOf('"', qStart + 1);
+            if (qEnd < 0) return null;
+            return json.Substring(qStart + 1, qEnd - qStart - 1);
+        }
+
+        private static int ParseJsonInt(String json, String key)
+        {
+            String search = "\"" + key + "\"";
+            int idx = json.IndexOf(search);
+            if (idx < 0) return 0;
+            int colon = json.IndexOf(':', idx + search.Length);
+            if (colon < 0) return 0;
+            int start = colon + 1;
+            while (start < json.Length && (json[start] == ' ' || json[start] == '\t')) start++;
+            int end = start;
+            while (end < json.Length && json[end] >= '0' && json[end] <= '9') end++;
+            if (end == start) return 0;
+            int val;
+            return Int32.TryParse(json.Substring(start, end - start), out val) ? val : 0;
         }
     }
 }

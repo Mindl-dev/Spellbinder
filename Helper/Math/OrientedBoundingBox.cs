@@ -231,9 +231,16 @@ namespace Helper.Math
         public Vector3 LineImpactVector(Vector3 startPoint, Vector3 endPoint)
         {
             Vector3 impactPoint = endPoint;
-            Vector3 direction = Vector3.Normalize(endPoint - startPoint);
+            Vector3 delta = endPoint - startPoint;
+            float length = delta.Length();
 
-            while (PointInBox(impactPoint))
+            if (length < 0.001f || float.IsNaN(length))
+                return endPoint;
+
+            Vector3 direction = delta / length;
+
+            int maxIterations = 500;
+            while (PointInBox(impactPoint) && maxIterations-- > 0)
             {
                 impactPoint -= direction;
             }

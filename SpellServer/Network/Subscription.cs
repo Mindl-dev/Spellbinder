@@ -93,27 +93,30 @@ namespace SpellServer
             return result;
         }
 
-        /// <summary>Kick any existing session with the same account ID and remove from player list.</summary>
+        /// <summary>Kick any existing session with the same account ID.
+        /// Only closes the socket and flags for disconnect — all cleanup
+        /// (DB, arena, player list removal) happens in Network.Disconnect
+        /// from the ghost's own ProcessReceive thread.</summary>
         public static void KickGhostSessions(Player newPlayer, int accountId, PlayerManager players)
         {
             Player ghost = players.FindByAccountId(accountId);
-            if (ghost != null && ghost != newPlayer)
-            {
-                // Flag for disconnect and close socket — don't call Network.Disconnect
-                // as it calls Arena.PlayerLeft which acquires lock(SyncRoot),
-                // deadlocking if the arena thread holds it. Socket close will cause
-                // the ghost's ProcessReceive to error out and clean up arena state.
-                ghost.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
-                ghost.Disconnect = true;
-                try { ghost.TcpClient.Client.Close(); } catch { }
-                players.Remove(ghost);
-            }
+            if (ghost == null || ghost == newPlayer) return;
+
+            Program.Log($"[Ghost] Kicking ghost session for {ghost.Username} (AID {accountId})", System.Drawing.Color.Orange);
+
+            ghost.DisconnectReason = Resources.Strings_Disconnect.MultipleLogin;
+            ghost.Disconnect = true;
+
+            // Close socket to unblock ghost's ProcessReceive → triggers Network.Disconnect
+            try { ghost.TcpClient?.Client?.Close(); } catch { }
+            try { ghost.TcpClient?.Close(); } catch { }
         }
 
         /// <summary>Check if another player with the same hardware serial is already connected.</summary>
         public static ErrorType CheckMultibox(string serial, AdminLevel newPlayerAdmin, PlayerManager players)
         {
-            if (serial == "Not_Found" || serial == "VMWare" || serial == "VirtualPC")
+            if (serial == "Not_Found" || serial == "VMWare" || serial == "VirtualPC"
+                || serial.Length <= 2)
                 return ErrorType.None;
 
             Player connectedPlayer = players.FindBySerial(serial);
@@ -168,9 +171,8 @@ namespace SpellServer
             // 3. Kick ghost sessions (removes from player list before serial check)
             KickGhostSessions(player, creds.AccountId, PlayerManager.Players);
 
-            // 4. Multibox check (same hardware serial)
-            ErrorType multiboxError = CheckMultibox(serial, creds.Admin, PlayerManager.Players);
-            if (multiboxError != ErrorType.None) { RejectLogin(player, multiboxError, serial, username); return; }
+            // Multibox check removed — serial is unreliable (patched clients send "?\")
+            // and it blocks legitimate logins. Use IP bans if needed.
 
             // 5. Ban check
             if (MySQL.BannedSerials.IsBanned(serial)) { RejectLogin(player, ErrorType.BannedComputer, serial, username); return; }
@@ -196,7 +198,14 @@ namespace SpellServer
             Network.Send(player, GamePacket.Outgoing.Login.Connected(player));
             Network.Send(player, GamePacket.Outgoing.Player.SendPlayerId(player));
 
-            MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
+            try
+            {
+                MySQL.OnlineAccounts.SetOnline(player.AccountId, player.Username);
+            }
+            catch (Exception ex)
+            {
+                Program.Log($"[Warning] SetOnline failed for {player.Username} (AID {player.AccountId}): {ex.Message}", Color.Orange);
+            }
 
             Program.Log(String.Format("(PID: {0}, AID: {1}, S/N: {2}) {3} has connected.",
                 player.PlayerId, player.AccountId, serial, player.Username), Color.MediumSlateBlue);

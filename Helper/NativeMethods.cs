@@ -347,10 +347,24 @@ namespace Helper
             });
         }
 
+        private static String SanitizeKey(String key)
+        {
+            // Strip non-printable control characters (0x00-0x1F, 0x7F) that can
+            // hide in source code and silently break INI lookups.
+            if (key == null) return key;
+            var sb = new System.Text.StringBuilder(key.Length);
+            foreach (char c in key)
+            {
+                if (c >= 0x20 && c != 0x7F)
+                    sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
         private static String GetCachedIniValue(String section, String key, String path)
         {
             var ini = LoadIniFile(path);
-            if (ini.TryGetValue(section, out var sec) && sec.TryGetValue(key, out var val))
+            if (ini.TryGetValue(SanitizeKey(section), out var sec) && sec.TryGetValue(SanitizeKey(key), out var val))
                 return val;
             return "";
         }

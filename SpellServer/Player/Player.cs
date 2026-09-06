@@ -62,6 +62,7 @@ namespace SpellServer
         public Boolean PingInitialized;
         public Boolean Disconnect;
         public String DisconnectReason;
+        public Boolean IsBot;
 
         public Int16 PlayerId;
         public Int32 AccountId;
@@ -278,6 +279,7 @@ namespace SpellServer
             Players[client] = this;
 
             TcpClient.NoDelay = true;
+            TcpClient.Client.ReceiveTimeout = 30000; // 30s — forces Receive() to throw on idle connections
 
             ProcessReceiveThread = new Thread(ProcessReceive);
             _receiveBuffer = new Byte[TcpClient.ReceiveBufferSize];
@@ -499,12 +501,9 @@ namespace SpellServer
 
             if (!IsInArena || IsAdmin) return;
 
-            if (IsPingSpiking)
-            {
-                DisconnectReason = String.Format(Resources.Strings_Disconnect.PingSpiking, Ping);
-                Disconnect = true;
-                return;
-            }
+            // Ping kick disabled — heartbeat-based ping measurement is unreliable
+            // due to server-side lock contention inflating apparent latency.
+            // Re-enable once the arena tick refactor removes SyncRoot contention.
 
             Int64 elapsedActiveTime = ActiveArenaPlayer.ActiveTime.ElapsedSeconds;
 

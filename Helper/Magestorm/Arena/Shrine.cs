@@ -26,6 +26,10 @@ namespace Helper
         private Int16 _currentBias;
         private Single _guildPoints;
 
+        public Byte Fixture;
+        public Int32 X;
+        public Int32 Y;
+        public Int32 Z;
         public ListCollection<Int16> Links;
 
         public Boolean IsDisabled
@@ -101,7 +105,7 @@ namespace Helper
             CurrentBias = bias;
             Power = power;
             IsDisabled = false;
-            Links = links;
+            Links = new ListCollection<Int16>(links);
 
         }
     }

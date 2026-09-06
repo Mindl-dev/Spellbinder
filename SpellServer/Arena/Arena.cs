@@ -5,6 +5,7 @@ using Mysqlx.Crud;
 using Mysqlx.Expr;
 using MySqlX.XDevAPI.Relational;
 using SharpDX;
+using SpellServer.Commands;
 using SpellServer.Properties;
 using System;
 using System.Collections.Concurrent;
@@ -84,7 +85,6 @@ namespace SpellServer
         {
             _inputQueue.Enqueue(packet);
         }
-
         private void ProcessInput()
         {
             while (_inputQueue.TryDequeue(out var packet))
@@ -102,6 +102,11 @@ namespace SpellServer
 	    public Int64 MatchId;
         public Byte TableId;
         public Grid Grid;
+        public LeyGraph LeyGraph;
+        public Bot.NavGrid NavGrid;
+        public bool ProfilingEnabled;
+        public TickProfile TickProfile = new TickProfile();
+        public void ResetProfiling() { TickProfile.Reset(); }
         public Interval Duration;
 	    public Interval IdleDuration;
         public State CurrentState;
@@ -153,6 +158,7 @@ namespace SpellServer
         public bool AFFromClients = false;
 
         public Interval CleanupTick;
+        public Interval XpSaveTick;
 
         private bool statsProcessed = false;
 
@@ -200,6 +206,8 @@ namespace SpellServer
                 Grid = new Grid(grid);
                 Tables = grid.Tables.GetById(grid.GridId);
                 ArenaTeams = new ArenaTeamCollection(Grid);
+                LeyGraph = LeyGraph.Build(Grid.Pools, ArenaTeams.Dragon.Shrine, ArenaTeams.Pheonix.Shrine, ArenaTeams.Gryphon.Shrine);
+                NavGrid = new Bot.NavGrid(Grid);
                 ArenaPlayers = new ArenaPlayerCollection();
                 ArenaPlayerHistory = new ArenaPlayerCollection();
                 Runes = new RuneCollection();
@@ -243,6 +251,7 @@ namespace SpellServer
                 PlayerTrackingTick = new Interval(10, true);
                 ThinTrackingTick = new Interval(3000, true);
                 CleanupTick = new Interval(5000, false);
+                XpSaveTick = new Interval(120000, true); // Save XP to DB every 2 minutes
 
                 GameName = String.Format("[{0}] {1}", ruleset.ModeString, Grid.GameName);
 
@@ -387,14 +396,58 @@ namespace SpellServer
                     {                                              
                         try
                         {
-                            ProcessInput();
-                            ProcessArenaPlayers();
-                            ProcessProjectiles(FrameTime);
-                            ProcessRunes();
-                            ProcessBolts();
-                            ProcessWalls();
-                            ProcessTriggers();
-                            ProcessMisc();
+                            if (ProfilingEnabled)
+                            {
+                                TickProfile.TotalTick.Start();
+
+                                TickProfile.ProcessInput.Start();
+                                ProcessInput();
+                                TickProfile.ProcessInput.Stop();
+
+                                TickProfile.ProcessPlayers.Start();
+                                ProcessArenaPlayers();
+                                TickProfile.ProcessPlayers.Stop();
+
+                                TickProfile.ProcessProjectiles.Start();
+                                ProcessProjectiles(FrameTime);
+                                TickProfile.ProcessProjectiles.Stop();
+
+                                TickProfile.ProcessRunes.Start();
+                                ProcessRunes();
+                                TickProfile.ProcessRunes.Stop();
+
+                                TickProfile.ProcessBolts.Start();
+                                ProcessBolts();
+                                TickProfile.ProcessBolts.Stop();
+
+                                TickProfile.ProcessWalls.Start();
+                                ProcessWalls();
+                                TickProfile.ProcessWalls.Stop();
+
+                                TickProfile.ProcessTriggers.Start();
+                                ProcessTriggers();
+                                TickProfile.ProcessTriggers.Stop();
+
+                                TickProfile.ProcessMisc.Start();
+                                ProcessMisc();
+                                Bot.BotManager.ProcessBots(this);
+                                TickProfile.ProcessMisc.Stop();
+
+                                TickProfile.TotalTick.Stop();
+                                TickProfile.SampleCount++;
+                            }
+                            else
+                            {
+                                ProcessInput();
+                                ProcessArenaPlayers();
+                                ProcessProjectiles(FrameTime);
+                                ProcessRunes();
+                                ProcessBolts();
+                                ProcessWalls();
+                                ProcessTriggers();
+                                ProcessMisc();
+                                Bot.BotManager.ProcessBots(this);
+                            }
 
                             elapsedTime = DateTime.UtcNow - StartTime;
                             elapsedSeconds = (int)elapsedTime.TotalSeconds;
@@ -439,74 +492,34 @@ namespace SpellServer
                         ArenaPlayer arenaPlayer = ArenaPlayers[i];
                         if (arenaPlayer == null) continue;
 
-                        if (arenaPlayer.ActiveTeam == winningTeam)
-                        {
-                            if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.ExpEvent) && arenaPlayer.SecondsPlayed >= 120)
-                            {
-                                Int32 awardedExp;
+                        // Bonus XP: 40% of combat+objective, prorated by time played, 1.5x for winners
+                        int earnedXp = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                        float timeRatio = Math.Min(1.0f, (float)arenaPlayer.SecondsPlayed / (TimeLimit));
+                        float winMultiplier = (arenaPlayer.ActiveTeam == winningTeam && winningTeam != Team.Neutral) ? 1.5f : 1.0f;
+                        int bonusExp = (int)(earnedXp * 0.40f * timeRatio * winMultiplier);
 
-                                if (arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus))
-                                {
-                                    awardedExp = EventExp*2;
-                                }
-                                else
-                                {
-                                    awardedExp = EventExp;
-                                }
-
-                                arenaPlayer.ActiveCharacter.AwardExp += awardedExp;
-
-                                Program.Log(String.Format("[Event] ({0}){1} -> Has been awarded {2} EXP by {3}.", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.WorldPlayer.ActiveCharacter.Name, awardedExp, arenaPlayer.WorldPlayer.ActiveArena.Founder), Color.Blue, "Admin");
-                            }
-
-                            Int32 pointsPlace = top10Points.FindIndex(indexPlayer => indexPlayer == arenaPlayer);
-
-                            switch (pointsPlace)
-                            {
-                                case 0:
-                                {
-                                    pointsPlace = 10;
-                                    break;
-                                }
-                                case 1:
-                                {
-                                    pointsPlace = 8;
-                                    break;
-                                }
-                                case 2:
-                                {
-                                    pointsPlace = 7;
-                                    break;
-                                }
-                                default:
-                                {
-                                    pointsPlace = 5;
-                                    break;
-                                }
-                            }
-
-                            Single pointsBonus = pointsPlace * ((arenaPlayer.ActiveCharacter.Level * (25 + (arenaPlayer.KillCount * 2.2f))) + (arenaPlayer.ActiveCharacter.Level * (10 + (arenaPlayer.RaiseCount * 1.3f))));
-                            
-                            Single bonusTime = (((Single)DateTime.Now.Subtract(arenaPlayer.JoinTime).TotalSeconds / (TimeLimit / 100f)) * 0.006f) + 1f;
-                            Int32 bonusExp = (Int32)(((arenaPlayer.CombatExp * bonusTime) - arenaPlayer.CombatExp) + ((arenaPlayer.ObjectiveExp * bonusTime) - arenaPlayer.ObjectiveExp) + pointsBonus);
-
+                        if (bonusExp > 0)
                             GivePlayerExperience(arenaPlayer, bonusExp, ArenaPlayer.ExperienceType.Bonus);
 
-                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.ArenaState(this, arenaPlayer.WorldPlayer, false));
+                        // Event XP (special events only)
+                        if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.ExpEvent) && arenaPlayer.SecondsPlayed >= 120)
+                        {
+                            Int32 eventExp = arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.MagestormPlus) ? EventExp * 2 : EventExp;
+                            arenaPlayer.ActiveCharacter.AwardExp += eventExp;
+                        }
 
-                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.World.ArenaState(this, arenaPlayer.WorldPlayer, false));
+                        Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
 
+                        if (arenaPlayer.ActiveTeam == winningTeam && winningTeam != Team.Neutral)
+                        {
                             if (arenaPlayer.SecondsPlayed >= 300 && ArenaPlayers.Count >= 3)
-                            {
                                 arenaPlayer.ActiveCharacter.Statistics.Wins++;
-                            }
                         }
                         else
                         {
                             if (ArenaPlayers.Count >= 3)
-                            {
                                 arenaPlayer.ActiveCharacter.Statistics.Losses++;
-                            }
                         }
                     }
 
@@ -562,6 +575,27 @@ namespace SpellServer
                     }
                 }
             }
+
+            // Periodic XP save — prevents XP loss on crash
+            if (XpSaveTick != null && XpSaveTick.HasElapsed)
+            {
+                for (Int32 i = 0; i < ArenaPlayers.Count; i++)
+                {
+                    ArenaPlayer ap = ArenaPlayers[i];
+                    if (ap == null) continue;
+
+                    int sessionTotal = ap.CombatExp + ap.ObjectiveExp + ap.BonusExp;
+                    if (sessionTotal > 0)
+                    {
+                        ap.WorldPlayer.ActiveCharacter.AwardExp = sessionTotal;
+                        System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                        {
+                            try { Character.Save(ap.WorldPlayer, null); }
+                            catch { }
+                        });
+                    }
+                }
+            }
         }
 
         public void ProcessArenaPlayers(bool UDP = false)
@@ -602,22 +636,37 @@ namespace SpellServer
                     Effect arenaEffect = arenaPlayer.Effects[j];
                     if (arenaEffect == null) continue;
 
-                    Boolean hasElapsed = arenaEffect.Duration.HasElapsed;
-
-                    if (!arenaPlayer.IsAlive || (hasElapsed && !arenaEffect.Duration.CanReset))
+                    if (!arenaPlayer.IsAlive)
                     {
                         arenaPlayer.Effects[j] = null;
                         continue;
                     }
 
-                    switch (arenaEffect.EffectSpell.Effect)
-                    {
-                        case SpellEffectType.Bleed:
-                        {
-                            if (hasElapsed) DoPlayerDamage(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell, null, false);
+                    Boolean hasElapsed = arenaEffect.Duration.HasElapsed;
 
-                            break;
+                    // Process ticking effects BEFORE removal so the last tick fires
+                    if (hasElapsed)
+                    {
+                        SpellEffectType tickEffect = (int)arenaEffect.EffectSpell.Effect > (int)SpellEffectType.Expulse
+                            ? SpellEffectType.Healing : arenaEffect.EffectSpell.Effect;
+
+                        switch (tickEffect)
+                        {
+                            case SpellEffectType.Bleed:
+                                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                                    Program.Log($"[BleedTick] {arenaPlayer.ActiveCharacter?.Name} spell={arenaEffect.EffectSpell?.Name} canReset={arenaEffect.Duration.CanReset}", System.Drawing.Color.Red);
+                                DoPlayerDamage(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell, null, false);
+                                break;
+                            case SpellEffectType.Healing:
+                                DoPlayerHealing(arenaPlayer, arenaEffect.Owner, arenaEffect.EffectSpell);
+                                break;
                         }
+                    }
+
+                    // Remove expired effects after ticking
+                    if (hasElapsed && !arenaEffect.Duration.CanReset)
+                    {
+                        arenaPlayer.Effects[j] = null;
                     }
                 }
 
@@ -2137,6 +2186,7 @@ namespace SpellServer
                             Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.System.DirectTextMessage(arenaPlayer.WorldPlayer, String.Format("You have captured the {0} orb!", captureTeam.Shrine.Team)));
 
                             Network.SendToArena(arenaPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, captureTeam.Shrine, (Byte)biasAmount, UDP), true);
+                            LeyGraph?.SyncFromGameState();
                         }
                         break;
                     }
@@ -2148,9 +2198,24 @@ namespace SpellServer
         {
             Effect arenaEffect = new Effect(spell, sourcePlayer, effectType);
 
+            if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+            {
+                Program.Log($"[DoPlayerEffect] spell={spell?.Name}(id={spell?.Id}) type={spell?.Type} effectType={effectType} " +
+                    $"effectSpell={arenaEffect.EffectSpell?.Name}(id={arenaEffect.EffectSpell?.Id}) " +
+                    $"effect={arenaEffect.EffectSpell?.Effect} deathSpellEffect={spell?.DeathSpellEffect} " +
+                    $"targetSpellEffect={spell?.TargetSpellEffect} " +
+                    $"target={targetPlayer?.ActiveCharacter?.Name} source={sourcePlayer?.ActiveCharacter?.Name}",
+                    System.Drawing.Color.Cyan);
+            }
+
             if (arenaEffect.EffectSpell != null)
             {
                 SpellEffectType arenaEffectType = arenaEffect.EffectSpell.Effect;
+
+                // Spells.dat effect= field stores magnitude (2000, 3000, etc.) not SpellEffectType.
+                // Values > Expulse (19) are magnitudes miscast as enum — treat as Healing.
+                if ((int)arenaEffectType > (int)SpellEffectType.Expulse)
+                    arenaEffectType = SpellEffectType.Healing;
 
                 switch (arenaEffectType)
                 {
@@ -2164,7 +2229,7 @@ namespace SpellServer
 
                         if (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoRaiseCall)) return false;
 
-                        DoPlayerResurrect(targetPlayer, sourcePlayer, arenaEffect.EffectSpell.Level);
+                        DoPlayerResurrect(targetPlayer, sourcePlayer, (Int16)SpellTuning.ComputeEffectValue(SpellEffectType.Resurrect, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0));
                         break;
                     }
                     case SpellEffectType.Bless:
@@ -2194,7 +2259,7 @@ namespace SpellServer
 
                             if (currentEffect != null)
                             {
-                                if (currentEffect.EffectSpell.Level > arenaEffect.EffectSpell.Level) return false;
+                                if (SpellTuning.GetPotency(currentEffect.EffectSpell) > SpellTuning.GetPotency(arenaEffect.EffectSpell)) return false;
                             }
 
                             targetPlayer.Effects[(Int32) arenaEffectType] = arenaEffect;
@@ -2248,17 +2313,12 @@ namespace SpellServer
                     }
                 }
 
-                if (effectType == EffectType.Area || effectType == EffectType.AuraCaster || effectType == EffectType.AuraTarget)
+                // Relay effect to all clients via CastTargeted (0x2D).
+                // CastEffect (0xB3) is for self-cast. For enemy-applied effects like
+                // Cramp/Bleed, the client needs CastTargeted with source + target + spell.
+                if (spell.DeathSpellEffect > 0)
                 {
                     Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, (short)spell.DeathSpellEffect, UDP), true);
-                    //Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastTargetedEx(targetPlayer, sourcePlayer, arenaEffect.OwnerSpell, UDP), true);
-                    return true;
-                }
-
-                if (spell.Type == SpellType.Rune)
-                {
-                    Network.SendToArena(targetPlayer, GamePacket.Outgoing.Arena.CastEffect(targetPlayer, (short)spell.DeathSpellEffect, UDP), true);
-                    return true;
                 }
             }
 
@@ -2425,6 +2485,10 @@ namespace SpellServer
             SpellDamage spellDamage = new SpellDamage(spell);
             Int16 hDifference = Convert.ToInt16(targetPlayer.MaxHp - targetPlayer.CurrentHp);
 
+            // Cap healing at 25% of max HP per cast
+            Int16 maxHeal = Convert.ToInt16(Math.Ceiling(targetPlayer.MaxHp * 0.25f));
+            if (spellDamage.Healing > maxHeal) spellDamage.Healing = maxHeal;
+
             if (spellDamage.Healing <= 0 || hDifference <= 0) return false;
 
             Int16 healingDone = spellDamage.Healing > hDifference ? hDifference : spellDamage.Healing;
@@ -2433,7 +2497,8 @@ namespace SpellServer
 
             if (arenaEffect != null && spellDamage.Healing < 255)
             {
-                healingDone = (Int16)(healingDone - (healingDone * (arenaEffect.EffectSpell.Level / 100f)));
+                float healReduction = SpellTuning.ComputeEffectValue(SpellEffectType.HealingReduction, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0);
+                healingDone = (Int16)(healingDone - (healingDone * (healReduction / 100f)));
             }
 
             targetPlayer.CurrentHp += healingDone;
@@ -2474,6 +2539,10 @@ namespace SpellServer
 
             Network.SendTo(this, GamePacket.Outgoing.Arena.PlayerResurrect(sourcePlayer, targetPlayer, UDP), Network.SendToType.Arena);
             Network.Send(targetPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(targetPlayer, null, new SpellDamage(null, 0, 0, 0), UDP));
+
+            // Spawn at ghost's current position (near the spirit gate)
+            var spawnPacket = new Packets.PlayerYankPacket(targetPlayer.ArenaPlayerId, targetPlayer.Location).ToBytes();
+            Network.Send(targetPlayer.WorldPlayer, spawnPacket);
         }
 
         public void DoPlayerDamage(ArenaPlayer targetPlayer, ArenaPlayer sourcePlayer, Spell spell, SpellDamage spellDamage, Boolean showHitToSource, bool UDP = false)
@@ -2498,6 +2567,7 @@ namespace SpellServer
                     case SpellEffectType.Resist:
                     {
                         Single dReduction = 0;
+                        float resistPct = SpellTuning.ComputeEffectValue(arenaEffect.EffectSpell.Effect, SpellTuning.GetPotency(arenaEffect.EffectSpell), 0);
 
                         switch (spell.Element)
                         {
@@ -2506,11 +2576,11 @@ namespace SpellServer
                             {
                                 if (arenaEffect.EffectSpell.Element == SpellElementType.None)
                                 {
-                                    dReduction = (arenaEffect.EffectSpell.Level*0.01f)*spellDamage.Damage;
+                                    dReduction = (resistPct * 0.01f) * spellDamage.Damage;
                                 }
                                 else
                                 {
-                                    dReduction = ((arenaEffect.EffectSpell.Level*0.5f)*0.01f)*spellDamage.Damage;
+                                    dReduction = ((resistPct * 0.5f) * 0.01f) * spellDamage.Damage;
                                 }
                                 break;
                             }
@@ -2522,7 +2592,7 @@ namespace SpellServer
                             {
                                 if ((arenaEffect.EffectSpell.Element == spell.Element || arenaEffect.EffectSpell.Element == SpellElementType.None) && spell.Element != SpellElementType.None)
                                 {
-                                    dReduction = (arenaEffect.EffectSpell.Level*0.01f)*spellDamage.Damage;
+                                    dReduction = (resistPct * 0.01f) * spellDamage.Damage;
                                 }
                                 break;
                             }
@@ -2543,6 +2613,23 @@ namespace SpellServer
             }
 
             spellDamage.Damage -= resistedAmount;
+
+            // Earthpower damage scaling
+            if (sourcePlayer != null && LeyGraph != null)
+            {
+                float earthMult = LeyPowerCalculator.GetDamageMultiplier(sourcePlayer.ActiveTeam, LeyGraph);
+                spellDamage.Damage = (Int16)(spellDamage.Damage * earthMult);
+                spellDamage.Power = (Int16)(spellDamage.Power * earthMult);
+
+                if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking))
+                {
+                    int ep = LeyPowerCalculator.GetTeamEarthpower(sourcePlayer.ActiveTeam, LeyGraph);
+                    Network.SendTo(this, GamePacket.Outgoing.System.DirectTextMessage(null,
+                        String.Format("[Earthpower] {0} team={1}% mult={2:F2}x dmg={3}",
+                        sourcePlayer.ActiveCharacter.Name, ep, earthMult, spellDamage.Damage)),
+                        Network.SendToType.Arena);
+                }
+            }
 
             if (targetPlayer.ActiveCharacter.Level < AveragePlayerLevel)
             {
@@ -2584,8 +2671,7 @@ namespace SpellServer
 
                     Single experience = (Single) (spellDamage.Damage + Math.Ceiling(spellDamage.Power*0.75));
 
-                    GivePlayerExperience(sourcePlayer, experience*1.80f, ArenaPlayer.ExperienceType.Combat);
-                    GivePlayerExperience(targetPlayer, experience*0.70f, ArenaPlayer.ExperienceType.Combat);
+                    GivePlayerExperience(sourcePlayer, experience, ArenaPlayer.ExperienceType.Combat);
                 }
 
                 if (showHitToSource)
@@ -2917,14 +3003,19 @@ namespace SpellServer
 
                 }
                 
-                arenaPlayer.ExpPenalty = (Int32) targetPenalty;
+                // Death penalty: 10% of session XP (levels 1-2 exempt per game manual)
+                if (arenaPlayer.ActiveCharacter.Level >= 3)
+                {
+                    int sessionXp = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                    int deathPenalty = (int)(sessionXp * 0.10f);
+                    if (deathPenalty > 0)
+                    {
+                        arenaPlayer.CombatExp = Math.Max(0, arenaPlayer.CombatExp - deathPenalty);
+                    }
+                }
 
                 if (targetArenaPlayer != null)
                 {
-                    if (killerPenalty > 0)
-                    {
-                        targetArenaPlayer.ExpPenalty = (Int32)killerPenalty;
-                    }
 
                     if (targetArenaPlayer != arenaPlayer)
                     {
@@ -2960,8 +3051,22 @@ namespace SpellServer
 
         public void PlayerMove(ArenaPlayer arenaPlayer, ArenaPlayer.StatusFlag statusFlags, Byte mSpeed, Vector3 location, Single direction)
         {
+            if (ProfilingEnabled)
+            {
+                TickProfile.MoveWait.Start();
+                if (!Monitor.TryEnter(SyncRoot, 0))
+                {
+                    TickProfile.MoveWait.RecordContention();
+                    Monitor.Enter(SyncRoot);
+                }
+                TickProfile.MoveWait.Stop();
+            }
+            else
+            {
+                Monitor.Enter(SyncRoot);
+            }
 
-            lock (SyncRoot)
+            try
             {
                 if (DebugFlags.HasFlag(ArenaSpecialFlag.PlayerTracking))
                 {
@@ -2987,6 +3092,10 @@ namespace SpellServer
                     PlayerDeath(arenaPlayer, null);
                 }
             }
+            finally
+            {
+                Monitor.Exit(SyncRoot);
+            }
         }
 
         public void BiasedShrine(ArenaPlayer arenaPlayer, Byte shrineId, Byte team, Byte biasStrength)
@@ -2995,6 +3104,18 @@ namespace SpellServer
             if (shrine == null) return;
             if (shrine.IsIndestructible || !arenaPlayer.IsAlive || arenaPlayer.WorldPlayer.Flags.HasFlag(PlayerFlag.Hidden) ||
                 Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoShrineBiasing) || Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.CaptureTheFlag))
+            {
+                Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
+                return;
+            }
+
+            // Ley line connectivity check — nexus requires adjacent owned node
+            int shrineNodeId = shrine.ShrineId + LeyGraph.ShrineIdOffset;
+            BiasEligibility shrineEligibility = LeyGraph != null
+                ? LeyGraph.GetBiasEligibility(shrineNodeId, arenaPlayer.ActiveTeam)
+                : BiasEligibility.Connected;
+
+            if (shrineEligibility == BiasEligibility.Blocked)
             {
                 Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, 0));
                 return;
@@ -3063,7 +3184,18 @@ namespace SpellServer
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
-                if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 70)
+                // Enemy nexus: success rate scales with earthpower (3 nodes ~30%, full network ~90%)
+                // This is the sole gate — no additional roll check for nexus attacks
+                bool nexusSuccess = true;
+                if (!isFriendly && LeyGraph != null)
+                {
+                    int teamEarthpower = LeyPowerCalculator.GetTeamEarthpower(arenaPlayer.ActiveTeam, LeyGraph);
+                    int nexusChance = Math.Min(90, 20 + (int)(teamEarthpower * 0.7f));
+                    nexusSuccess = CryptoRandom.GetInt32(0, 100) <= nexusChance;
+                }
+
+                // Healing own nexus always succeeds, attacking uses earthpower gate
+                if (biasAmount > 0 && (isFriendly || nexusSuccess))
                 {
                     if (isFriendly)
                     {
@@ -3090,6 +3222,7 @@ namespace SpellServer
 
                     Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedShrine(arenaPlayer, shrine, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                    LeyGraph?.SyncFromGameState();
                 }
                 else
                 {
@@ -3106,6 +3239,18 @@ namespace SpellServer
             {
                 Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, 0));
                 return;
+            }
+
+            // Ley line connectivity check
+            BiasEligibility eligibility = LeyGraph != null
+                ? LeyGraph.GetBiasEligibility(poolId, arenaPlayer.ActiveTeam)
+                : BiasEligibility.Connected;
+
+            if (DebugFlags.HasFlag(ArenaSpecialFlag.ProjectileTracking) && LeyGraph != null)
+            {
+                var node = LeyGraph.Nodes.ContainsKey(poolId) ? LeyGraph.Nodes[poolId] : null;
+                string neighbors = node != null ? string.Join(",", node.Neighbors.Select(n => $"{n.Id}({n.Team})")) : "?";
+                Program.Log($"[Bias] {arenaPlayer.ActiveCharacter.Name} team={arenaPlayer.ActiveTeam} pool={poolId} eligibility={eligibility} neighbors=[{neighbors}]", System.Drawing.Color.Yellow);
             }
 
             // Rate limit bias attempts — shares cooldown with shrine biasing
@@ -3171,6 +3316,10 @@ namespace SpellServer
 
                 Int32 biasAmount = CryptoRandom.GetInt32(biasMin, biasMax);
 
+                // Back-hack penalty: disconnected nodes bias 4x slower
+                if (eligibility == BiasEligibility.Disconnected)
+                    biasAmount = Math.Max(1, (Int32)(biasAmount * LeyPowerCalculator.BackHackBiasMultiplier));
+
                 if (biasAmount > 0 && (CryptoRandom.GetInt32(0, 100) + biasRollBonus) > 75)
                 {
                     GivePlayerExperience(arenaPlayer, (((arenaPlayer.ActiveCharacter.Level / 9.2f) + 0.48f) * biasAmount), ArenaPlayer.ExperienceType.Objective);
@@ -3209,6 +3358,7 @@ namespace SpellServer
 
                     Network.SendTo(this, GamePacket.Outgoing.Arena.BiasedPool(arenaPlayer, pool, (Byte)biasAmount), Network.SendToType.Arena);
                     Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer));
+                    LeyGraph?.SyncFromGameState();
                 }
                 else
                 {
@@ -3223,11 +3373,21 @@ namespace SpellServer
             {
                 if (arenaPlayer.IsAlive || (Ruleset.Rules.HasFlag(ArenaRuleset.ArenaRule.NoTapping) && !arenaPlayer.WorldPlayer.IsAdmin)) return;
                 
-                if (arenaPlayer.ActiveTeam == Team.Neutral || !arenaPlayer.ActiveShrine.IsDead)
+                if (arenaPlayer.ActiveTeam == Team.Neutral || !arenaPlayer.ActiveShrine.IsDamaged)
                 {
                     if (arenaPlayer.OwnerArena.Ruleset.Mode != ArenaRuleset.ArenaMode.FreeForAll)
                     {
-                        arenaPlayer.ExpPenalty = arenaPlayer.ActiveCharacter.Level*(TeamHasHealer(arenaPlayer.ActiveTeam) ? 13 : 4);
+                        // Node/nexus res penalty: 20% of session XP (on top of 10% death penalty)
+                        // Healer Spirit Gate res has no additional penalty (handled in DoPlayerResurrect)
+                        if (arenaPlayer.ActiveCharacter.Level >= 3)
+                        {
+                            int sessionXp = arenaPlayer.CombatExp + arenaPlayer.ObjectiveExp;
+                            int resPenalty = (int)(sessionXp * 0.20f);
+                            if (resPenalty > 0)
+                            {
+                                arenaPlayer.CombatExp = Math.Max(0, arenaPlayer.CombatExp - resPenalty);
+                            }
+                        }
                         Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.UpdateExperience(arenaPlayer, UDP));
                     }
 
@@ -3237,6 +3397,14 @@ namespace SpellServer
 
                     arenaPlayer.ValhallaProtection.Reset();
                     arenaPlayer.CurrentHp = arenaPlayer.MaxHp;
+
+                    // Spawn at team nexus, not the earthnode the ghost walked to
+                    Shrine teamShrine = arenaPlayer.ActiveShrine;
+                    Vector3 spawnPos = (teamShrine != null)
+                        ? new Vector3(teamShrine.X, teamShrine.Y, teamShrine.Z)
+                        : arenaPlayer.Location;
+                    var spawnPacket = new Packets.PlayerYankPacket(arenaPlayer.ArenaPlayerId, spawnPos).ToBytes();
+                    Network.Send(arenaPlayer.WorldPlayer, spawnPacket);
                 }
                 else
                 {
@@ -3320,19 +3488,26 @@ namespace SpellServer
             {
                 if (!arenaPlayer.IsAlive) return false;
 
-                SpellCheatInfo cheatInfo = SpellManager.DoesPlayerHaveSpell(arenaPlayer.WorldPlayer, spell);
-
-                if (!cheatInfo.HasSpell)
+                // Effect spells (from spell_effects.json) have no SpellTreeLevels — the client
+                // legitimately sends these for self-cast shields (e.g. Heat Shield sends spell 104
+                // = Resist Heat Effect). Skip cheat check for these; the server already validated
+                // the parent spell when the shield was first cast.
+                if (spell.SpellTreeLevels != null)
                 {
-					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
+                    SpellCheatInfo cheatInfo = SpellManager.DoesPlayerHaveSpell(arenaPlayer.WorldPlayer, spell);
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
-                    return false;
+                    if (!cheatInfo.HasSpell)
+                    {
+                        Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
+
+                        // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                        // arenaPlayer.WorldPlayer.Disconnect = true;
+                        return false;
+                    }
                 }
 
                 arenaPlayer.IsAwayFromKeyboard = false;
-     
+
                 DoPlayerEffect(arenaPlayer, arenaPlayer, spell, EffectType.Default);
 
                 return true;
@@ -3345,17 +3520,14 @@ namespace SpellServer
             {
                 if (targetArenaPlayer == null || !arenaPlayer.IsAlive) return false;
 
+                // Cheat check disabled — DoesPlayerHaveSpell returns false positives
+                // (Wrong Class for legitimate spells, missing SpellTreeLevels for effect spells).
+                // TODO: Fix spell tree validation and re-enable as log-only.
                 SpellCheatInfo cheatInfo = SpellManager.DoesPlayerHaveSpell(arenaPlayer.WorldPlayer, spell);
-
                 if (!cheatInfo.HasSpell)
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
-
-                    arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
-                    return false;
                 }
-
 
                 switch (spell.Friendly)
                 {
@@ -3378,6 +3550,27 @@ namespace SpellServer
                         if (targetArenaPlayer.IsAlive && ((arenaPlayer.ActiveTeam == targetArenaPlayer.ActiveTeam || arenaPlayer.ActiveTeam == Team.Neutral) || targetArenaPlayer.ActiveTeam == Team.Neutral))
                         {
                             DoPlayerEffect(arenaPlayer, arenaPlayer, spell, EffectType.Caster);
+
+                            // Transfer spells: caster pays HP cost immediately
+                            if (spell.CasterSpellEffect > 0)
+                            {
+                                Spell casterEffect = SpellManager.Spells[spell.CasterSpellEffect];
+                                if (casterEffect != null && casterEffect.Effect == SpellEffectType.Bleed)
+                                {
+                                    SpellDamage selfDmg = new SpellDamage(casterEffect);
+                                    if (selfDmg.Damage > 0)
+                                    {
+                                        // Don't let Transfer kill the caster — leave at 1 HP minimum
+                                        Int16 actualDmg = (Int16)Math.Min(selfDmg.Damage, arenaPlayer.CurrentHp - 1);
+                                        if (actualDmg > 0)
+                                        {
+                                            arenaPlayer.CurrentHp -= actualDmg;
+                                            Network.Send(arenaPlayer.WorldPlayer, GamePacket.Outgoing.Arena.PlayerDamage(arenaPlayer, arenaPlayer, selfDmg));
+                                        }
+                                    }
+                                }
+                            }
+
                             if (!DoPlayerEffect(targetArenaPlayer, arenaPlayer, spell, EffectType.Target)) return false;
                         }
                         else return false;
@@ -3412,8 +3605,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3508,8 +3702,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3537,8 +3732,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3562,8 +3758,9 @@ namespace SpellServer
                 {
                     Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return false;
                 }
 
@@ -3595,8 +3792,8 @@ namespace SpellServer
                 {
                     Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-                    arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return;
                 }
 
@@ -3622,8 +3819,9 @@ namespace SpellServer
                 {
 					Program.Log(String.Format("[Spell Hack] ({0}){1} -> Spell: {2}, List Level: {3}, Spell Level: {4}, List: {5}, Error: {6}", arenaPlayer.WorldPlayer.AccountId, arenaPlayer.ActiveCharacter.Name, cheatInfo.Spell.Name, cheatInfo.ListLevel, cheatInfo.SpellLevel, cheatInfo.ListName, cheatInfo.Error), Color.Red, "Cheat");
 
-					arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
-                    arenaPlayer.WorldPlayer.Disconnect = true;
+					// Don't disconnect — cheat checks are unreliable (wrong class, effect spells, admin paths)
+                    // arenaPlayer.WorldPlayer.DisconnectReason = Resources.Strings_Disconnect.SpellHack;
+                    // arenaPlayer.WorldPlayer.Disconnect = true;
                     return;
                 }
 

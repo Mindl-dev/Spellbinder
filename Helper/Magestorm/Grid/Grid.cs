@@ -180,8 +180,20 @@ namespace Helper
             }
 
             PheonixShrine = new Shrine(grid.PheonixShrine.Team, grid.PheonixShrine.ShrineId, grid.PheonixShrine.Power, grid.PheonixShrine.CurrentBias, grid.PheonixShrine.Links);
+            PheonixShrine.Fixture = grid.PheonixShrine.Fixture;
+            PheonixShrine.X = grid.PheonixShrine.X;
+            PheonixShrine.Y = grid.PheonixShrine.Y;
+            PheonixShrine.Z = grid.PheonixShrine.Z;
             DragonShrine = new Shrine(grid.DragonShrine.Team, grid.DragonShrine.ShrineId, grid.DragonShrine.Power, grid.DragonShrine.CurrentBias, grid.DragonShrine.Links);
+            DragonShrine.Fixture = grid.DragonShrine.Fixture;
+            DragonShrine.X = grid.DragonShrine.X;
+            DragonShrine.Y = grid.DragonShrine.Y;
+            DragonShrine.Z = grid.DragonShrine.Z;
             GryphonShrine = new Shrine(grid.GryphonShrine.Team, grid.GryphonShrine.ShrineId, grid.GryphonShrine.Power, grid.GryphonShrine.CurrentBias, grid.GryphonShrine.Links);
+            GryphonShrine.Fixture = grid.GryphonShrine.Fixture;
+            GryphonShrine.X = grid.GryphonShrine.X;
+            GryphonShrine.Y = grid.GryphonShrine.Y;
+            GryphonShrine.Z = grid.GryphonShrine.Z;
 
             GameName = grid.GameName;
             GridFilename = grid.GridFilename;
@@ -386,13 +398,10 @@ namespace Helper
                 TimeLimit = NativeMethods.GetPrivateProfileInt16(keyName, "timelimit", arenaDatFilename);
                 ExpBonus = NativeMethods.GetPrivateProfileSingle(keyName, "expbonus", arenaDatFilename);
 
-                Pools = new PoolCollection();
-
-                Int32 poolCount = NativeMethods.GetPrivateProfileInt32("earthblooddefs", "numearthblood", WorldFilename);
-                for (Int32 x = 0; x < poolCount; x++)
-                {
-                    Pools.Add(new Pool(Convert.ToByte(x), NativeMethods.GetPrivateProfileInt16(String.Format("earthblood{0:00}", x), "power", WorldFilename), 100));
-                }
+                String nifsFilename = Path.Combine(Path.GetDirectoryName(WorldFilename), "NIFS", "NIFS.DAT");
+                if (!File.Exists(nifsFilename))
+                    nifsFilename = null;
+                Pools = LoadPools(WorldFilename, nifsFilename);
 
                 Int32 shrineCount = NativeMethods.GetPrivateProfileInt32("shrinedefs", "numshrines", WorldFilename);
                 for (Int32 x = 0; x < shrineCount; x++)
@@ -401,6 +410,7 @@ namespace Helper
 
                     Int16 power = NativeMethods.GetPrivateProfileInt16(shrineString, "power", WorldFilename);
                     Int16 bias = NativeMethods.GetPrivateProfileInt16(shrineString, "bias", WorldFilename);
+                    Byte fixture = NativeMethods.GetPrivateProfileByte(shrineString, "fixture", WorldFilename);
                     Int16 link1 = NativeMethods.GetPrivateProfileInt16(shrineString, "link1", WorldFilename);
                     Int16 link2 = NativeMethods.GetPrivateProfileInt16(shrineString, "link2", WorldFilename);
                     Int16 link3 = NativeMethods.GetPrivateProfileInt16(shrineString, "link3", WorldFilename);
@@ -411,25 +421,35 @@ namespace Helper
                     Links.Add(link2);
                     Links.Add(link3);
 
+                    Shrine shrine = null;
                     switch (NativeMethods.GetPrivateProfileString(shrineString, "alignment", WorldFilename))
                     {
                         case "chaos":
-                            {
                                 DragonShrine = new Shrine(Team.Dragon, (Byte)x, power, bias, Links);
+                                shrine = DragonShrine;
                                 break;
-                            }
 
                         case "balance":
-                            {
                                 PheonixShrine = new Shrine(Team.Pheonix, (Byte)x, power, bias, Links);
+                                shrine = PheonixShrine;
                                 break;
-                            }
 
                         case "order":
-                            {
                                 GryphonShrine = new Shrine(Team.Gryphon, (Byte)x, power, bias, Links);
+                                shrine = GryphonShrine;
                                 break;
-                            }
+                    }
+
+                    if (shrine != null)
+                    {
+                        shrine.Fixture = fixture;
+                        if (nifsFilename != null && fixture > 0)
+                        {
+                            String fixtureSection = String.Format("fixture{0:00}", fixture);
+                            shrine.X = NativeMethods.GetPrivateProfileInt32(fixtureSection, "x", nifsFilename);
+                            shrine.Y = NativeMethods.GetPrivateProfileInt32(fixtureSection, "y", nifsFilename);
+                            shrine.Z = NativeMethods.GetPrivateProfileInt32(fixtureSection, "z", nifsFilename);
+                        }
                     }
                 }
 
@@ -829,6 +849,39 @@ namespace Helper
                 }
             }
         }
+        public static PoolCollection LoadPools(String worldFilename, String nifsFilename = null)
+        {
+            var pools = new PoolCollection();
+            Int32 poolCount = NativeMethods.GetPrivateProfileInt32("earthblooddefs", "numearthblood", worldFilename);
+
+            for (Int32 x = 0; x < poolCount; x++)
+            {
+                String section = String.Format("earthblood{0:00}", x);
+                var pool = new Pool(Convert.ToByte(x), NativeMethods.GetPrivateProfileInt16(section, "power", worldFilename), 100);
+                pool.Fixture = NativeMethods.GetPrivateProfileByte(section, "fixture", worldFilename);
+                pool.Radius = NativeMethods.GetPrivateProfileInt16(section, "radius", worldFilename);
+
+                for (Int32 linkNum = 1; linkNum <= 5; linkNum++)
+                {
+                    Int16 link = NativeMethods.GetPrivateProfileInt16(section, String.Format("link{0}", linkNum), worldFilename);
+                    if (link != 0)
+                        pool.Links.Add(link);
+                }
+
+                // Load position from fixture in NIFS.DAT
+                if (nifsFilename != null && pool.Fixture > 0)
+                {
+                    String fixtureSection = String.Format("fixture{0:00}", pool.Fixture);
+                    pool.X = NativeMethods.GetPrivateProfileInt32(fixtureSection, "x", nifsFilename);
+                    pool.Y = NativeMethods.GetPrivateProfileInt32(fixtureSection, "y", nifsFilename);
+                    pool.Z = NativeMethods.GetPrivateProfileInt32(fixtureSection, "z", nifsFilename);
+                }
+
+                pools.Add(pool);
+            }
+            return pools;
+        }
+
         private void LoadSubPixelLibrary()
         {
             byte[] rawData = File.ReadAllBytes(SubPixelFilename);
